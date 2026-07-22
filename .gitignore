@@ -1,0 +1,35 @@
+# --- data & environment (huge / machine-specific, never commit) ---
+data/
+env/
+features_cache/
+
+# --- regenerable artifacts that also embed absolute local paths ---
+manifest.csv
+manifest_balanced.csv
+splits/
+folds/
+
+# --- verbose training logs ---
+train_log.txt
+train_log2.txt
+cross_log.txt
+cross_smoke.txt
+
+# --- python / jupyter cruft ---
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+Untitled.ipynb
+
+# --- editor / tooling ---
+.claude/
+
+# --- LaTeX build output (if you compile locally) ---
+*.aux
+*.log
+*.out
+*.synctex.gz
+output.pdf
+
+# temp sample lists (contain absolute paths)
+explanations/_*.csv

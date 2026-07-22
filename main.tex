@@ -1,0 +1,286 @@
+% =====================================================================
+%  Explainable Deep Learning for Deepfake Voice Detection
+%  Complete, self-contained IEEE paper. Compiles on Overleaf as-is.
+%
+%  Upload these three images next to main.tex (optional — the document
+%  compiles without them, showing a placeholder box in each figure):
+%     fig_method_comparison.png
+%     fig_cross_dataset.png
+%     fig_explain.png
+% =====================================================================
+\documentclass[conference]{IEEEtran}
+
+\usepackage{cite}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage[table]{xcolor}
+\usepackage{textcomp}
+
+% Include a figure if present, else a labelled placeholder box, so the
+% document always produces a PDF even before the images are uploaded.
+\newcommand{\safefig}[2]{%
+  \IfFileExists{#2}{\includegraphics[width=#1]{#2}}{%
+    \fbox{\parbox[c][3cm][c]{\dimexpr#1-2\fboxsep-2\fboxrule\relax}{%
+      \centering\small\ttfamily\detokenize{#2}\\[4pt]\normalfont(upload this figure)}}}%
+}
+
+\begin{document}
+
+\title{Explainable Deep Learning for Deepfake Voice Detection:\\
+A Leakage-Free Re-evaluation and Cross-Dataset Study}
+
+\author{\IEEEauthorblockN{Roham Izadidoost}
+\IEEEauthorblockA{Manipal University Jaipur \\
+izadidoostroham@gmail.com}
+\and
+\IEEEauthorblockN{Dr.~Sumit Srivastava}
+\IEEEauthorblockA{Manipal University Jaipur}}
+
+\maketitle
+
+\begin{abstract}
+We revisit a recently reported machine-learning approach to deepfake voice
+detection that claims 99.93\% accuracy, and show that this figure stems from a
+leaky, small-scale evaluation rather than genuine detection ability. We merge
+three public corpora---ASVspoof~2021, a LibriSpeech/TTS set, and MLAAD~v5---into
+a single balanced benchmark, and re-evaluate under a speaker-disjoint protocol
+using Equal Error Rate (EER). On this honest benchmark we reproduce the paper's
+classical pipeline as a baseline (best 11.33\% EER) and propose
+\emph{AttentiveSpecCNN}, a compact convolutional network with a learnable
+temporal-attention pooling layer that both improves accuracy and yields built-in
+explanations via attention weights and Grad-CAM. The proposed model reaches
+4.81\% EER, a $\sim$58\% relative reduction over the baseline. Finally, a
+leave-one-source-out study shows that this in-domain success does \emph{not}
+transfer to a fully unseen source, quantifying an important and often-overlooked
+generalisation gap.
+\end{abstract}
+
+\begin{IEEEkeywords}
+audio deepfake detection, anti-spoofing, explainable AI, attention, EER,
+cross-dataset generalisation.
+\end{IEEEkeywords}
+
+\section{Introduction}
+Synthetic speech is now realistic enough to threaten voice authentication and
+enable fraud and misinformation, motivating reliable detectors. A recent study,
+``Unmasking the Fake''~\cite{unmasking}, reports 99.93\% accuracy using Mel
+Frequency Cepstral Coefficients (MFCC) refined by a Gaussian-Naive-Bayes and
+Non-negative-Matrix-Factorisation ``transfer'' step feeding classical
+classifiers.
+
+Such a figure is not comparable to properly evaluated anti-spoofing systems. It
+is obtained on a small, single Kaggle set using random $k$-fold cross-validation
+and synthetic minority oversampling applied \emph{before} splitting, both of
+which leak information between train and test; the reported per-class metrics are
+internally inconsistent; and no EER---the field-standard metric---is given. We
+therefore treat the method as a baseline to reproduce rather than a target.
+
+Our contributions are: (i) a unified, cleaned, class-balanced benchmark merged
+from three public corpora; (ii) a rigorous \emph{speaker-disjoint} evaluation
+with EER; (iii) \emph{AttentiveSpecCNN}, an explainable model that replaces the
+paper's static feature engineering with a learnable attention mechanism and
+improves EER by $\sim$58\% relative over the reproduced baseline; and (iv) a
+cross-dataset study exposing the limits of in-domain performance.
+
+\section{Datasets and Preprocessing}
+We merge three public sources (Table~\ref{tab:datasets}): the ASVspoof~2021
+deepfake (DF) track~\cite{asvspoof}, a set pairing LibriSpeech real speech with
+modern text-to-speech (TTS) fakes, and MLAAD~v5~\cite{mlaad}, a multilingual TTS
+corpus spanning roughly ninety generators. The combined corpus is
+$\sim$97\% fake, so we draw a class-balanced subset (19{,}251 real / 19{,}251
+fake) whose fake half is spread evenly across all sources and generators to avoid
+a single-generator bias. Audio is decoded, converted to mono, resampled to
+16\,kHz, fixed to 4\,s, and transformed to 80-band log-mel spectrograms.
+
+\begin{table}[t]
+\centering
+\caption{The three merged source datasets. The combined corpus is
+$\sim$97\% fake; a class-balanced subset (19{,}251 / 19{,}251) is used.}
+\label{tab:datasets}
+\begin{tabular}{@{}llrr@{}}
+\toprule
+Source (local name) & Description & Real & Fake \\
+\midrule
+ASVspoof 2021 (DF) & Telephone/codec deepfakes            & 16{,}977 & 441{,}894 \\
+Adarsh AD set      & LibriSpeech real + TTS fakes         & 2{,}274  & 2{,}173   \\
+MLAAD v5           & Multilingual TTS (fake only)         & 0        & 151{,}446 \\
+\midrule
+\textbf{Merged}    & Unified manifest                     & \textbf{19{,}251} & \textbf{595{,}513} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Method}
+\subsection{AttentiveSpecCNN}
+The proposed detector is a compact ($\approx$106K-parameter) 2-D CNN over log-mel
+spectrograms followed by a learnable temporal-attention pooling layer. Four
+convolutional blocks (channels 16/32/64/128, each $3{\times}3$ conv, batch norm,
+ReLU and $2{\times}2$ max-pool) produce a time--frequency feature map; the
+frequency axis is averaged and an attention layer computes a softmax weight per
+time frame, forming a context vector classified by a small multilayer perceptron.
+This attention layer is the key departure from~\cite{unmasking}: rather than a
+fixed MFCC$\rightarrow$GNB$\rightarrow$NMF transform, it \emph{learns} how much
+each moment of audio contributes to the decision. Table~\ref{tab:config} lists
+the configuration.
+
+\begin{table}[t]
+\centering
+\caption{Audio front-end, model, and training configuration.}
+\label{tab:config}
+\begin{tabularx}{\columnwidth}{@{}lX@{}}
+\toprule
+Setting & Value \\
+\midrule
+Sample rate / channels & 16\,kHz, mono \\
+Clip length            & 4\,s (64{,}000 samples); pad, else random (train) / center (eval) crop \\
+Log-mel                & 80 bands, $n_\text{fft}{=}400$, hop${=}160$ $\rightarrow$ $80{\times}401$ \\
+CNN backbone           & 4 blocks, 16/32/64/128, $3{\times}3$ conv+BN+ReLU+$2{\times}2$ pool \\
+Pooling                & frequency mean, then temporal attention \\
+Head                   & Linear $128{\to}64$, ReLU, dropout 0.3, Linear $64{\to}2$ \\
+Parameters             & $\approx$106{,}000 \\
+Optimiser              & Adam, lr $10^{-3}$, ReduceLROnPlateau ($\times0.5$, patience 2) \\
+Loss                   & cross-entropy, inverse-frequency class weights \\
+Batch / epochs         & 64 / 15, best-val-EER checkpoint \\
+Hardware               & single NVIDIA RTX 3080 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Explainability}
+Two saliency views come for free. The attention weights give a per-frame
+importance curve, and Grad-CAM over the final convolutional layer highlights the
+time--frequency regions that drove the predicted class (Fig.~\ref{fig:explain}).
+
+\subsection{Classical baseline}
+We reproduce~\cite{unmasking} with 40 MFCCs summarised by mean and standard
+deviation (an 80-D vector), standardised before classification. Random Forest,
+Logistic Regression, $k$-Nearest Neighbours and Gaussian Naive Bayes are
+evaluated on the raw MFCCs and on the paper's GNB+NMF ``transfer'' features
+(GNB class probabilities concatenated with a 16-component NMF).
+
+\section{Evaluation Protocol}
+Two choices make the numbers trustworthy. First, splits are
+\emph{speaker-disjoint}: train, validation and test share no speaker or TTS
+source-reader, so a model cannot inflate its score by memorising voice identity,
+unlike random $k$-fold. Second, we report EER---the operating point where false
+accept and false reject rates are equal---alongside balanced accuracy and
+per-class F1, so the ``predict-everything-fake'' failure mode cannot hide behind
+raw accuracy.
+
+\section{Results}
+\subsection{In-domain detection}
+Table~\ref{tab:indomain} and Fig.~\ref{fig:method} report all methods on the same
+speaker-disjoint test set. The proposed model roughly halves the best classical
+baseline's EER. Notably, the paper's GNB+NMF ``transfer'' step does not help---it
+slightly worsens the strongest classical model---and the paper's headline GNB is
+the weakest configuration.
+
+\begin{table*}[t]
+\centering
+\caption{In-domain detection on the speaker-disjoint test set (lower EER is
+better).}
+\label{tab:indomain}
+\begin{tabular}{@{}llrrrr@{}}
+\toprule
+Method & Features & EER (\%) & Bal.\ Acc (\%) & F1$_{\text{fake}}$ (\%) & AUC \\
+\midrule
+\rowcolor{green!12}\textbf{AttentiveSpecCNN (ours)} & log-mel & \textbf{4.81} & \textbf{93.84} & \textbf{93.49} & \textbf{0.99} \\
+Random Forest                         & MFCC             & 11.33 & 87.51 & 87.86 & 0.96 \\
+Random Forest                         & GNB+NMF transfer & 11.89 & 87.60 & 87.83 & 0.95 \\
+$k$-Nearest Neighbours                & MFCC             & 13.15 & 85.46 & 86.13 & 0.92 \\
+Logistic Regression                   & GNB+NMF transfer & 14.78 & 84.73 & 84.09 & 0.92 \\
+$k$-Nearest Neighbours                & GNB+NMF transfer & 15.05 & 83.93 & 84.67 & 0.91 \\
+Logistic Regression                   & MFCC             & 15.52 & 84.33 & 84.17 & 0.91 \\
+Gaussian Naive Bayes                  & GNB+NMF transfer & 23.93 & 76.72 & 75.77 & 0.87 \\
+Gaussian Naive Bayes (paper headline) & MFCC             & 26.69 & 73.05 & 71.75 & 0.81 \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\begin{figure}[t]
+\centering
+\safefig{\columnwidth}{fig_method_comparison.png}
+\caption{Equal Error Rate by method; the proposed model roughly halves the best
+classical baseline's EER.}
+\label{fig:method}
+\end{figure}
+
+\begin{figure*}[t]
+\centering
+\safefig{0.82\textwidth}{fig_explain.png}
+\caption{Explanation for a correctly-identified real clip: log-mel spectrogram
+(top), Grad-CAM (middle), and temporal attention (bottom).}
+\label{fig:explain}
+\end{figure*}
+
+\subsection{Cross-dataset generalisation}
+To test whether the model detects transferable artifacts or dataset-specific
+cues, we train on two sources and test on the held-out third
+(Table~\ref{tab:cross}, Fig.~\ref{fig:cross}). Performance collapses to, or below,
+chance. Trained on ASVspoof (telephone/codec) and MLAAD (clean TTS), the model
+appears to associate clean audio with ``fake'' and mislabels the clean
+LibriSpeech real speech of dataset~2 (AUC 0.42, below chance). The strong
+in-domain result thus leans heavily on recording/domain signatures.
+
+\begin{table}[t]
+\centering
+\caption{Leave-one-source-out generalisation. MLAAD has no real audio, so only
+the fake-detection rate on unseen generators is reportable.}
+\label{tab:cross}
+\begin{tabular}{@{}lllr@{}}
+\toprule
+Held-out source & Trained on & Metric & Result \\
+\midrule
+\rowcolor{green!12}\textit{(ref.) In-domain} & all three & EER / AUC & \textbf{4.81\% / 0.99} \\
+ASVspoof 2021 & ds2 + MLAAD & EER / AUC   & 44.9\% / 0.56 \\
+dataset~2     & ASV + MLAAD & EER / AUC   & 57.5\% / 0.42 \\
+MLAAD         & ASV + ds2   & fake-recall & 48.4\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\safefig{\columnwidth}{fig_cross_dataset.png}
+\caption{In-domain vs.\ held-out ROC-AUC. Performance collapses to (or below)
+chance on a fully unseen source.}
+\label{fig:cross}
+\end{figure}
+
+\section{Discussion and Limitations}
+The study supports a three-tier conclusion, each with protocol-correct numbers:
+the paper's 99.93\% accuracy is not reproducible or comparable; on a fair
+benchmark the proposed explainable model achieves 4.81\% EER, a $\sim$58\%
+relative improvement over the reproduced baseline; and cross-dataset
+generalisation remains open, so in-domain metrics overstate real-world
+robustness. Limitations: MLAAD contributes only fake audio, so part of the
+separation reflects domain differences; the ASVspoof-holdout fold is real-starved
+(only $\sim$2.3k real clips to train on); and the cross-dataset numbers are
+single-run, fixed-threshold probes, for which ROC-AUC is the most robust signal.
+
+\section{Conclusion}
+A leakage-free re-evaluation dispels an implausibly high published accuracy and
+shows that a compact, explainable attention CNN substantially improves honest
+in-domain detection. The cross-dataset collapse, however, underscores that robust
+generalisation---not headline accuracy---is the open problem in audio deepfake
+detection.
+
+\begin{thebibliography}{1}
+\bibitem{unmasking}
+M.~U.~T. Gujjar, K. Munir, M. Amjad, A.~U. Rehman, and A. Bermak,
+``Unmasking the fake: Machine learning approach for deepfake voice detection,''
+\emph{IEEE Access}, vol.~12, pp. 197442--197453, 2024.
+
+\bibitem{asvspoof}
+J.~Yamagishi \emph{et al.},
+``ASVspoof 2021: Accelerating progress in spoofed and deepfake speech
+detection,'' in \emph{Proc. ASVspoof Challenge Workshop}, 2021.
+
+\bibitem{mlaad}
+N.~M\"uller \emph{et al.},
+``MLAAD: The multi-language audio anti-spoofing dataset,'' 2024.
+\end{thebibliography}
+
+\end{document}

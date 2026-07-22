@@ -1,0 +1,4 @@
+test_source,metric,eer,bal_acc,auc,fake_recall
+ASVspoof,EER,44.925000000000004,54.49999999999999,0.559615625,
+dataset_2,EER,57.49999999999999,51.300000000000004,0.419634375,
+MLAAD,fake-recall(unseen gen),,,,48.4
