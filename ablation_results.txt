@@ -1,0 +1,6 @@
+DA-RAD ablation (test = held-out In-the-Wild EER, lower=better)
+xlsr | Best val EER: 30.97%
+rawboost | Best val EER: 32.65%
+grl | Best val EER: 35.58%
+darad | Best val EER: 45.05%
+ABLATION DONE

@@ -1,0 +1,5 @@
+GO/NO-GO fine-tuned (top-4 layers) — test=held-out In-the-Wild, lower EER better
+xlsr | Best val EER: 9.42%
+anchor | Best val EER: 10.88%
+darad | Best val EER: 13.58%
+GONOGO DONE

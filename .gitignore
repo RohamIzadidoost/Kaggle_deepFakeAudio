@@ -33,3 +33,16 @@ output.pdf
 
 # temp sample lists (contain absolute paths)
 explanations/_*.csv
+
+# --- model checkpoints (large / regenerable; some exceed GitHub's 100MB limit) ---
+*.pt
+
+# --- generated protocol manifests + checkpoints (path-bearing, regenerable) ---
+protocols/
+
+# --- full 5-corpus manifest (path-bearing, >100MB, regenerable) ---
+manifest_all.csv
+
+# --- verbose run logs ---
+protoA_log.txt
+download_log.txt

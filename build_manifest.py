@@ -198,6 +198,82 @@ def load_mlaad(ds3_root: Path):
     return rows
 
 
+def load_asvspoof2019_la(root: Path):
+    """ASVspoof2019 LA (train/dev/eval) from the CM protocol files.
+
+    Protocol line: '<speaker> <utt_id> - <attack> <label>'
+    (label at the last column is 'bonafide' or 'spoof'). Speaker (LA_00xx) is
+    shared by real & fake, so we keep it for speaker-disjoint splitting.
+    """
+    base = root / "asvspoof2019_LA"
+    if not base.exists():
+        print("[asvspoof2019_LA] not found, skipping.")
+        return []
+    proto_dir = base / "ASVspoof2019_LA_cm_protocols"
+    splits = {
+        "train": ("ASVspoof2019.LA.cm.train.trn.txt", "ASVspoof2019_LA_train"),
+        "dev": ("ASVspoof2019.LA.cm.dev.trl.txt", "ASVspoof2019_LA_dev"),
+        "eval": ("ASVspoof2019.LA.cm.eval.trl.txt", "ASVspoof2019_LA_eval"),
+    }
+    rows = []
+    for subset, (pfile, adir) in splits.items():
+        ppath = proto_dir / pfile
+        flac_dir = base / adir / "flac"
+        if not ppath.exists() or not flac_dir.exists():
+            print(f"[asvspoof2019_LA] {subset}: protocol or flac dir missing, skipping subset.")
+            continue
+        n = 0
+        with open(ppath) as f:
+            for line in f:
+                p = line.split()
+                if len(p) < 5:
+                    continue
+                spk, utt, attack, label = p[0], p[1], p[-2], p[-1]
+                rows.append({
+                    "filepath": str(flac_dir / f"{utt}.flac"),
+                    "label": "fake" if label == "spoof" else "real",
+                    "dataset_source": "asvspoof2019_LA",
+                    "generator": attack if attack != "-" else "bonafide",
+                    "speaker": f"asv19:{spk}",
+                    "extra": subset,
+                })
+                n += 1
+        print(f"[asvspoof2019_LA] {subset}: {n} rows")
+    return rows
+
+
+def load_in_the_wild(root: Path):
+    """In-the-Wild (OOD test corpus), folder-based real/fake .wav.
+
+    Used as a held-out cross-corpus test set, so each file is its own speaker
+    group (per-file) — it is never in the training pool, so no leakage concern.
+    """
+    base = root / "in_the_wild"
+    if not base.exists():
+        print("[in_the_wild] not found, skipping.")
+        return []
+    rows = []
+    for wav in base.rglob("*.wav"):
+        low = [part.lower() for part in wav.parts]
+        if "fake" in low or "spoof" in low:
+            label = "fake"
+        elif "real" in low or "bonafide" in low:
+            label = "real"
+        else:
+            continue
+        rows.append({
+            "filepath": str(wav),
+            "label": label,
+            "dataset_source": "in_the_wild",
+            "generator": "in_the_wild",
+            "speaker": f"itw:{wav.stem}",
+            "extra": "",
+        })
+    n_real = sum(1 for r in rows if r["label"] == "real")
+    print(f"[in_the_wild] {len(rows)} rows ({n_real} real / {len(rows) - n_real} fake)")
+    return rows
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--root", required=True, help="Path to the 'data' folder containing dataset_1/2/3")
@@ -213,6 +289,9 @@ def main():
     all_rows += load_asvspoof_labels(ds1)
     all_rows += load_seedtts_style(ds2)
     all_rows += load_mlaad(ds3)
+    # extra corpora for the DA-RAD cross-corpus study (skipped gracefully if absent)
+    all_rows += load_asvspoof2019_la(root)
+    all_rows += load_in_the_wild(root)
 
     if not all_rows:
         print("No rows collected — check your --root path.")
