@@ -274,6 +274,35 @@ def load_in_the_wild(root: Path):
     return rows
 
 
+def load_arabic_arad(root: Path):
+    """Arabic Audio Deepfake (ArAD) — folder-based real/fake, extracted by
+    download_arabic.py to arabic_arad/<split>/<real|fake>/*.wav. Multilingual OOD
+    target (Arabic); per-file speaker since it is only ever a held-out test corpus.
+    """
+    base = root / "arabic_arad"
+    if not base.exists():
+        print("[arabic_arad] not found, skipping.")
+        return []
+    rows = []
+    for wav in base.rglob("*.wav"):
+        parts = [p.lower() for p in wav.parts]
+        label = "real" if "real" in parts else "fake" if "fake" in parts else None
+        if label is None:
+            continue
+        split = "test" if "test" in parts else "train" if "train" in parts else ""
+        rows.append({
+            "filepath": str(wav),
+            "label": label,
+            "dataset_source": "arabic_arad",
+            "generator": "arabic_arad",
+            "speaker": f"arad:{wav.parent.parent.name}:{wav.stem}",
+            "extra": split,
+        })
+    n_real = sum(1 for r in rows if r["label"] == "real")
+    print(f"[arabic_arad] {len(rows)} rows ({n_real} real / {len(rows) - n_real} fake)")
+    return rows
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--root", required=True, help="Path to the 'data' folder containing dataset_1/2/3")
@@ -292,6 +321,7 @@ def main():
     # extra corpora for the DA-RAD cross-corpus study (skipped gracefully if absent)
     all_rows += load_asvspoof2019_la(root)
     all_rows += load_in_the_wild(root)
+    all_rows += load_arabic_arad(root)
 
     if not all_rows:
         print("No rows collected — check your --root path.")
