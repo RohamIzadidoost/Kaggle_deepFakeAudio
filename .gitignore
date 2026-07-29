@@ -46,3 +46,6 @@ manifest_all.csv
 # --- verbose run logs ---
 protoA_log.txt
 download_log.txt
+
+# --- local scratch workspace unzipped from the cloud run bundle (large ckpts) ---
+cloud_bundle/

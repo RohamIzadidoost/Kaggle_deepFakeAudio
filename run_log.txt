@@ -1,0 +1,43 @@
+[16:33:54] python 3.14.4 | torch 2.13.0+cu130 | torchaudio 2.11.0+cu130
+[16:33:54] device cuda NVIDIA GeForce RTX 3080 | bf16 True | SMOKE False
+[16:33:54] already present: data/asvspoof2019_LA
+[16:33:54] already present: data/in_the_wild
+[16:33:54] already present: data/dataset_2
+[16:33:54] already present: data/arabic_arad
+[16:33:54] manifest:
+corpus        label
+arabic        fake     16991
+              real      2570
+asvspoof2019  fake     22800
+              real      2580
+dataset2      fake      2173
+              real      2274
+in_the_wild   fake     11816
+              real     19963
+[16:33:54] dataset2 generators: ['FlashSpeech', 'NaturalSpeech3', 'OpenAI', 'PromptTTS2', 'VALLE', 'VoiceBox', 'real_samples', 'seedtts_files', 'xTTS']
+[16:33:55] cache pool: 17573 clips
+corpus        label
+arabic        fake     2200
+              real     2200
+asvspoof2019  fake     2200
+              real     2200
+dataset2      fake     2173
+              real     2200
+in_the_wild   fake     2200
+              real     2200
+[16:34:01] cache ready: (17573, 64000) fp16 = 2.25 GB on GPU (7s)
+[16:34:03] encoder runs under autocast: True
+[16:34:03] === seed0/in_the_wild ===
+[16:34:03]   source 4000 clips from ['arabic', 'asvspoof2019', 'dataset2'] | target 2000
+[16:34:28]   seed0/in_the_wild epoch 1/5  loss 0.5885
+[16:34:50]   seed0/in_the_wild epoch 2/5  loss 0.2348
+[16:35:12]   seed0/in_the_wild epoch 3/5  loss 0.1434
+[16:35:34]   seed0/in_the_wild epoch 4/5  loss 0.1133
+[16:35:56]   seed0/in_the_wild epoch 5/5  loss 0.0525
+[16:36:05]   source   EER  10.90  AUC 0.959  acc@0.5  84.2  (0.1 min)
+[16:36:45]   tent     EER  10.70  AUC 0.947  acc@0.5  89.2  (0.7 min)
+[16:37:51]   st_only  EER  10.30  AUC 0.957  acc@0.5  88.4  (1.1 min)
+[16:39:22]   ours     EER  10.60  AUC 0.964  acc@0.5  89.2  (1.5 min)
+[16:40:12]   inductive: source EER 10.30 -> ours EER 9.80 (held-out half)
+[16:40:12] GRID COMPLETE in 6.2 min | peak GPU 6.9 GB
+[16:40:13] wrote fig_score_dist.png
