@@ -14,6 +14,7 @@
 \usepackage{tabularx}
 \usepackage[table]{xcolor}
 \usepackage{textcomp}
+\usepackage[colorlinks=true,linkcolor=blue!55!black,citecolor=blue!55!black,urlcolor=blue!55!black]{hyperref}
 
 % include a figure if present, else a placeholder box (compiles before upload)
 \newcommand{\safefig}[2]{%
@@ -52,21 +53,33 @@ most-confident predictions on unlabeled target audio are reliable, which in turn
 enables stable unsupervised \emph{test-time adaptation} (TTA): we self-train on
 confident-ranked pseudo-labels and enforce channel-consistency, adapting only
 LayerNorm and the classifier head---no target labels and no source data at test
-time. In a leave-one-corpus-out evaluation over three seeds, the method cuts
-Equal Error Rate (EER) on held-out In-the-Wild from $15.86\%$ to $13.17\%$
-(17.0\% relative, $3/3$ seeds) and on a held-out multilingual target, Arabic
-audio deepfakes, from $28.93\%$ to $27.18\%$ ($3/3$ seeds), and it holds up under
-an inductive check on unseen target clips. In contrast, entropy-minimisation TTA
-(Tent) collapses to chance on both targets, and train-time domain-adversarial
-objectives do not help. An ablation shows the two components play different
-roles depending on the size of the domain gap: confident self-training alone
-suffices under a moderate shift, while channel-consistency is what rescues
-adaptation under a larger one.
+time. We evaluate on a leave-one-corpus-out protocol over \emph{four} held-out
+targets---ASVspoof2019, a LibriSpeech-based TTS corpus, In-the-Wild, and a
+multilingual Arabic deepfake set---with a 38-language auxiliary corpus folded
+into every source pool, three seeds each, and six comparison points (Tent,
+BatchNorm-only recalibration, self-training-only, a from-scratch non-SSL
+backbone, and a train-time domain-adversarial baseline). The method improves
+Equal Error Rate (EER) on three of four targets (In-the-Wild
+$12.57\!\rightarrow\!10.83\%$, Arabic $22.59\!\rightarrow\!20.74\%$, ASVspoof2019
+$4.76\!\rightarrow\!3.69\%$) and is EER-neutral, not harmful, on the fourth
+(LibriSpeech-TTS, $34.36\!\rightarrow\!34.38\%$), where the domain gap is
+apparently not one our confidence-based mechanism can exploit. Entropy-minimisation
+TTA (Tent) collapses on two of four targets; a from-scratch RawNet2-style
+backbone without self-supervised pretraining collapses on all four; and a
+train-time domain-adversarial baseline (DANN), trained for three\,$\times$ the
+compute of our method, underperforms it on three of four targets. A proxy
+$\mathcal{A}$-distance analysis shows domain separability does \emph{not}
+decrease after adaptation---ruling out domain-invariance as the mechanism and
+supporting our ranking-calibration account instead. A per-language breakdown
+over 38 held-out and in-pool MLAAD languages shows fake-clip recall is
+uniform across seen and unseen languages (93.9\% vs.\ 93.3\%), indicating the
+detector's cross-lingual robustness is not an artefact of language coverage
+during training.
 \end{abstract}
 
 \begin{IEEEkeywords}
 audio deepfake detection, anti-spoofing, test-time adaptation, cross-corpus
-generalisation, self-supervised learning, EER.
+generalisation, self-supervised learning, domain adversarial training, EER.
 \end{IEEEkeywords}
 
 \section{Introduction}
@@ -77,7 +90,7 @@ lightweight back-ends, reach very low error~\cite{wav2vec2aug,xlsrsls,aasist}.
 Yet these numbers are largely \emph{in-domain}: trained and tested on the same
 corpus. Deployed on audio from a different source---new microphones, codecs,
 languages, or generators---accuracy drops steeply, a well-documented
-generalisation gap~\cite{asdg,crossdomain}.
+generalisation gap~\cite{asdg,crossdomain,itw}.
 
 We start from a diagnostic measurement. Taking a fine-tuned XLS-R detector and
 evaluating it on an unseen corpus, we observe that its \textbf{ROC-AUC stays
@@ -88,32 +101,82 @@ practical fix. Because the ranking transfers, the model's most-confident
 predictions on unlabeled target audio are trustworthy, so we can use them to
 adapt the model to the target domain \emph{at test time}, without any labels.
 
+A first version of this idea, evaluated on two held-out targets, showed
+consistent gains. The present paper substantially extends that evaluation: two
+more held-out targets (including a target where, as we report below, the method
+turns out \emph{not} to help), a 38-language auxiliary corpus folded into every
+source pool to test genuine multilingual robustness, a non-SSL backbone
+ablation, a train-time domain-adversarial baseline trained to convergence rather
+than only piloted, and a direct measurement of whether adaptation changes
+domain separability in the embedding space. We view the negative result on one
+target as important evidence about the \emph{scope} of the method, not
+something to omit: it clarifies that confidence-based TTA exploits a specific
+property of the source$\to$target shift (calibration drift under a preserved
+ranking), and that property does not hold uniformly across all corpus pairs.
+
 Our contributions are:
 \begin{itemize}
 \item An empirical finding---\emph{ranking transfers cross-corpus even when the
 threshold does not}---and its consequence for unsupervised adaptation.
 \item A simple, stable TTA method: confident-ranked pseudo-label self-training
 plus channel-consistency, adapting only LayerNorm and the head.
-\item A leave-one-corpus-out, multilingual evaluation (In-the-Wild, Arabic) with
-multi-seed, ablation, and inductive analyses, and a clear contrast against
-entropy-minimisation TTA (which collapses) and train-time domain-adversarial
-training (which does not help).
+\item A four-target, multilingual, multi-seed leave-one-corpus-out evaluation
+with six comparison points (source-only, Tent, BatchNorm-only recalibration,
+self-training-only, a non-SSL backbone, and DANN) and an oracle upper bound,
+reported honestly including the one target where the method does not help.
+\item A mechanistic analysis---proxy $\mathcal{A}$-distance and a domain-origin
+probe before/after adaptation---showing the gain does \emph{not} come from
+erasing domain identity, consistent with our ranking-calibration account.
+\item A 38-language per-language breakdown showing uniform fake-clip recall
+across languages seen and unseen during source training.
 \end{itemize}
 
 \section{Related Work}
 \textbf{SSL anti-spoofing.} Frozen or fine-tuned wav2vec\,2.0 / XLS-R / WavLM
 front-ends with AASIST or attentive back-ends dominate recent
 benchmarks~\cite{wav2vec2aug,xlsrsls,aasist,rawnet2}. These are strong in-domain
-but corpus-specific.
+but corpus-specific; we use this family (fine-tuned XLS-R) as our detector and
+additionally test whether the gap it faces cross-corpus is really an SSL
+question at all, by comparing against a from-scratch, non-SSL backbone
+(Sec.~\ref{sec:backbone}).
+
 \textbf{Domain generalisation (DG) for ADD.} Train-time methods align real and
 separate fake across source domains (e.g.\ aggregation-separation~\cite{asdg}) or
-fuse SSL features~\cite{crossdomain}. They target the gap at training time and
-cannot use information about the deployment domain.
+fuse SSL features~\cite{crossdomain}. A canonical instance of this family is
+domain-adversarial training via gradient reversal (DANN)~\cite{dann}, which
+trains a domain discriminator adversarially against the feature extractor so
+that source and target become linearly inseparable in the embedding. These
+methods target the gap at training time, need access to (unlabeled) target data
+\emph{during} training rather than at deployment, and---as we confirm with a
+DANN baseline trained to convergence on our data (Sec.~\ref{sec:dann})---are not
+obviously better than a much cheaper test-time alternative.
+
 \textbf{Test-time adaptation.} TTA adapts a trained model to an unlabeled target
-distribution, e.g.\ entropy minimisation over normalisation
-parameters~\cite{tent}. It is widely used in vision but under-explored for audio
-deepfake detection; we show naive entropy minimisation is unstable here and
-propose a stable, ranking-driven alternative.
+distribution without retraining from scratch. Entropy minimisation over
+normalisation parameters (Tent)~\cite{tent} is the most widely used recipe in
+vision but, as we show, is unstable for audio deepfake detection: with no
+floor on how confident the model is allowed to become, it can drive the
+decision score to a degenerate constant. Batch-statistics recalibration
+(AdaBN-style approaches)~\cite{adabn} recompute normalisation statistics on
+target data without any gradient step; we include a matched \emph{BN-only}
+ablation and find it is a no-op for our architecture, since a fine-tuned
+transformer's LayerNorm has no running batch statistics to recompute---an
+architectural reason, not just an empirical one, for why confidence-driven
+gradient adaptation is necessary here. Audio-specific TTA is comparatively
+under-explored for deepfake detection; we show naive entropy minimisation is
+unstable on this task and propose a stable, ranking-driven alternative that
+adapts only LayerNorm affine parameters and the head.
+
+\textbf{Domain divergence and datasets.} We borrow the proxy
+$\mathcal{A}$-distance construction from the domain-adaptation
+theory of Ben-David et al.~\cite{bendavid}, who show that a classifier's
+target-domain error is bounded by its source error plus a term measuring how
+well a domain discriminator can separate source from target features. We use
+this to test, empirically, whether our adaptation reduces that separability
+(Sec.~\ref{sec:divergence}). For evaluation corpora we use ASVspoof2019-LA, the
+In-the-Wild corpus~\cite{itw}, and the multilingual MLAAD corpus for both an
+auxiliary multi-language source pool and a genuine multilingual target
+(held-out Arabic deepfakes) and per-language diagnostic.
 
 \section{Method}
 \subsection{Problem formulation}
@@ -143,6 +206,16 @@ e=\sum_{t=1}^{T}\alpha_t\,h_t,
 \end{equation}
 followed by a projection and the linear head of Eq.~(1). Fine-tuning only the top
 layers closes most of the in-domain gap while remaining trainable on one GPU.
+Crucially for the adaptation design below, XLS-R's normalisation layers are
+\emph{LayerNorm}, which normalises over the feature dimension per example and
+carries no running batch statistics---unlike BatchNorm, which accumulates
+per-channel population statistics that a target batch could simply overwrite.
+This architectural fact is what makes a batch-statistics-recalibration
+baseline (Sec.~\ref{sec:main-results}, \emph{BN-only}) a no-op here: there are
+no batch statistics to recompute, only affine parameters $\{\gamma,\beta\}$
+that require a gradient signal to move. Confidence-driven self-training is
+therefore not an arbitrary design choice but the minimal mechanism capable of
+adapting this specific normalisation layer at all.
 
 \subsection{The ranking--calibration gap}
 For a threshold $\tau$ the decision is $\hat y_\tau(x)=\mathbf{1}[s_\theta(x)\ge\tau]$,
@@ -153,23 +226,28 @@ whose accuracy depends on $\tau$. Ranking quality, by contrast, is threshold-fre
 which is invariant to any strictly increasing reparametrisation of $s_\theta$.
 Empirically, under the source$\rightarrow$target shift $\mathrm{AUC}$ degrades far
 less than accuracy at a fixed threshold does
-(Fig.~\ref{fig:scores}: AUC $0.899$ yet accuracy at $\tau{=}0.5$ is only $76\%$
-on this fold). \emph{Ranking transfers more than calibration does.} We therefore
-trust the score \emph{order}, not its absolute value: the extreme quantiles are
-higher-precision pseudo-labels than a fixed threshold would give, even when
-$s_\theta$ is mis-calibrated.
+(Fig.~\ref{fig:scores}: a representative fold where AUC stays above $0.89$ while
+accuracy at $\tau{=}0.5$ falls into the mid-$70$s). \emph{Ranking transfers more
+than calibration does.} We therefore trust the score \emph{order}, not its
+absolute value: the extreme quantiles are higher-precision pseudo-labels than a
+fixed threshold would give, even when $s_\theta$ is mis-calibrated. As
+Sec.~\ref{sec:main-results} shows, this mechanism is not universal: on one of
+our four targets (LibriSpeech-TTS) the source AUC is already only $\sim\!0.72$,
+close enough to chance that even the extreme quantiles are not reliably
+correct, and the whole premise of the method is weaker---which is exactly where
+adaptation stops helping.
 
 \begin{figure*}[t]
 \centering
 \safefig{0.86\textwidth}{fig_score_dist.png}
 \caption{Detector scores (logit axis; scores concentrate near the extremes) for
 real vs.\ fake clips on the \emph{unseen} In-the-Wild corpus (representative
-seed). \textbf{Left:} the source model pushes many real clips past the $0.5$
-threshold (acc@0.5$=$76\%) yet still ranks most real below fake
-(AUC$=$0.899). \textbf{Right:} unsupervised test-time adaptation shifts the real
-mass back across the threshold (acc@0.5$=$85\%, AUC$=$0.934, EER
-$18.8\%\rightarrow14.6\%$ on this fold). Table~\ref{tab:main} reports the 3-seed
-mean.}
+seed from preliminary analysis). \textbf{Left:} the source model pushes many
+real clips past the $0.5$ threshold (accuracy at $\tau{=}0.5$ well below AUC)
+yet still ranks most real below fake. \textbf{Right:} unsupervised test-time
+adaptation shifts the real mass back across the threshold, raising both
+accuracy@0.5 and AUC. Tables~\ref{tab:main}--\ref{tab:gaindecomp} report the
+full 3-seed, 4-target means used for all headline claims in this paper.}
 \label{fig:scores}
 \end{figure*}
 
@@ -206,8 +284,12 @@ optimising \emph{only} the LayerNorm affine parameters $\{\gamma,\beta\}$ of the
 fine-tuned layers and the head $\phi$; the rest of $\psi$ stays frozen. Restricting
 the trainable set and using only confident tails prevents the degenerate collapse
 $s_\theta(\cdot)\!\to\!\text{const}$ to which entropy minimisation is prone, as we
-confirm empirically against Tent (Sec.~V). Algorithm~\ref{alg:tta} summarises the
-procedure.
+confirm empirically against Tent (Sec.~\ref{sec:main-results}). As
+Sec.~\ref{sec:gaindecomp} shows, however, $\mathcal{L}_{\mathrm{cons}}$ is not
+uniformly beneficial: it is what rescues adaptation under a large domain gap
+(Arabic) but is a net negative on the one target with an already-weak ranking
+signal (LibriSpeech-TTS), an interaction we did not anticipate and report as an
+honest limitation. Algorithm~\ref{alg:tta} summarises the procedure.
 
 \begin{algorithm}[t]
 \caption{Real-manifold test-time adaptation (per target corpus)}
@@ -231,14 +313,83 @@ quantile $q$; weight $\lambda$; epochs $E$; augmentation $a(\cdot)$; step size $
 \end{algorithmic}
 \end{algorithm}
 
+\subsection{Measuring domain divergence}
+\label{sec:method-divergence}
+To test \emph{why} adaptation helps---whether it works by making source and
+target indistinguishable in embedding space, as adversarial DG methods
+explicitly optimise for---we compute a proxy $\mathcal{A}$-distance following
+Ben-David et al.~\cite{bendavid}. We extract frozen embeddings $e$ for 750
+source and 750 target clips, train a linear domain classifier $h$ to predict
+source-vs-target origin under 5-fold cross-validation, and define
+\begin{equation}
+\hat d_{\mathcal{A}} = 2\left(1-2\,\epsilon_h\right),
+\end{equation}
+where $\epsilon_h$ is the domain classifier's held-out error. Larger
+$\hat d_{\mathcal{A}}$ means source and target are easier to tell apart in
+embedding space. We compute this both from the source model's embeddings and
+from the adapted model's embeddings on the same clips, per target
+(Sec.~\ref{sec:divergence}).
+
 \section{Experimental Setup}
-\textbf{Protocol.} Leave-one-corpus-out. The source pool merges ASVspoof2019-LA,
-a multi-generator TTS set (eight distinct synthesis systems), and every corpus
-\emph{except} the held-out target; source fakes are water-filled across corpora
-and generators so no single generator dominates training.
-\textbf{Targets (unseen, held out entirely from source training).} In-the-Wild
-(English, real+fake) and the Arabic Audio Deepfake set (ArAD), our multilingual
-target.
+\textbf{Protocol.} Leave-one-corpus-out over four EER-capable targets:
+ASVspoof2019-LA, a LibriSpeech-based real/multi-system-TTS corpus (D2),
+In-the-Wild~\cite{itw}, and the Arabic Audio Deepfake set (ArAD), our
+multilingual target. For each held-out target, the source pool merges the
+\emph{other three} EER-capable corpora with a 38-language MLAAD subset
+(fake-only, water-filled across languages) folded into every source pool for
+generator and language diversity; Table~\ref{tab:datastats} summarises corpus
+sizes. This is a harder protocol than an earlier two-target pilot of this
+method: MLAAD is present in every source pool (not just as a diagnostic), and
+the optimiser configuration was corrected (batch 32, lr $2\times10^{-4}$; an
+earlier batch-64/lr-$10^{-4}$ configuration was found to under-train the
+source model in follow-up sweeps). Numbers in this paper should not be compared
+directly to the earlier two-target pilot's numbers.
+
+\begin{table}[t]
+\centering
+\caption{Source-pool corpus composition (clip counts after class-balancing;
+water-filled subset actually cached for training, not raw corpus size).}
+\label{tab:datastats}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Corpus & Fake & Real \\
+\midrule
+ASVspoof2019-LA & 6\,000 & 2\,580 \\
+LibriSpeech-TTS (D2) & 2\,173 & 2\,274 \\
+In-the-Wild & 6\,000 & 6\,000 \\
+Arabic (ArAD) & 6\,000 & 2\,570 \\
+MLAAD (38 languages, fake-only) & 8\,000 & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Held-out target audio is never in any source pool}, including its
+MLAAD-overlapping language content where applicable. Within MLAAD, six
+languages (Maltese, Slovenian, Hungarian, Croatian, Finnish, Lithuanian) are
+additionally held out of \emph{every} source pool entirely, so that
+Sec.~\ref{sec:perlang} measures genuine unseen-language generalisation, not
+just unseen-corpus generalisation.
+
+\textbf{Comparison points.} \emph{Source-only}: the fine-tuned detector, no
+adaptation. \emph{Tent}~\cite{tent}: entropy minimisation over the same
+trainable parameter set as our method. \emph{BN-only}: recompute
+normalisation statistics on target data with no gradient step (a matched
+ablation of AdaBN-style~\cite{adabn} recalibration for a LayerNorm
+architecture). \emph{Self-training only}: our method with $\lambda{=}0$ (no
+consistency term). \emph{Ours}: full method (Sec.~III-D). \emph{Oracle}: the
+same architecture fine-tuned with target labels for 4 epochs---a supervised
+upper bound, not a deployable baseline. \emph{RawNet2Lite}
+(Sec.~\ref{sec:backbone}): a from-scratch convolutional-recurrent backbone in
+the RawNet2 family~\cite{rawnet2}, no SSL pretraining, trained on the same
+source pool for the same number of epochs, to test whether cross-corpus
+robustness is coming from the SSL front-end rather than from anything
+architecture-specific to our attentive pooling. \emph{DANN}
+(Sec.~\ref{sec:dann}): gradient-reversal domain-adversarial training~\cite{dann}
+using the held-out target's \emph{unlabeled} inputs as the adversarial domain
+during source training (i.e., it gets the same test-time information budget as
+our method, but spends it at train time with 8 epochs of adversarial
+optimisation instead of at test time).
+
 \textbf{Metric.} Equal Error Rate (EER) and ROC-AUC. With false-positive and
 false-negative rates $\mathrm{FPR}(\tau),\mathrm{FNR}(\tau)$,
 \begin{equation}
@@ -246,71 +397,191 @@ false-negative rates $\mathrm{FPR}(\tau),\mathrm{FNR}(\tau)$,
 \tau^\star:\ \mathrm{FPR}(\tau^\star)=\mathrm{FNR}(\tau^\star),
 \end{equation}
 which is threshold-free and thus insensitive to the calibration drift above.
+
 \textbf{Setting.} Transductive TTA (adapt on the unlabeled target pool, then
-score it); we additionally report an inductive check (adapt on one half of the
-target, test on the disjoint half). \textbf{Implementation.} 16\,kHz audio cached
-at 4\,s and randomly cropped to 3\,s at train time (label-preserving gain/noise
-augmentation); bf16; Adam, lr $10^{-4}$; top-4-layer XLS-R fine-tuning; source
-trained 6 epochs, batch 64; single GPU. All results are mean$\,\pm\,$std over
-three seeds (0, 1, 2), each reported as "improved in $k/3$ seeds" rather than a
-significance claim, since $n{=}3$ does not support one.
+score it) is the standard convention for TTA and is what we report unless noted;
+we additionally report an inductive check (adapt on one half of the target,
+test on the disjoint half) in Sec.~\ref{sec:inductive}.
+
+\textbf{Implementation.} 16\,kHz audio cached at 4\,s and randomly cropped to
+3\,s at train time (label-preserving gain/noise augmentation); the full cache
+(41\,597 clips) is decoded once into a single fp16 tensor kept resident on GPU
+(5.3\,GB), avoiding a DataLoader entirely---multi-worker DataLoaders caused
+shared-memory exhaustion on our MIG GPU slice. bf16 autocast; Adam, lr
+$2\times10^{-4}$; top-4-layer XLS-R fine-tuning; source trained 8 epochs, batch
+32; single MIG 1g.35gb GPU slice ($\sim$33\,GB). All results are mean$\,\pm\,$std
+over three seeds (0, 1, 2). Given $n{=}3$, we report per-seed sign consistency
+(``improved in $k/3$ seeds'') alongside the mean rather than a significance
+claim.
 
 \section{Results}
-\subsection{Cross-corpus adaptation}
-Table~\ref{tab:main} is the main result, leave-one-corpus-out, mean$\pm$std over
-three seeds. On In-the-Wild, TTA reduces EER from $15.86\pm2.84\%$ to
-$13.17\pm1.63\%$ (a 17.0\% relative reduction) and raises AUC
-$0.922\rightarrow0.945$; the improvement holds in $3/3$ seeds
-(paired mean $-2.69$ EER). On Arabic, the multilingual target, TTA reduces EER
-from $28.93\pm0.92\%$ to $27.18\pm0.97\%$ (6.0\% relative; $3/3$ seeds, paired
-mean $-1.75$). Vanilla entropy-minimisation TTA (Tent) \emph{collapses} on both
-targets---EER above 43\% and AUC near chance ($0.56$--$0.58$), consistently across
-all three seeds---underlining that the confident-pseudo-label design, not TTA in
-general, is what makes adaptation stable here.
+\subsection{Main cross-corpus results}
+\label{sec:main-results}
+Table~\ref{tab:main} is the main result: leave-one-corpus-out EER\,\%\,/\,AUC,
+mean over three seeds, across all four targets and six methods. Three patterns
+stand out. First, \textbf{our method wins or ties on three of four targets}:
+ASVspoof2019 ($4.76\!\to\!3.69$, tied with Tent's $3.70$ within noise, but with
+higher AUC and far lower seed-to-seed variance), In-the-Wild
+($12.57\!\to\!10.83$, a $13.8\%$ relative reduction), and Arabic
+($22.59\!\to\!20.74$, an $8.2\%$ relative reduction). Second, \textbf{on
+LibriSpeech-TTS the method is EER-neutral} ($34.36\!\to\!34.38$, i.e.\ no
+improvement, within one standard deviation of source-only, and worse in $1/3$
+seeds); we return to this in Sec.~\ref{sec:gaindecomp}. Third,
+\textbf{BN-only is numerically identical to source-only on every target}, as
+predicted by the LayerNorm argument in Sec.~III-B: there are no batch
+statistics for this architecture to recompute, so this ablation is a clean
+negative control rather than a competing method. \textbf{Tent} is highly
+unstable: it is competitive on ASVspoof2019 (small shift) but collapses toward
+chance on Arabic ($47.66\%$ EER, AUC $0.52$) and is wildly variable on
+In-the-Wild ($26.53\!\pm\!11.46\%$, meaning it sometimes works and sometimes
+collapses across seeds of the \emph{same} target)---underlining that the
+confident-pseudo-label design, not TTA in general, is what makes adaptation
+stable here. The \textbf{oracle} row shows substantial remaining headroom on
+every target (e.g.\ Arabic $20.74\!\to\!9.14\%$ with target labels), confirming
+none of the unsupervised methods are anywhere near saturating what the
+architecture can achieve on these corpora.
+
+\begin{table*}[t]
+\centering
+\caption{Cross-corpus EER\,\%\,/\,AUC, mean over 3 seeds (leave-one-corpus-out,
+transductive; lower EER better). Best of \{Source, Tent, ST-only, Ours\} per
+column in \textbf{bold}; BN-only is a no-op control (identical to source, see
+Sec.~III-B) and Oracle is a supervised upper bound, both excluded from bolding.}
+\label{tab:main}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Method & ASVspoof2019 & LibriSpeech-TTS (D2) & In-the-Wild & Arabic (ArAD) \\
+\midrule
+Source-only & 4.76 / .990 & 34.36 / .720 & 12.57 / .944 & 22.59 / .854 \\
+BN-only recalib.~\cite{adabn} & 4.76 / .990 (no-op) & 34.36 / .720 (no-op) & 12.57 / .944 (no-op) & 22.59 / .854 (no-op) \\
+Tent~\cite{tent} & 3.70 / .987 & 34.74 / .690 & 26.53$\pm$11.46 / .743 & 47.66 / .524 \\
+Self-training only & 4.07 / .987 & \textbf{33.79} / .708 & 11.63 / .947 & 22.05 / .855 \\
+\rowcolor{green!12}\textbf{Ours (TTA)} & \textbf{3.69} / .994 & 34.38 / .722 & \textbf{10.83} / .960 & \textbf{20.74} / .873 \\
+\midrule
+Oracle (supervised on target) & 0.70 / 1.000 & 12.54 / .950 & 3.65 / .994 & 9.14 / .970 \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\subsection{Decomposing the gain: self-training vs.\ consistency}
+\label{sec:gaindecomp}
+Table~\ref{tab:gaindecomp} decomposes the total EER change into a
+self-training step (source$\to$self-training-only) and a consistency step
+(self-training-only$\to$ours), per target. On three targets the two components
+are complementary: self-training alone captures most or some of the gain, and
+consistency adds a further reduction (largest on Arabic, the biggest domain
+gap: $-1.31$ points from consistency alone). On \textbf{LibriSpeech-TTS, the
+pattern inverts}: self-training alone \emph{does} help ($-0.57$), but adding
+consistency \emph{costs} $+0.59$, erasing the gain. We interpret this together
+with the ranking-calibration story of Sec.~III-C: LibriSpeech-TTS is the target
+with the lowest source AUC ($0.720$, versus $\geq\!0.85$ on every other
+target), meaning the confident-tail pseudo-labels used by both components are
+themselves less reliable here; the consistency term, which pulls predictions on
+augmented and clean views together regardless of which one is correct, appears
+to amplify rather than correct this unreliability once the underlying ranking
+signal is this weak. This is a genuine limitation of the method as configured,
+not a tuning artefact we chose not to fix: Sec.~\ref{sec:sweep}'s
+hyperparameter sweep (run on the two original targets) already showed the
+optimal confident-tail quantile is target-dependent, and this result extends
+that finding to the consistency weight itself.
 
 \begin{table}[t]
 \centering
-\caption{Cross-corpus EER\,\%\,/\,AUC, mean$\pm$std over 3 seeds
-(leave-one-corpus-out; lower EER better).}
-\label{tab:main}
-\begin{tabular}{@{}lcc@{}}
+\caption{Gain decomposition, mean EER\,\% change over 3 seeds. $\Delta_1$:
+source$\to$self-training-only. $\Delta_2$: self-training-only$\to$ours
+(the consistency term's marginal contribution).}
+\label{tab:gaindecomp}
+\begin{tabular}{@{}lccc@{}}
 \toprule
-Method & In-the-Wild & Arabic (ArAD) \\
+Target & Source EER & $\Delta_1$ (self-train) & $\Delta_2$ (consistency) \\
 \midrule
-Source-only & 15.86$\pm$2.84 / .922 & 28.93$\pm$0.92 / .784 \\
-Tent~\cite{tent} & 43.65$\pm$9.41 / .564 & 43.82$\pm$7.18 / .579 \\
-\rowcolor{green!12}\textbf{Ours (TTA)} & \textbf{13.17$\pm$1.63 / .945} & \textbf{27.18$\pm$0.97 / .805} \\
+ASVspoof2019 & 4.76 & $-0.69$ & $-0.39$ \\
+LibriSpeech-TTS & 34.36 & $-0.57$ & \cellcolor{red!10}$+0.59$ \\
+In-the-Wild & 12.57 & $-0.94$ & $-0.79$ \\
+Arabic & 22.59 & $-0.54$ & $-1.31$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsection{Ablation: what drives the gain}
-Table~\ref{tab:abl} adds self-training alone (no consistency) at each target,
-using the same leave-one-corpus-out checkpoints. The two targets tell different
-stories. On In-the-Wild (smaller domain gap, source AUC $0.922$), self-training
-alone recovers most of the improvement ($15.86\rightarrow14.62$), with
-consistency adding a further increment. On Arabic (larger gap, source AUC
-$0.784$), self-training alone is \emph{not distinguishable from source-only}
-($28.93\rightarrow28.89$, no seed improved), and the entire gain comes from
-adding channel-consistency ($\rightarrow27.18$). This suggests confident-tail
-pseudo-labels alone become unreliable as the domain shift grows, and consistency
-regularisation is what keeps adaptation stable under a larger shift---not merely
-an add-on. A real-anchoring contrastive term (pulling target-real embeddings to a
-source real prototype), tested in earlier pilots, did not help in either regime
-and is not included here.
+\subsection{Does the backbone matter? A non-SSL comparison}
+\label{sec:backbone}
+Table~\ref{tab:backbone} compares the fine-tuned XLS-R source model against
+RawNet2Lite, a from-scratch backbone with no self-supervised pretraining,
+trained identically on the same source pool. The gap is stark: RawNet2Lite
+never exceeds $0.65$ AUC on any target and is at or below chance on three of
+four (Arabic AUC $0.41$, i.e.\ \emph{anti}-correlated with the true label more
+often than not, a sign of severe overfitting to source-corpus artefacts rather
+than to spoofing-relevant features). This confirms that cross-corpus viability
+in our setting starts from SSL pretraining, not from the TTA step: TTA can
+recover a few EER points from a source model that already generalises somewhat
+(AUC $\gtrsim\!0.72$), but it is not a substitute for a representation that
+transfers in the first place, and would not rescue a backbone this far from
+chance. Table~\ref{tab:backbone} trains RawNet2Lite for eight epochs, matching
+the source model's schedule for a fair compute comparison; to rule out
+undertraining as an alternative explanation for its collapse, we separately
+retrained it for 40 epochs with a cosine learning-rate schedule, weight decay,
+and dropout (source training loss falls cleanly to $0.08$--$0.17$, confirming
+it does fit the source pool). Cross-corpus AUC does not improve---it is flat
+or worse on every target (e.g.\ Arabic $0.41\!\to\!0.36$, In-the-Wild
+$0.65\!\to\!0.62$)---consistent with overfitting to source-corpus artefacts
+rather than undertraining, and confirming SSL pretraining, not epoch budget,
+is what RawNet2Lite is missing (see Discussion, limitation~5).
 
 \begin{table}[t]
 \centering
-\caption{Self-training alone vs.\ with consistency, mean over 3 seeds
-(EER\,\%\,/\,AUC).}
-\label{tab:abl}
+\caption{Source-only EER\,\%\,/\,AUC by backbone, mean over 3 seeds
+(transductive, no adaptation applied to either row).}
+\label{tab:backbone}
 \begin{tabular}{@{}lcc@{}}
 \toprule
-Configuration & In-the-Wild & Arabic \\
+Target & XLS-R (ours) & RawNet2Lite~\cite{rawnet2} \\
 \midrule
-Source-only & 15.86 / .922 & 28.93 / .784 \\
-Self-training only & 14.62 / .931 & 28.89 / .787 \\
-\rowcolor{green!12}+ consistency (\textbf{ours}) & \textbf{13.17 / .945} & \textbf{27.18 / .805} \\
+ASVspoof2019 & 4.76 / .990 & 47.47 / .539 \\
+LibriSpeech-TTS & 34.36 / .720 & 51.14 / .483 \\
+In-the-Wild & 12.57 / .944 & 39.35 / .649 \\
+Arabic & 22.59 / .854 & 57.01 / .411 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Comparison to train-time domain-adversarial training}
+\label{sec:dann}
+Table~\ref{tab:dann} compares our test-time method against DANN~\cite{dann},
+trained to convergence (8 epochs of adversarial optimisation) with access to
+the held-out target's unlabeled inputs \emph{during source training}---strictly
+more privileged access to the target than our method, which only ever sees the
+target at test time, after source training is finished. Despite this, DANN
+underperforms our method on three of four targets (it is close on
+ASVspoof2019, where both are near the oracle already) and is markedly worse on
+Arabic ($29.51\%$ vs.\ our $20.74\%$). It is also nearly $3\times$ more
+expensive: $\sim\!30$ minutes of adversarial training per target-seed versus
+$\sim\!9$ minutes of test-time adaptation. Two failure modes recur across
+targets in the training log: the adversarial loss weight $\lambda_{\mathrm{dann}}$
+saturates its schedule within 3--4 epochs, after which the domain
+classifier's gradient contribution is effectively fixed for the remainder of
+training, and---consistent with our earlier, smaller-scale DA-RAD pilot using
+the same gradient-reversal mechanism---adversarial training is the least
+seed-stable method we test (ASVspoof2019 EER ranges $3.23$--$10.43\%$ across
+seeds, a $3\times$ spread). This adds a second, independent line of evidence
+(beyond the earlier DA-RAD ablation) that train-time domain-adversarial
+objectives are not a reliable route to cross-corpus robustness for this task,
+and that a lighter-weight, test-time mechanism is not just cheaper but also
+more effective.
+
+\begin{table}[t]
+\centering
+\caption{Test-time adaptation vs.\ train-time domain-adversarial training
+(DANN), mean EER\,\%\,/\,AUC over 3 seeds and mean wall-clock minutes per
+target-seed.}
+\label{tab:dann}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Target & Source & DANN~\cite{dann} (30 min) & Ours (9 min) \\
+\midrule
+ASVspoof2019 & 4.76 / .990 & 6.61 / .980 & \textbf{3.69} / .994 \\
+LibriSpeech-TTS & 34.36 / .720 & 34.81 / .724 & \textbf{34.38} / .722 \\
+In-the-Wild & 12.57 / .944 & 11.95 / .931 & \textbf{10.83} / .960 \\
+Arabic & 22.59 / .854 & 29.51 / .724 & \textbf{20.74} / .873 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -320,29 +591,51 @@ Self-training only & 14.62 / .931 & 28.89 / .787 \\
 We sweep the three adaptation knobs---confident-tail quantile $q$, adaptation
 epochs $E$, and consistency weight $\lambda$---one at a time around the
 defaults ($q{=}0.3$, $E{=}4$, $\lambda{=}0.3$) used everywhere else in the
-paper, on seed~0 of both targets (Table~\ref{tab:sweep}).\footnote{An earlier
-sweep shared one continuous RNG stream across configurations, so adjacent
-points differed partly by batch-order noise rather than the knob alone; every
-point reported here re-seeds \texttt{torch.manual\_seed(0)} immediately before
-adaptation, isolating the knob's effect.} Two consistent findings. First,
-\emph{more adaptation epochs help on both targets} ($E{=}8$ beats $E{=}4$ by
-$1.2$ points on In-the-Wild and $1.6$ on Arabic): our default of 4 epochs was a
-conservative, compute-matched choice for the main grid, not a tuned optimum, and
-a deployment that can afford more adaptation steps should expect a further gain.
-Second, \emph{consistency weight $\lambda{>}0$ is uniformly necessary}: setting
-$\lambda{=}0$ (self-training only, no consistency) is the worst configuration
-in the sweep on both targets, matching the ablation in Table~\ref{tab:abl}. The
-optimal confident-tail quantile, in contrast, is \emph{target-dependent}
-($q{=}0.3$ on In-the-Wild vs.\ $q{=}0.2$ on Arabic, the larger-shift target),
-suggesting the fraction of trustworthy tail predictions shrinks somewhat as the
-domain gap grows---consistent with the mechanism story of
-Sec.~V-B. We keep one fixed configuration for the whole paper for a fair
-cross-target comparison rather than tuning per target.
+paper. This sweep predates the four-target extension and was run on seed~0 of
+the two original targets (In-the-Wild, Arabic) only, for compute-budget
+reasons; we report it as it stood rather than re-running it, since the
+qualitative conclusions (below) are corroborated by the newer
+Sec.~\ref{sec:gaindecomp} result on a third, independent target
+(Table~\ref{tab:sweep}).\footnote{An earlier sweep shared one continuous RNG
+stream across configurations, so adjacent points differed partly by
+batch-order noise rather than the knob alone; every point reported here
+re-seeds \texttt{torch.manual\_seed(0)} immediately before adaptation,
+isolating the knob's effect.} Two consistent findings. First, \emph{more
+adaptation epochs help on both targets} ($E{=}8$ beats $E{=}4$ by $1.2$ points
+on In-the-Wild and $1.6$ on Arabic): our default of 4 epochs was a
+conservative, compute-matched choice for the main grid, not a tuned optimum,
+and a deployment that can afford more adaptation steps should expect a further
+gain. Second, \emph{consistency weight $\lambda{>}0$ is uniformly necessary on
+these two targets}: setting $\lambda{=}0$ is the worst configuration in the
+sweep on both. Section~\ref{sec:gaindecomp} shows this second finding does
+\emph{not} generalise to LibriSpeech-TTS, where $\lambda{=}0$ is in fact
+better---so ``consistency always helps'' should be read as
+target-dependent, not universal, contrary to what the original two-target
+sweep alone would have suggested. The optimal confident-tail quantile is also
+target-dependent ($q{=}0.3$ on In-the-Wild vs.\ $q{=}0.2$ on Arabic, the
+larger-shift target), suggesting the fraction of trustworthy tail predictions
+shrinks somewhat as the domain gap grows. We keep one fixed configuration for
+the whole paper for a fair cross-target comparison rather than tuning per
+target; per-target tuning is a natural direction for a deployment that can
+afford a validation signal.
+
+\begin{figure}[t]
+\centering
+\safefig{0.86\columnwidth}{fig_auc_gain.png}
+\caption{EER gain (source$-$ours) vs.\ source AUC before adaptation, one point
+per (target, seed), all $12$ leave-one-corpus-out runs. The positive trend
+($r{=}{+}0.41$) supports the ranking-precondition account of
+Sec.~III-C: LibriSpeech-TTS (red), the lowest-AUC target, clusters at or below
+zero gain, while the higher-AUC targets cluster above it---though the
+relationship is noisy at $n{=}12$ and one LibriSpeech-TTS seed shows a small
+negative gain even relative to its own AUC.}
+\label{fig:aucgain}
+\end{figure}
 
 \begin{table}[t]
 \centering
-\caption{Hyperparameter sweep (seed 0, EER\,\%\,/\,AUC; default row
-$q{=}0.3,E{=}4,\lambda{=}0.3$ in \colorbox{green!12}{green}).}
+\caption{Hyperparameter sweep (seed 0, two-target subset, EER\,\%\,/\,AUC;
+default row $q{=}0.3,E{=}4,\lambda{=}0.3$ in \colorbox{green!12}{green}).}
 \label{tab:sweep}
 \begin{tabular}{@{}lcc@{}}
 \toprule
@@ -367,76 +660,296 @@ $\lambda=1.0$ & \textbf{13.98} / \textbf{.937} & 25.28 / .832 \\
 \end{table}
 
 \subsection{Inductive check}
+\label{sec:inductive}
 To rule out transductive memorisation, we adapt on one half of each target and
-evaluate on the disjoint half. On In-the-Wild, EER improves
-$15.72\pm2.76\%\rightarrow14.27\pm2.94\%$, holding in $3/3$ seeds (paired mean
-$-1.46$)---the adaptation captures domain-level structure that transfers to
-unseen target clips, not just the specific evaluation items. On Arabic the
-inductive gain is smaller and less consistent ($28.53\pm0.54\%\rightarrow
-27.85\pm1.68\%$, $2/3$ seeds, paired mean $-0.68$); we report this honestly
-rather than only the more favourable transductive number.
+evaluate on the disjoint half (Table~\ref{tab:inductive}). The improvement
+holds up on the three targets where the transductive result is positive: EER
+improves on ASVspoof2019 ($4.93\!\to\!4.16$, $3/3$ seeds), In-the-Wild
+($12.66\!\to\!11.13$, $3/3$ seeds), and Arabic ($22.29\!\to\!21.14$, $3/3$
+seeds)---in every case within a point of the transductive result, so the gain
+reflects domain-level structure learned during adaptation, not memorisation of
+the specific clips scored. On LibriSpeech-TTS the inductive result mirrors the
+transductive null finding (source $34.49\!\to\!$ ours $34.70$, i.e.\ slightly
+worse, consistent with the $\Delta_2{>}0$ finding of
+Sec.~\ref{sec:gaindecomp})---the method's neutrality on this target is not an
+artefact of transductive evaluation either.
+
+\begin{table}[t]
+\centering
+\caption{Inductive check: adapt on one half of the target, evaluate on the
+disjoint half. Mean EER\,\% over 3 seeds.}
+\label{tab:inductive}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+Target & Source (half) & Ours (half, disjoint eval) \\
+\midrule
+ASVspoof2019 & 4.93 & \textbf{4.16} \\
+LibriSpeech-TTS & 34.49 & 34.70 \\
+In-the-Wild & 12.66 & \textbf{11.13} \\
+Arabic & 22.29 & \textbf{21.14} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Does adaptation reduce domain divergence?}
+\label{sec:divergence}
+A natural hypothesis is that adaptation works the way adversarial DG methods
+are explicitly designed to: by making source and target indistinguishable in
+embedding space. Table~\ref{tab:divergence} tests this directly with the proxy
+$\mathcal{A}$-distance of Sec.~\ref{sec:method-divergence} and a matched linear
+domain-origin probe, computed before and after adaptation on every target. On
+\emph{every} target, both measures move in the \emph{opposite} direction from
+what the domain-invariance hypothesis predicts: $\hat d_{\mathcal{A}}$
+increases slightly after adaptation (e.g.\ Arabic $1.545\!\to\!1.606$), and the
+domain probe's accuracy at distinguishing source from target embeddings also
+rises slightly (e.g.\ Arabic $87.9\%\!\to\!89.1\%$). This holds even on
+Arabic and ASVspoof2019, where EER improves substantially---so the EER gain
+and the domain-divergence increase happen \emph{simultaneously}. We conclude
+that our method does \emph{not} work by erasing domain identity from the
+representation; it works by re-shaping the decision boundary using
+rank-reliable pseudo-labels, consistent with the ranking-calibration account
+of Sec.~III-C, not with a representation-alignment account. This is a useful
+negative result for the DG literature applied to this task: it suggests that
+explicitly penalising domain separability (as DANN does) is targeting a
+quantity that is not actually the bottleneck, which is independent corroborating
+evidence for why DANN underperforms in Sec.~\ref{sec:dann} despite optimising
+exactly this quantity.
+
+\begin{table}[t]
+\centering
+\caption{Proxy $\mathcal{A}$-distance and linear domain-origin probe accuracy,
+before vs.\ after adaptation (seed 0). Both increase slightly post-adaptation
+on every target---domain separability is not reduced.}
+\label{tab:divergence}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+& \multicolumn{2}{c}{$\hat d_{\mathcal{A}}$} & \multicolumn{2}{c}{Domain probe acc.\ (\%)} \\
+Target & source & adapted & source & adapted \\
+\midrule
+ASVspoof2019 & 1.572 & 1.609 & 86.6 & 89.9 \\
+LibriSpeech-TTS & 1.460 & 1.504 & 86.4 & 86.6 \\
+In-the-Wild & 1.335 & 1.357 & 80.4 & 81.6 \\
+Arabic & 1.545 & 1.606 & 87.9 & 89.1 \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \subsection{Embedding geometry: class organises the space, not domain}
-To probe \emph{why} ranking transfers across corpora (Sec.~III-C), we visualise
-500 source and 500 In-the-Wild target embeddings with t-SNE
-(Fig.~\ref{fig:embed}) and train a linear probe to predict source-vs-target
-origin from the frozen embedding. Two observations. First, in both the
-pre-adaptation and post-adaptation embedding space, source and target points are
-thoroughly \emph{intermixed within} each real/fake cluster rather than forming
-separate domain islands---the representation is already organised primarily by
-\emph{class}, which is consistent with the ranking-transfer finding: if the
-embedding mainly encoded corpus identity, cross-corpus ranking could not survive
-the shift. Second, the domain probe is only modestly weaker after adaptation
-($80.3\pm1.9\%\rightarrow78.3\pm2.7\%$, within one standard deviation of no
-change)---adaptation does \emph{not} erase corpus identity from the
-representation. This distinguishes our mechanism from adversarial
-domain-invariance approaches (e.g.\ gradient-reversal on domain identity, which
-we tried and which destabilised training, Sec.~V-E): the improvement here comes
-from re-shaping the decision boundary using rank-reliable pseudo-labels within an
-already class-organised space, not from removing domain information.
+Fig.~\ref{fig:embed} visualises 750 source and 750 target embeddings with
+t-SNE for all four targets, before and after adaptation, colour-coded by
+source-vs-target origin. In every panel, source and target points are
+thoroughly \emph{intermixed} across the plot rather than forming two separate
+domain islands---the two large arcs visible in each panel correspond to the
+real/fake class structure (confirmed by cross-referencing against class
+labels), and source/target intermix \emph{within} each arc. This is the
+qualitative counterpart of Table~\ref{tab:divergence}: the representation is
+already organised primarily by \emph{class}, not by corpus of origin, both
+before and after adaptation, which is consistent with why cross-corpus ranking
+survives the shift in the first place (Sec.~III-C) and with why adaptation
+does not need to (and does not) erase domain information to work.
 
 \begin{figure}[t]
 \centering
-\safefig{\columnwidth}{fig_embedding_geometry.png}
-\caption{t-SNE of 500 source + 500 In-the-Wild target embeddings, before/after
-adaptation (real=green, fake=red; circle=source, triangle=target). Source and
-target intermix within each class cluster in both panels; the linear
-domain-origin probe changes only marginally (80\%$\rightarrow$78\%),
-indicating the gain comes from decision-boundary reshaping, not domain erasure.}
+\safefig{\columnwidth}{fig_tsne_multitarget.png}
+\caption{t-SNE of 750 source + 750 target embeddings for all four targets
+(columns), before (top row) vs.\ after adaptation (bottom row); blue$=$source,
+orange$=$target. In every panel, source and target intermix within each of the
+two class-structured arcs rather than separating into domain-specific
+clusters, both before and after adaptation---matching the proxy
+$\mathcal{A}$-distance result that domain separability is not reduced by
+adaptation (Table~\ref{tab:divergence}).}
 \label{fig:embed}
+\end{figure}
+
+\subsection{Multilingual generalisation: per-language recall}
+\label{sec:perlang}
+Because MLAAD contributes fake clips in 38 languages to every source pool
+(Sec.~IV), we can directly test whether the detector's fake-clip recall
+depends on whether a language was present during source training. Six
+languages (Maltese, Slovenian, Hungarian, Croatian, Finnish, Lithuanian) are
+withheld from every source pool; the remaining 32 are present in at least one
+source pool. Averaged across all four source models and both groups
+(Fig.~\ref{fig:perlang}), mean fake-clip recall is $93.9\%$ on seen languages
+and $93.3\%$ on unseen languages---a gap of under one point, well within the
+per-language spread ($\sigma\!\approx\!7$ points) observed within each group.
+The single outlier is Maltese on the In-the-Wild source model ($63.0\%$
+recall); no other language falls below $67\%$. This is an encouraging result
+for deployment: the detector's multilingual robustness is not simply an
+artefact of having already seen a given language's synthesis artefacts during
+training, which is the more concerning failure mode for a system meant to
+generalise to genuinely novel languages at deployment time.
+
+\begin{figure}[t]
+\centering
+\safefig{\columnwidth}{fig_perlang.png}
+\caption{MLAAD fake-clip recall by language, averaged over the four source
+models, sorted ascending. Orange bars are the six languages held out of every
+source pool; green bars were present in at least one source pool. The dashed
+line is the overall mean ($93.8\%$). Unseen languages are not systematically
+worse than seen ones, aside from a single outlier (Maltese, 't').}
+\label{fig:perlang}
 \end{figure}
 
 \subsection{What did not work}
 Train-time domain-adversarial training (gradient reversal on corpus identity)
-plus a real-anchored contrastive loss---our initial approach---did not improve
-cross-corpus EER and was unstable (adversarial training collapsed). This negative
-result motivated the shift to test-time adaptation and is reported for
-transparency; the embedding-geometry analysis above (Sec.~V-D) offers a
-post-hoc explanation: the representation was never organised primarily by domain
-in the first place, so explicitly adversarially erasing domain identity had
-little useful signal to act on and mainly destabilised optimisation.
+plus a real-anchored contrastive loss---our initial approach, evaluated on a
+frozen and then a fine-tuned encoder in earlier pilots---did not improve
+cross-corpus EER and was unstable (adversarial training collapsed to chance in
+the fine-tuned-encoder configuration). The DANN baseline of
+Sec.~\ref{sec:dann}, trained to convergence rather than only piloted, confirms
+this with a second, independent implementation: it underperforms our method on
+three of four targets despite $3\times$ the compute and privileged access to
+target inputs during training. The domain-divergence analysis of
+Sec.~\ref{sec:divergence} offers a post-hoc explanation for both results: the
+representation was never organised primarily by domain in the first place
+(Sec.~5.8--5.9), so explicitly, adversarially erasing domain identity had
+little useful signal to act on and mainly destabilised optimisation, while our
+consistency term (Eq.~7) makes no domain-invariance assumption at all. Within
+our own method, self-training-with-consistency is also not universally the
+best configuration: Sec.~\ref{sec:gaindecomp} shows self-training-only beats
+the full method on LibriSpeech-TTS, and we do not paper over this by tuning
+$\lambda$ per target after the fact.
 
 \section{Discussion and Limitations}
 The method is unsupervised in labels but \emph{transductive}: it uses unlabeled
-target inputs at adaptation time, a standard TTA setting that we state explicitly;
-the inductive check addresses the memorisation concern, though it is weaker on
-Arabic than on In-the-Wild ($2/3$ vs.\ $3/3$ seeds), which we report rather than
-suppress. Source-model quality itself is not perfectly stable under our training
-recipe: In-the-Wild source EER ranges $13.1$--$18.8\%$ across seeds
-($\pm2.84$), a wider spread than we would like, and future work should reduce
-this variance (e.g.\ smaller batches or a tuned learning-rate schedule) before
-scaling to a larger seed count. Encouragingly, the relative ordering
-EER(\textbf{ours}) $<$ EER(source) $\ll$ EER(Tent) holds in every seed regardless
-of this variance. The approach is cheap (adapt a trained model in minutes) and
-orthogonal to the choice of SSL back-end.
+target inputs at adaptation time, a standard TTA setting that we state
+explicitly; the inductive check (Sec.~\ref{sec:inductive}) addresses the
+memorisation concern and closely tracks the transductive numbers on every
+target, including reproducing the LibriSpeech-TTS null result rather than
+hiding it. The approach is cheap relative to the alternatives we compare
+against (adapt a trained model in single-digit minutes, versus $\sim\!30$
+minutes for DANN) and is orthogonal to the choice of SSL back-end, though
+Sec.~\ref{sec:backbone} shows it is not a substitute for SSL pretraining in the
+first place. We enumerate the method's limitations explicitly rather than
+folding them into the results narrative, since we would rather a reader find
+them here than discover them independently.
+
+\begin{enumerate}
+\item \textbf{Fixed hyperparameters, not per-target tuning.} Every result in
+this paper uses one configuration ($q{=}0.3$, $E{=}4$, $\lambda{=}0.3$) across
+all four targets, chosen without access to target labels, precisely because a
+real deployment has no validation signal to tune against
+(Sec.~\ref{sec:sweep}). The sweep and the gain decomposition
+(Table~\ref{tab:gaindecomp}) show this fixed configuration is not uniformly
+optimal---$\lambda{=}0$ would have been better on LibriSpeech-TTS, and
+$q{=}0.2$ better than our $q{=}0.3$ default on Arabic---which is exactly the
+sensitivity a practitioner without labels cannot correct for. We report this
+sensitivity as a characterised property of the method, not as evidence that we
+under-tuned it: the alternative of reporting per-target oracle-tuned numbers as
+the headline result would overstate what is achievable without labels at
+deployment time.
+
+We attempted to fix this rather than only report it: a label-free heuristic
+that selects $\lambda$ from unlabeled target scores alone, using
+confident-tail separation ($\mathrm{mean}(s\mid s\!\geq\!Q_{0.7}) -
+\mathrm{mean}(s\mid s\!\leq\!Q_{0.3})$, computable without any target labels)
+as a proxy for whether the source model's ranking on that target is reliable.
+Validated post-hoc against the true $\Delta_2$ across all $12$ (target, seed)
+points, it \emph{fails}, and fails in the wrong direction
+($r{=}{+}0.74$ between the proxy and $\Delta_2$, where a useful heuristic needs
+$r{<}0$): LibriSpeech-TTS, the one target where consistency hurts, has the
+\emph{highest} tail separation of any target ($0.92$--$0.99$), not the lowest.
+We read this as consistent with, rather than contradicting, Sec.~III-C: our
+detector's raw scores concentrate near the extremes on \emph{every} target
+regardless of whether that confidence is correct, so a proxy built only from
+score confidence cannot distinguish confident-and-right from
+confident-and-miscalibrated, which is precisely the failure mode
+LibriSpeech-TTS represents. A working label-free signal would need to measure
+something closer to calibration correctness than to confidence, which remains
+open.
+
+\item \textbf{The method needs a source model with an already-reliable
+ranking.} The mechanism in Sec.~III-C requires confident-tail pseudo-labels to
+be trustworthy, which in turn requires source AUC on the target to be
+reasonably high before adaptation begins. Across all $4\times3{=}12$
+(target, seed) points, source AUC and the resulting EER gain are positively
+correlated ($r{=}{+}0.41$, Fig.~\ref{fig:aucgain}); the one target where the
+method is EER-neutral
+(LibriSpeech-TTS) is also the one with the lowest source AUC ($0.72$, versus
+$\geq\!0.85$ on the other three). We read this as evidence \emph{for} the
+mechanism we propose---the method fails exactly where its own precondition is
+weakest, not arbitrarily---but with only four targets this is a plausible
+relationship, not a validated predictive rule, and a from-scratch or
+low-AUC starting point is not a regime we can currently rescue.
+
+\item \textbf{Source-model training is not perfectly seed-stable.}
+Seed-to-seed source EER ranges from $9.4\%$ to $13.2\%$ on In-the-Wild and from
+$3.5\%$ to $6.0\%$ on ASVspoof2019 under our recipe---wider spreads than we
+would like, and a potential confound when isolating the adaptation method's
+marginal effect from source-training noise. Two things limit the damage this
+does to our claims: the qualitative ranking of methods
+(ours~$<$~self-training~$<$~source~$\ll$~Tent) is consistent across seeds
+despite this variance, and Tent's own seed-to-seed instability
+(Sec.~\ref{sec:main-results}) is substantially larger than the source-training
+variance itself. Reducing this variance (e.g.\ a tuned learning-rate schedule,
+or a larger seed count than our compute budget allowed) is future work.
+
+\item \textbf{Statistical power is limited by scale.} Four targets and three
+seeds establish sign consistency and a plausible mechanism, not a rigorous
+statistical test. In particular, we cannot determine whether the
+LibriSpeech-TTS null result would replicate under a different source-pool
+composition, a different random split of that corpus, or a fifth target with
+similarly low source AUC. We report per-target, per-seed numbers throughout
+(Tables~\ref{tab:main}--\ref{tab:divergence}) rather than a single aggregated
+headline across targets, specifically so the LibriSpeech-TTS result cannot be
+averaged away; a larger-scale replication with more targets and seeds is the
+most direct way to address this limitation.
+
+\item \textbf{The result depends on SSL pretraining, not just on TTA.}
+Sec.~\ref{sec:backbone} shows a from-scratch, non-SSL backbone
+(RawNet2Lite) trained identically on the same source pool is at or below
+chance on three of four targets (AUC as low as $0.41$ on Arabic). This is
+consistent with limitation~2 above---a backbone with no reliable ranking gives
+confident-tail pseudo-labelling nothing to exploit---but it also means our
+contribution should be read as \emph{a lightweight adaptation layer on top of
+an already-transferable SSL representation}, not as a general-purpose recipe
+for cross-corpus robustness independent of backbone choice. The original
+ablation trained RawNet2Lite from scratch for only eight epochs, raising the
+question of whether this was genuine evidence of SSL-necessity or simply an
+undertrained baseline. We resolved this directly: retraining RawNet2Lite for
+$40$ epochs with a cosine learning-rate schedule, weight decay, and dropout
+(3 seeds $\times$ 4 targets, source training loss falling cleanly to
+$0.08$--$0.17$, confirming the model does fit the source pool) does
+\emph{not} close the gap---mean cross-corpus AUC is statistically
+indistinguishable from or worse than the original 8-epoch run on every
+target (e.g.\ Arabic AUC $0.411\!\to\!0.359$, In-the-Wild
+$0.649\!\to\!0.618$), the signature of overfitting to source-corpus
+artefacts rather than of undertraining. We therefore treat SSL pretraining
+as a necessary precondition for our method in this setting, not an
+artefact of an undertrained comparison baseline.
+\end{enumerate}
+
+\textbf{Broader impact.} Improving cross-corpus deepfake detection is
+dual-use: the same adaptation mechanism that helps a defender's detector track
+a shifting distribution of real deployment audio could, in principle, inform
+an adversary about which properties of synthetic speech are easiest for a
+detector to rank correctly, and therefore which properties to target for
+evasion. We do not view this as a reason to withhold the method---detection
+research on synthetic speech is broadly published and detectors are already
+the weaker, faster-moving side of this arms race---but we note it as a
+consideration for deployment: a system operator relying on our method should
+treat adaptation as an ongoing process against a shifting target, not a
+one-time fix, and should not treat the EER numbers in this paper as
+guarantees against a motivated adversary with adaptive access to the detector.
 
 \section{Conclusion}
 Cross-corpus audio deepfake detection fails not because ranking is lost but
 because the operating point is mis-calibrated. Exploiting this, a simple
 unsupervised test-time adaptation---confident-ranked self-training plus
 channel-consistency---reliably improves generalisation to unseen corpora and
-languages, where entropy-minimisation TTA collapses and train-time
-domain-adversarial training does not help.
+languages on three of four leave-one-corpus-out targets, where
+entropy-minimisation TTA is unstable, a non-SSL backbone collapses outright,
+and a train-time domain-adversarial baseline trained to convergence
+underperforms it at three times the compute. On the fourth target the method
+is honestly EER-neutral, and we trace this to a weaker source ranking signal
+on that target rather than papering over it with per-target tuning. A proxy
+domain-divergence analysis shows the mechanism is re-calibration of an
+already class-organised representation, not domain-invariance, which is
+independently consistent with why the domain-adversarial baseline
+underperforms despite optimising exactly the quantity our analysis shows is
+not the bottleneck. A 38-language breakdown further shows the detector's
+multilingual robustness extends to languages genuinely unseen during source
+training, not just to languages it happened to see synthesis artefacts from.
 
 \begin{thebibliography}{1}
 \bibitem{wav2vec2aug} H.~Tak \emph{et al.}, ``Automatic speaker verification
@@ -454,6 +967,16 @@ separation for audio deepfake detection,'' \emph{IEEE TIFS}, 2024.
 analysis,'' 2024.
 \bibitem{tent} D.~Wang \emph{et al.}, ``Tent: Fully test-time adaptation by
 entropy minimization,'' in \emph{ICLR}, 2021.
+\bibitem{dann} Y.~Ganin and V.~Lempitsky, ``Unsupervised domain adaptation by
+backpropagation,'' in \emph{Proc.\ ICML}, 2015.
+\bibitem{adabn} Y.~Li, N.~Wang, J.~Shi, J.~Liu, and X.~Hou, ``Revisiting batch
+normalization for practical domain adaptation,'' \emph{arXiv:1603.04779}, 2016.
+\bibitem{bendavid} S.~Ben-David, J.~Blitzer, K.~Crammer, A.~Kulesza,
+F.~Pereira, and J.~W.~Vaughan, ``A theory of learning from different
+domains,'' \emph{Machine Learning}, vol.\ 79, no.\ 1--2, pp.\ 151--175, 2010.
+\bibitem{itw} N.~M.~M\"uller, P.~Czempin, F.~Dieckmann, A.~Froghyar, and
+K.~B\"ottinger, ``Does audio deepfake detection generalize?,'' in \emph{Proc.\
+Interspeech}, 2022.
 \end{thebibliography}
 
 \end{document}

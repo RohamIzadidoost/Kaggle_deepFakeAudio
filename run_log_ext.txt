@@ -1,0 +1,671 @@
+[11:16:01] PILOT=False | device cuda NVIDIA H200 NVL MIG 1g.35gb | bf16 True
+[11:16:01] batch=32 lr=0.0002 source_epochs=8 targets=['asvspoof2019', 'dataset2', 'in_the_wild', 'arabic']
+[11:16:01] already present: data/asvspoof2019_LA
+[11:16:01] already present: data/in_the_wild
+[11:16:01] already present: data/dataset_2
+[11:16:01] already present: data/mlaad
+[11:16:01] already present: data/arabic_arad
+[11:16:01] manifest:
+corpus        label
+arabic        fake      16991
+              real       2570
+asvspoof2019  fake      22800
+              real       2580
+dataset2      fake       2173
+              real       2274
+in_the_wild   fake      11816
+              real      19963
+mlaad         fake     154000
+[11:16:01] MLAAD languages: ['ar', 'bg', 'bn', 'cs', 'da', 'de', 'el', 'en', 'es', 'et', 'fa', 'fi', 'fr', 'ga', 'hi', 'hr', 'hu', 'it', 'ja', 'ko', 'lt', 'lv', 'mt', 'nl', 'pl', 'pt', 'ro', 'ru', 'sk', 'sl', 'sv', 'sw', 'th', 'tk', 'tr', 'uk', 'vi', 'zh-cn']
+[11:16:01] MLAAD held-out languages (never seen in training): ['mt', 'sl', 'hu', 'hr', 'fi', 'lt']
+[11:16:01] cache pool: 41597 clips
+corpus        label
+arabic        fake     6000
+              real     2570
+asvspoof2019  fake     6000
+              real     2580
+dataset2      fake     2173
+              real     2274
+in_the_wild   fake     6000
+              real     6000
+mlaad         fake     8000
+[11:16:57] cache ready: (41597, 64000) fp16 = 5.32 GB on GPU (56s)
+[11:16:59] encoder runs under autocast: True
+[11:16:59] === seed0/asvspoof2019 ===
+[11:16:59]   source 10000 clips from ['arabic', 'dataset2', 'in_the_wild', 'mlaad'] | target 5580
+[11:17:52]   seed0/asvspoof2019 epoch 1/8  loss 0.4615
+[11:18:43]   seed0/asvspoof2019 epoch 2/8  loss 0.1576
+[11:19:34]   seed0/asvspoof2019 epoch 3/8  loss 0.1026
+[11:20:25]   seed0/asvspoof2019 epoch 4/8  loss 0.0619
+[11:21:16]   seed0/asvspoof2019 epoch 5/8  loss 0.0514
+[11:22:06]   seed0/asvspoof2019 epoch 6/8  loss 0.0475
+[11:22:57]   seed0/asvspoof2019 epoch 7/8  loss 0.0379
+[11:23:48]   seed0/asvspoof2019 epoch 8/8  loss 0.0306
+[11:24:13]   source   EER   4.73  AUC 0.991  acc@0.5  92.9  (0.4 min)
+[11:26:24]   tent     EER   4.16  AUC 0.992  acc@0.5  91.1  (2.2 min)
+[11:30:14]   st_only  EER   4.39  AUC 0.986  acc@0.5  95.3  (3.8 min)
+[11:35:48]   ours     EER   4.25  AUC 0.992  acc@0.5  88.8  (5.6 min)
+[11:36:38]   bn_only  EER   4.73  AUC 0.991  acc@0.5  92.9  (0.8 min)
+[11:37:04]   oracle epoch 1/4  loss 0.1587
+[11:37:31]   oracle epoch 2/4  loss 0.0739
+[11:37:57]   oracle epoch 3/4  loss 0.0402
+[11:38:24]   oracle epoch 4/4  loss 0.0317
+[11:38:48]   oracle   EER   0.50  AUC 1.000  acc@0.5  98.8  (2.2 min)
+[11:41:48]   inductive: source EER 4.98 -> ours EER 4.48
+[11:41:57]   MLAAD held-out-language fake-recall: 92.2%  (langs ['mt', 'sl', 'hu', 'hr', 'fi', 'lt'])
+[11:42:06]   seed0/asvspoof2019/rawnet2lite epoch 1/8  loss 0.5915
+[11:42:15]   seed0/asvspoof2019/rawnet2lite epoch 2/8  loss 0.4860
+[11:42:24]   seed0/asvspoof2019/rawnet2lite epoch 3/8  loss 0.4431
+[11:42:34]   seed0/asvspoof2019/rawnet2lite epoch 4/8  loss 0.4090
+[11:42:43]   seed0/asvspoof2019/rawnet2lite epoch 5/8  loss 0.3918
+[11:42:52]   seed0/asvspoof2019/rawnet2lite epoch 6/8  loss 0.3729
+[11:43:01]   seed0/asvspoof2019/rawnet2lite epoch 7/8  loss 0.3607
+[11:43:11]   seed0/asvspoof2019/rawnet2lite epoch 8/8  loss 0.3487
+[11:43:13]   rawnet2lite(scratch) EER 48.84  AUC 0.521
+[11:43:13] === seed0/dataset2 ===
+[11:43:13]   source 10000 clips from ['arabic', 'asvspoof2019', 'in_the_wild', 'mlaad'] | target 4447
+[11:44:05]   seed0/dataset2 epoch 1/8  loss 0.3896
+[11:44:56]   seed0/dataset2 epoch 2/8  loss 0.0857
+[11:45:47]   seed0/dataset2 epoch 3/8  loss 0.0578
+[11:46:38]   seed0/dataset2 epoch 4/8  loss 0.0429
+[11:47:29]   seed0/dataset2 epoch 5/8  loss 0.0341
+[11:48:20]   seed0/dataset2 epoch 6/8  loss 0.0250
+[11:49:11]   seed0/dataset2 epoch 7/8  loss 0.0344
+[11:50:02]   seed0/dataset2 epoch 8/8  loss 0.0192
+[11:50:21]   source   EER  36.95  AUC 0.687  acc@0.5  59.4  (0.3 min)
+[11:52:06]   tent     EER  38.47  AUC 0.619  acc@0.5  59.9  (1.7 min)
+[11:55:09]   st_only  EER  35.73  AUC 0.682  acc@0.5  64.1  (3.0 min)
+[11:59:35]   ours     EER  36.72  AUC 0.692  acc@0.5  63.3  (4.4 min)
+[12:00:14]   bn_only  EER  36.95  AUC 0.687  acc@0.5  59.4  (0.7 min)
+[12:00:36]   oracle epoch 1/4  loss 0.7436
+[12:00:57]   oracle epoch 2/4  loss 0.4250
+[12:01:18]   oracle epoch 3/4  loss 0.3412
+[12:01:39]   oracle epoch 4/4  loss 0.3005
+[12:01:59]   oracle   EER  12.44  AUC 0.951  acc@0.5  75.8  (1.7 min)
+[12:04:22]   inductive: source EER 37.41 -> ours EER 37.27
+[12:04:30]   MLAAD held-out-language fake-recall: 97.5%  (langs ['mt', 'sl', 'hu', 'hr', 'fi', 'lt'])
+[12:04:40]   seed0/dataset2/rawnet2lite epoch 1/8  loss 0.5797
+[12:04:49]   seed0/dataset2/rawnet2lite epoch 2/8  loss 0.4505
+[12:04:58]   seed0/dataset2/rawnet2lite epoch 3/8  loss 0.4020
+[12:05:07]   seed0/dataset2/rawnet2lite epoch 4/8  loss 0.3773
+[12:05:17]   seed0/dataset2/rawnet2lite epoch 5/8  loss 0.3490
+[12:05:26]   seed0/dataset2/rawnet2lite epoch 6/8  loss 0.3258
+[12:05:35]   seed0/dataset2/rawnet2lite epoch 7/8  loss 0.3131
+[12:05:44]   seed0/dataset2/rawnet2lite epoch 8/8  loss 0.2850
+[12:05:46]   rawnet2lite(scratch) EER 53.00  AUC 0.455
+[12:05:46] === seed0/in_the_wild ===
+[12:05:46]   source 10000 clips from ['arabic', 'asvspoof2019', 'dataset2', 'mlaad'] | target 6000
+[12:06:39]   seed0/in_the_wild epoch 1/8  loss 0.4715
+[12:07:30]   seed0/in_the_wild epoch 2/8  loss 0.1322
+[12:08:21]   seed0/in_the_wild epoch 3/8  loss 0.0902
+[12:09:11]   seed0/in_the_wild epoch 4/8  loss 0.0581
+[12:10:02]   seed0/in_the_wild epoch 5/8  loss 0.0539
+[12:10:53]   seed0/in_the_wild epoch 6/8  loss 0.0282
+[12:11:44]   seed0/in_the_wild epoch 7/8  loss 0.0408
+[12:12:35]   seed0/in_the_wild epoch 8/8  loss 0.0245
+[12:13:03]   source   EER  13.02  AUC 0.943  acc@0.5  86.5  (0.4 min)
+[12:15:24]   tent     EER  13.43  AUC 0.890  acc@0.5  86.0  (2.4 min)
+[12:19:31]   st_only  EER  12.07  AUC 0.944  acc@0.5  87.8  (4.1 min)
+[12:26:36]   ours     EER  13.18  AUC 0.945  acc@0.5  86.9  (7.1 min)
+[12:28:30]   bn_only  EER  13.02  AUC 0.943  acc@0.5  86.5  (1.9 min)
+[12:29:32]   oracle epoch 1/4  loss 0.2755
+[12:30:34]   oracle epoch 2/4  loss 0.1571
+[12:31:36]   oracle epoch 3/4  loss 0.1148
+[12:32:38]   oracle epoch 4/4  loss 0.0940
+[12:33:35]   oracle   EER   3.97  AUC 0.992  acc@0.5  88.4  (5.1 min)
+[12:40:32]   inductive: source EER 12.87 -> ours EER 14.23
+[12:40:51]   MLAAD held-out-language fake-recall: 84.7%  (langs ['mt', 'sl', 'hu', 'hr', 'fi', 'lt'])
+[12:41:12]   seed0/in_the_wild/rawnet2lite epoch 1/8  loss 0.6504
+[12:41:32]   seed0/in_the_wild/rawnet2lite epoch 2/8  loss 0.5821
+[12:41:52]   seed0/in_the_wild/rawnet2lite epoch 3/8  loss 0.5030
+[12:42:13]   seed0/in_the_wild/rawnet2lite epoch 4/8  loss 0.4418
+[12:42:34]   seed0/in_the_wild/rawnet2lite epoch 5/8  loss 0.4097
+[12:42:54]   seed0/in_the_wild/rawnet2lite epoch 6/8  loss 0.3971
+[12:43:15]   seed0/in_the_wild/rawnet2lite epoch 7/8  loss 0.3720
+[12:43:35]   seed0/in_the_wild/rawnet2lite epoch 8/8  loss 0.3472
+[12:43:40]   rawnet2lite(scratch) EER 38.83  AUC 0.663
+[12:43:40] === seed0/arabic ===
+[12:43:40]   source 10000 clips from ['asvspoof2019', 'dataset2', 'in_the_wild', 'mlaad'] | target 5570
+[12:45:34]   seed0/arabic epoch 1/8  loss 0.4227
+[12:47:24]   seed0/arabic epoch 2/8  loss 0.1190
+[12:49:15]   seed0/arabic epoch 3/8  loss 0.0873
+[12:51:02]   seed0/arabic epoch 4/8  loss 0.0563
+[12:52:52]   seed0/arabic epoch 5/8  loss 0.0466
+[12:54:42]   seed0/arabic epoch 6/8  loss 0.0330
+[12:56:33]   seed0/arabic epoch 7/8  loss 0.0310
+[12:58:23]   seed0/arabic epoch 8/8  loss 0.0326
+[12:59:17]   source   EER  21.60  AUC 0.864  acc@0.5  71.1  (0.9 min)
+[13:04:01]   tent     EER  44.90  AUC 0.551  acc@0.5  56.9  (4.7 min)
+[13:12:18]   st_only  EER  21.02  AUC 0.860  acc@0.5  78.9  (8.3 min)
+[13:24:25]   ours     EER  19.91  AUC 0.881  acc@0.5  80.1  (12.1 min)
+[13:26:12]   bn_only  EER  21.60  AUC 0.864  acc@0.5  71.1  (1.8 min)
+[13:27:10]   oracle epoch 1/4  loss 0.6865
+[13:28:08]   oracle epoch 2/4  loss 0.3925
+[13:29:06]   oracle epoch 3/4  loss 0.2921
+[13:30:03]   oracle epoch 4/4  loss 0.2443
+[13:30:57]   oracle   EER   9.34  AUC 0.972  acc@0.5  90.5  (4.8 min)
+[13:37:31]   inductive: source EER 20.76 -> ours EER 20.04
+[13:37:50]   MLAAD held-out-language fake-recall: 93.0%  (langs ['mt', 'sl', 'hu', 'hr', 'fi', 'lt'])
+[13:38:11]   seed0/arabic/rawnet2lite epoch 1/8  loss 0.5957
+[13:38:31]   seed0/arabic/rawnet2lite epoch 2/8  loss 0.4940
+[13:38:52]   seed0/arabic/rawnet2lite epoch 3/8  loss 0.4486
+[13:39:13]   seed0/arabic/rawnet2lite epoch 4/8  loss 0.4242
+[13:39:33]   seed0/arabic/rawnet2lite epoch 5/8  loss 0.4004
+[13:39:54]   seed0/arabic/rawnet2lite epoch 6/8  loss 0.3779
+[13:40:15]   seed0/arabic/rawnet2lite epoch 7/8  loss 0.3624
+[13:40:35]   seed0/arabic/rawnet2lite epoch 8/8  loss 0.3455
+[13:40:40]   rawnet2lite(scratch) EER 56.20  AUC 0.417
+[13:40:40] === seed1/asvspoof2019 ===
+[13:40:40]   source 10000 clips from ['arabic', 'dataset2', 'in_the_wild', 'mlaad'] | target 5580
+[13:42:35]   seed1/asvspoof2019 epoch 1/8  loss 0.3791
+[13:44:26]   seed1/asvspoof2019 epoch 2/8  loss 0.1343
+[13:46:17]   seed1/asvspoof2019 epoch 3/8  loss 0.0908
+[13:48:08]   seed1/asvspoof2019 epoch 4/8  loss 0.0552
+[13:49:56]   seed1/asvspoof2019 epoch 5/8  loss 0.0518
+[13:51:47]   seed1/asvspoof2019 epoch 6/8  loss 0.0375
+[13:53:38]   seed1/asvspoof2019 epoch 7/8  loss 0.0365
+[13:55:29]   seed1/asvspoof2019 epoch 8/8  loss 0.0351
+[13:56:23]   source   EER   6.04  AUC 0.986  acc@0.5  81.0  (0.9 min)
+[14:01:10]   tent     EER   3.91  AUC 0.989  acc@0.5  96.1  (4.8 min)
+[14:09:35]   st_only  EER   4.88  AUC 0.985  acc@0.5  94.8  (8.4 min)
+[14:21:47]   ours     EER   4.27  AUC 0.993  acc@0.5  87.6  (12.2 min)
+[14:23:34]   bn_only  EER   6.04  AUC 0.986  acc@0.5  81.0  (1.8 min)
+[14:24:32]   oracle epoch 1/4  loss 0.1636
+[14:25:30]   oracle epoch 2/4  loss 0.0638
+[14:26:28]   oracle epoch 3/4  loss 0.0425
+[14:27:26]   oracle epoch 4/4  loss 0.0365
+[14:28:19]   oracle   EER   0.55  AUC 1.000  acc@0.5  99.3  (4.8 min)
+[14:34:54]   inductive: source EER 6.27 -> ours EER 4.77
+[14:35:13]   MLAAD held-out-language fake-recall: 97.6%  (langs ['mt', 'sl', 'hu', 'hr', 'fi', 'lt'])
+[14:35:34]   seed1/asvspoof2019/rawnet2lite epoch 1/8  loss 0.5852
+[14:35:54]   seed1/asvspoof2019/rawnet2lite epoch 2/8  loss 0.4784
+[14:36:15]   seed1/asvspoof2019/rawnet2lite epoch 3/8  loss 0.4405
+[14:36:36]   seed1/asvspoof2019/rawnet2lite epoch 4/8  loss 0.4193
+[14:36:56]   seed1/asvspoof2019/rawnet2lite epoch 5/8  loss 0.3976
+[14:37:17]   seed1/asvspoof2019/rawnet2lite epoch 6/8  loss 0.3856
+[14:37:37]   seed1/asvspoof2019/rawnet2lite epoch 7/8  loss 0.3753
+[14:37:58]   seed1/asvspoof2019/rawnet2lite epoch 8/8  loss 0.3546
+[14:38:03]   rawnet2lite(scratch) EER 46.79  AUC 0.544
+[14:38:03] === seed1/dataset2 ===
+[14:38:03]   source 10000 clips from ['arabic', 'asvspoof2019', 'in_the_wild', 'mlaad'] | target 4447
+[14:39:56]   seed1/dataset2 epoch 1/8  loss 0.3520
+[14:41:47]   seed1/dataset2 epoch 2/8  loss 0.0861
+[14:43:38]   seed1/dataset2 epoch 3/8  loss 0.0505
+[14:45:29]   seed1/dataset2 epoch 4/8  loss 0.0407
+[14:47:20]   seed1/dataset2 epoch 5/8  loss 0.0330
+[14:49:12]   seed1/dataset2 epoch 6/8  loss 0.0244
+[14:51:00]   seed1/dataset2 epoch 7/8  loss 0.0208
+[14:52:51]   seed1/dataset2 epoch 8/8  loss 0.0184
+[14:53:34]   source   EER  32.63  AUC 0.736  acc@0.5  68.4  (0.7 min)
+[14:57:23]   tent     EER  32.43  AUC 0.718  acc@0.5  68.8  (3.8 min)
+[15:04:05]   st_only  EER  32.27  AUC 0.717  acc@0.5  67.4  (6.7 min)
+[15:13:51]   ours     EER  32.29  AUC 0.741  acc@0.5  68.1  (9.8 min)
+[15:15:16]   bn_only  EER  32.63  AUC 0.736  acc@0.5  68.4  (1.4 min)
+[15:16:03]   oracle epoch 1/4  loss 0.6202
+[15:16:49]   oracle epoch 2/4  loss 0.4060
+[15:17:35]   oracle epoch 3/4  loss 0.3359
+[15:18:21]   oracle epoch 4/4  loss 0.2929
+[15:19:04]   oracle   EER  11.09  AUC 0.958  acc@0.5  76.3  (3.8 min)
+[15:24:16]   inductive: source EER 33.46 -> ours EER 33.86
+[15:24:35]   MLAAD held-out-language fake-recall: 94.1%  (langs ['mt', 'sl', 'hu', 'hr', 'fi', 'lt'])
+[15:24:56]   seed1/dataset2/rawnet2lite epoch 1/8  loss 0.5929
+[15:25:16]   seed1/dataset2/rawnet2lite epoch 2/8  loss 0.4706
+[15:25:37]   seed1/dataset2/rawnet2lite epoch 3/8  loss 0.4140
+[15:25:58]   seed1/dataset2/rawnet2lite epoch 4/8  loss 0.3900
+[15:26:18]   seed1/dataset2/rawnet2lite epoch 5/8  loss 0.3568
+[15:26:39]   seed1/dataset2/rawnet2lite epoch 6/8  loss 0.3400
+[15:26:59]   seed1/dataset2/rawnet2lite epoch 7/8  loss 0.3231
+[15:27:20]   seed1/dataset2/rawnet2lite epoch 8/8  loss 0.3057
+[15:27:24]   rawnet2lite(scratch) EER 53.61  AUC 0.457
+[15:27:24] === seed1/in_the_wild ===
+[15:27:24]   source 10000 clips from ['arabic', 'asvspoof2019', 'dataset2', 'mlaad'] | target 6000
+[15:29:17]   seed1/in_the_wild epoch 1/8  loss 0.3913
+[15:31:08]   seed1/in_the_wild epoch 2/8  loss 0.1096
+[15:32:59]   seed1/in_the_wild epoch 3/8  loss 0.0669
+[15:34:50]   seed1/in_the_wild epoch 4/8  loss 0.0471
+[15:36:41]   seed1/in_the_wild epoch 5/8  loss 0.0444
+[15:38:33]   seed1/in_the_wild epoch 6/8  loss 0.0291
+[15:40:24]   seed1/in_the_wild epoch 7/8  loss 0.0263
+[15:42:15]   seed1/in_the_wild epoch 8/8  loss 0.0169
+[15:43:12]   source   EER  11.47  AUC 0.951  acc@0.5  72.6  (1.0 min)
+[15:48:20]   tent     EER  31.40  AUC 0.686  acc@0.5  66.6  (5.1 min)
+[15:57:21]   st_only  EER  11.50  AUC 0.943  acc@0.5  86.4  (9.0 min)
+[16:10:31]   ours     EER   9.42  AUC 0.970  acc@0.5  90.6  (13.2 min)
+[16:12:26]   bn_only  EER  11.47  AUC 0.951  acc@0.5  72.6  (1.9 min)
+[16:13:28]   oracle epoch 1/4  loss 0.2953
+[16:14:30]   oracle epoch 2/4  loss 0.1307
+[16:15:33]   oracle epoch 3/4  loss 0.1029
+[16:16:35]   oracle epoch 4/4  loss 0.0873
+[16:17:33]   oracle   EER   3.12  AUC 0.996  acc@0.5  91.5  (5.1 min)
+[16:24:34]   inductive: source EER 11.17 -> ours EER 10.00
+[16:24:53]   MLAAD held-out-language fake-recall: 96.9%  (langs ['mt', 'sl', 'hu', 'hr', 'fi', 'lt'])
+[16:25:14]   seed1/in_the_wild/rawnet2lite epoch 1/8  loss 0.6375
+[16:25:35]   seed1/in_the_wild/rawnet2lite epoch 2/8  loss 0.5710
+[16:25:55]   seed1/in_the_wild/rawnet2lite epoch 3/8  loss 0.5089
+[16:26:16]   seed1/in_the_wild/rawnet2lite epoch 4/8  loss 0.4674
+[16:26:37]   seed1/in_the_wild/rawnet2lite epoch 5/8  loss 0.4431
+[16:26:57]   seed1/in_the_wild/rawnet2lite epoch 6/8  loss 0.4121
+[16:27:18]   seed1/in_the_wild/rawnet2lite epoch 7/8  loss 0.4003
+[16:27:38]   seed1/in_the_wild/rawnet2lite epoch 8/8  loss 0.3727
+[16:27:43]   rawnet2lite(scratch) EER 34.58  AUC 0.706
+[16:27:43] === seed1/arabic ===
+[16:27:43]   source 10000 clips from ['asvspoof2019', 'dataset2', 'in_the_wild', 'mlaad'] | target 5570
+[16:29:37]   seed1/arabic epoch 1/8  loss 0.3481
+[16:31:28]   seed1/arabic epoch 2/8  loss 0.1201
+[16:33:19]   seed1/arabic epoch 3/8  loss 0.0706
+[16:35:10]   seed1/arabic epoch 4/8  loss 0.0455
+[16:37:01]   seed1/arabic epoch 5/8  loss 0.0478
+[16:38:52]   seed1/arabic epoch 6/8  loss 0.0315
+[16:40:43]   seed1/arabic epoch 7/8  loss 0.0260
+[16:42:34]   seed1/arabic epoch 8/8  loss 0.0320
+[16:43:28]   source   EER  24.08  AUC 0.836  acc@0.5  63.1  (0.9 min)
+[16:48:14]   tent     EER  48.29  AUC 0.517  acc@0.5  54.3  (4.8 min)
+[16:56:35]   st_only  EER  23.30  AUC 0.840  acc@0.5  76.6  (8.4 min)
+[17:08:48]   ours     EER  21.87  AUC 0.859  acc@0.5  78.2  (12.2 min)
+[17:10:35]   bn_only  EER  24.08  AUC 0.836  acc@0.5  63.1  (1.8 min)
+[17:11:33]   oracle epoch 1/4  loss 0.7394
+[17:12:31]   oracle epoch 2/4  loss 0.3822
+[17:13:29]   oracle epoch 3/4  loss 0.2950
+[17:14:27]   oracle epoch 4/4  loss 0.2585
+[17:15:20]   oracle   EER   8.92  AUC 0.970  acc@0.5  90.2  (4.7 min)
+[17:21:51]   inductive: source EER 24.13 -> ours EER 22.23
+[17:22:10]   MLAAD held-out-language fake-recall: 96.8%  (langs ['mt', 'sl', 'hu', 'hr', 'fi', 'lt'])
+[17:22:31]   seed1/arabic/rawnet2lite epoch 1/8  loss 0.6022
+[17:22:52]   seed1/arabic/rawnet2lite epoch 2/8  loss 0.4925
+[17:23:12]   seed1/arabic/rawnet2lite epoch 3/8  loss 0.4567
+[17:23:33]   seed1/arabic/rawnet2lite epoch 4/8  loss 0.4334
+[17:23:54]   seed1/arabic/rawnet2lite epoch 5/8  loss 0.4173
+[17:24:14]   seed1/arabic/rawnet2lite epoch 6/8  loss 0.3988
+[17:24:35]   seed1/arabic/rawnet2lite epoch 7/8  loss 0.3844
+[17:24:56]   seed1/arabic/rawnet2lite epoch 8/8  loss 0.3569
+[17:25:00]   rawnet2lite(scratch) EER 55.78  AUC 0.422
+[17:25:00] === seed2/asvspoof2019 ===
+[17:25:00]   source 10000 clips from ['arabic', 'dataset2', 'in_the_wild', 'mlaad'] | target 5580
+[17:26:53]   seed2/asvspoof2019 epoch 1/8  loss 0.3488
+[17:28:44]   seed2/asvspoof2019 epoch 2/8  loss 0.1327
+[17:30:36]   seed2/asvspoof2019 epoch 3/8  loss 0.0806
+[17:32:27]   seed2/asvspoof2019 epoch 4/8  loss 0.0654
+[17:34:18]   seed2/asvspoof2019 epoch 5/8  loss 0.0591
+[17:36:09]   seed2/asvspoof2019 epoch 6/8  loss 0.0395
+[17:38:00]   seed2/asvspoof2019 epoch 7/8  loss 0.0305
+[17:39:51]   seed2/asvspoof2019 epoch 8/8  loss 0.0280
+[17:40:44]   source   EER   3.51  AUC 0.993  acc@0.5  78.2  (0.9 min)
+[17:45:31]   tent     EER   3.04  AUC 0.980  acc@0.5  95.9  (4.8 min)
+[17:53:53]   st_only  EER   2.95  AUC 0.990  acc@0.5  95.1  (8.4 min)
+[18:06:08]   ours     EER   2.55  AUC 0.996  acc@0.5  90.9  (12.2 min)
+[18:07:55]   bn_only  EER   3.51  AUC 0.993  acc@0.5  78.2  (1.8 min)
+[18:08:53]   oracle epoch 1/4  loss 0.2279
+[18:09:51]   oracle epoch 2/4  loss 0.0689
+[18:10:49]   oracle epoch 3/4  loss 0.0539
+[18:11:47]   oracle epoch 4/4  loss 0.0407
+[18:12:40]   oracle   EER   1.04  AUC 0.999  acc@0.5  98.0  (4.8 min)
+[18:19:14]   inductive: source EER 3.55 -> ours EER 3.23
+[18:19:31]   MLAAD held-out-language fake-recall: 97.9%  (langs ['mt', 'sl', 'hu', 'hr', 'fi', 'lt'])
+[18:19:52]   seed2/asvspoof2019/rawnet2lite epoch 1/8  loss 0.5922
+[18:20:13]   seed2/asvspoof2019/rawnet2lite epoch 2/8  loss 0.4845
+[18:20:33]   seed2/asvspoof2019/rawnet2lite epoch 3/8  loss 0.4392
+[18:20:54]   seed2/asvspoof2019/rawnet2lite epoch 4/8  loss 0.4163
+[18:21:14]   seed2/asvspoof2019/rawnet2lite epoch 5/8  loss 0.3916
+[18:21:35]   seed2/asvspoof2019/rawnet2lite epoch 6/8  loss 0.3747
+[18:21:56]   seed2/asvspoof2019/rawnet2lite epoch 7/8  loss 0.3607
+[18:22:16]   seed2/asvspoof2019/rawnet2lite epoch 8/8  loss 0.3379
+[18:22:21]   rawnet2lite(scratch) EER 46.77  AUC 0.552
+[18:22:21] === seed2/dataset2 ===
+[18:22:21]   source 10000 clips from ['arabic', 'asvspoof2019', 'in_the_wild', 'mlaad'] | target 4447
+[18:24:14]   seed2/dataset2 epoch 1/8  loss 0.2897
+[18:26:05]   seed2/dataset2 epoch 2/8  loss 0.0785
+[18:27:56]   seed2/dataset2 epoch 3/8  loss 0.0485
+[18:29:47]   seed2/dataset2 epoch 4/8  loss 0.0392
+[18:31:38]   seed2/dataset2 epoch 5/8  loss 0.0329
+[18:33:29]   seed2/dataset2 epoch 6/8  loss 0.0395
+[18:35:20]   seed2/dataset2 epoch 7/8  loss 0.0289
+[18:37:11]   seed2/dataset2 epoch 8/8  loss 0.0224
+[18:37:54]   source   EER  33.51  AUC 0.737  acc@0.5  66.2  (0.7 min)
+[18:41:43]   tent     EER  33.32  AUC 0.733  acc@0.5  67.5  (3.8 min)
+[18:48:25]   st_only  EER  33.37  AUC 0.726  acc@0.5  66.9  (6.7 min)
+[18:58:08]   ours     EER  34.14  AUC 0.732  acc@0.5  66.1  (9.7 min)
+[18:59:33]   bn_only  EER  33.51  AUC 0.737  acc@0.5  66.2  (1.4 min)
+[19:00:19]   oracle epoch 1/4  loss 0.5602
+[19:01:06]   oracle epoch 2/4  loss 0.3799
+[19:01:52]   oracle epoch 3/4  loss 0.3157
+[19:02:38]   oracle epoch 4/4  loss 0.2811
+[19:03:21]   oracle   EER  14.10  AUC 0.941  acc@0.5  84.4  (3.8 min)
+[19:08:35]   inductive: source EER 32.60 -> ours EER 32.96
+[19:08:54]   MLAAD held-out-language fake-recall: 97.8%  (langs ['mt', 'sl', 'hu', 'hr', 'fi', 'lt'])
+[19:09:15]   seed2/dataset2/rawnet2lite epoch 1/8  loss 0.5730
+[19:09:35]   seed2/dataset2/rawnet2lite epoch 2/8  loss 0.4567
+[19:09:56]   seed2/dataset2/rawnet2lite epoch 3/8  loss 0.4139
+[19:10:17]   seed2/dataset2/rawnet2lite epoch 4/8  loss 0.3719
+[19:10:37]   seed2/dataset2/rawnet2lite epoch 5/8  loss 0.3491
+[19:10:58]   seed2/dataset2/rawnet2lite epoch 6/8  loss 0.3340
+[19:11:18]   seed2/dataset2/rawnet2lite epoch 7/8  loss 0.3059
+[19:11:39]   seed2/dataset2/rawnet2lite epoch 8/8  loss 0.2853
+[19:11:43]   rawnet2lite(scratch) EER 46.82  AUC 0.536
+[19:11:43] === seed2/in_the_wild ===
+[19:11:43]   source 10000 clips from ['arabic', 'asvspoof2019', 'dataset2', 'mlaad'] | target 6000
+[19:13:36]   seed2/in_the_wild epoch 1/8  loss 0.3191
+[19:15:27]   seed2/in_the_wild epoch 2/8  loss 0.1216
+[19:17:18]   seed2/in_the_wild epoch 3/8  loss 0.0689
+[19:19:09]   seed2/in_the_wild epoch 4/8  loss 0.0540
+[19:20:58]   seed2/in_the_wild epoch 5/8  loss 0.0505
+[19:22:46]   seed2/in_the_wild epoch 6/8  loss 0.0394
+[19:24:35]   seed2/in_the_wild epoch 7/8  loss 0.0302
+[19:26:23]   seed2/in_the_wild epoch 8/8  loss 0.0221
+[19:27:09]   source   EER  13.22  AUC 0.940  acc@0.5  71.5  (0.8 min)
+[19:29:30]   tent     EER  34.75  AUC 0.653  acc@0.5  63.0  (2.4 min)
+[19:33:37]   st_only  EER  11.32  AUC 0.954  acc@0.5  88.1  (4.1 min)
+[19:39:37]   ours     EER   9.90  AUC 0.966  acc@0.5  89.5  (6.0 min)
+[19:40:30]   bn_only  EER  13.22  AUC 0.940  acc@0.5  71.5  (0.9 min)
+[19:40:58]   oracle epoch 1/4  loss 0.3145
+[19:41:27]   oracle epoch 2/4  loss 0.1437
+[19:41:55]   oracle epoch 3/4  loss 0.1113
+[19:42:24]   oracle epoch 4/4  loss 0.0923
+[19:42:50]   oracle   EER   3.87  AUC 0.994  acc@0.5  94.1  (2.3 min)
+[19:46:03]   inductive: source EER 13.93 -> ours EER 9.17
+[19:46:12]   MLAAD held-out-language fake-recall: 98.5%  (langs ['mt', 'sl', 'hu', 'hr', 'fi', 'lt'])
+[19:46:21]   seed2/in_the_wild/rawnet2lite epoch 1/8  loss 0.6367
+[19:46:30]   seed2/in_the_wild/rawnet2lite epoch 2/8  loss 0.5486
+[19:46:40]   seed2/in_the_wild/rawnet2lite epoch 3/8  loss 0.4982
+[19:46:49]   seed2/in_the_wild/rawnet2lite epoch 4/8  loss 0.4628
+[19:46:58]   seed2/in_the_wild/rawnet2lite epoch 5/8  loss 0.4218
+[19:47:07]   seed2/in_the_wild/rawnet2lite epoch 6/8  loss 0.4042
+[19:47:17]   seed2/in_the_wild/rawnet2lite epoch 7/8  loss 0.3722
+[19:47:26]   seed2/in_the_wild/rawnet2lite epoch 8/8  loss 0.3693
+[19:47:28]   rawnet2lite(scratch) EER 44.63  AUC 0.576
+[19:47:28] === seed2/arabic ===
+[19:47:28]   source 10000 clips from ['asvspoof2019', 'dataset2', 'in_the_wild', 'mlaad'] | target 5570
+[19:48:20]   seed2/arabic epoch 1/8  loss 0.3106
+[19:49:11]   seed2/arabic epoch 2/8  loss 0.1060
+[19:50:02]   seed2/arabic epoch 3/8  loss 0.0738
+[19:50:53]   seed2/arabic epoch 4/8  loss 0.0519
+[19:51:44]   seed2/arabic epoch 5/8  loss 0.0362
+[19:52:35]   seed2/arabic epoch 6/8  loss 0.0262
+[19:53:26]   seed2/arabic epoch 7/8  loss 0.0338
+[19:54:17]   seed2/arabic epoch 8/8  loss 0.0233
+[19:54:41]   source   EER  22.10  AUC 0.861  acc@0.5  66.8  (0.4 min)
+[19:56:52]   tent     EER  49.78  AUC 0.502  acc@0.5  53.9  (2.2 min)
+[20:00:41]   st_only  EER  21.83  AUC 0.863  acc@0.5  77.9  (3.8 min)
+[20:06:15]   ours     EER  20.45  AUC 0.877  acc@0.5  79.2  (5.6 min)
+[20:07:04]   bn_only  EER  22.10  AUC 0.861  acc@0.5  66.8  (0.8 min)
+[20:07:31]   oracle epoch 1/4  loss 0.6544
+[20:07:57]   oracle epoch 2/4  loss 0.3588
+[20:08:24]   oracle epoch 3/4  loss 0.2752
+[20:08:50]   oracle epoch 4/4  loss 0.2256
+[20:09:15]   oracle   EER   9.17  AUC 0.970  acc@0.5  88.1  (2.2 min)
+[20:12:14]   inductive: source EER 21.97 -> ours EER 21.15
+[20:12:23]   MLAAD held-out-language fake-recall: 96.6%  (langs ['mt', 'sl', 'hu', 'hr', 'fi', 'lt'])
+[20:12:32]   seed2/arabic/rawnet2lite epoch 1/8  loss 0.6264
+[20:12:41]   seed2/arabic/rawnet2lite epoch 2/8  loss 0.5176
+[20:12:50]   seed2/arabic/rawnet2lite epoch 3/8  loss 0.4466
+[20:13:00]   seed2/arabic/rawnet2lite epoch 4/8  loss 0.4146
+[20:13:09]   seed2/arabic/rawnet2lite epoch 5/8  loss 0.3914
+[20:13:18]   seed2/arabic/rawnet2lite epoch 6/8  loss 0.3795
+[20:13:27]   seed2/arabic/rawnet2lite epoch 7/8  loss 0.3626
+[20:13:37]   seed2/arabic/rawnet2lite epoch 8/8  loss 0.3506
+[20:13:39]   rawnet2lite(scratch) EER 59.06  AUC 0.394
+[20:13:39] GRID COMPLETE in 536.7 min | peak GPU 11.1 GB
+[07:21:47] PILOT=False | device cuda NVIDIA H200 NVL MIG 1g.35gb | bf16 True
+[07:21:47] batch=32 lr=0.0002 source_epochs=8 targets=['asvspoof2019', 'dataset2', 'in_the_wild', 'arabic']
+[07:21:48] already present: data/asvspoof2019_LA
+[07:21:48] already present: data/in_the_wild
+[07:21:48] already present: data/dataset_2
+[07:21:48] already present: data/mlaad
+[07:21:48] already present: data/arabic_arad
+[07:21:48] manifest:
+corpus        label
+arabic        fake      16991
+              real       2570
+asvspoof2019  fake      22800
+              real       2580
+dataset2      fake       2173
+              real       2274
+in_the_wild   fake      11816
+              real      19963
+mlaad         fake     154000
+[07:21:48] MLAAD languages: ['ar', 'bg', 'bn', 'cs', 'da', 'de', 'el', 'en', 'es', 'et', 'fa', 'fi', 'fr', 'ga', 'hi', 'hr', 'hu', 'it', 'ja', 'ko', 'lt', 'lv', 'mt', 'nl', 'pl', 'pt', 'ro', 'ru', 'sk', 'sl', 'sv', 'sw', 'th', 'tk', 'tr', 'uk', 'vi', 'zh-cn']
+[07:21:48] MLAAD held-out languages (never seen in training): ['mt', 'sl', 'hu', 'hr', 'fi', 'lt']
+[07:21:48] cache pool: 41597 clips
+corpus        label
+arabic        fake     6000
+              real     2570
+asvspoof2019  fake     6000
+              real     2580
+dataset2      fake     2173
+              real     2274
+in_the_wild   fake     6000
+              real     6000
+mlaad         fake     8000
+[07:22:44] cache ready: (41597, 64000) fp16 = 5.32 GB on GPU (56s)
+[07:22:46] encoder runs under autocast: True
+[07:22:46] === seed0/asvspoof2019: already scored, skipping ===
+[07:22:46] === seed0/dataset2: already scored, skipping ===
+[07:22:46] === seed0/in_the_wild: already scored, skipping ===
+[07:22:46] === seed0/arabic: already scored, skipping ===
+[07:22:46] === seed1/asvspoof2019: already scored, skipping ===
+[07:22:46] === seed1/dataset2: already scored, skipping ===
+[07:22:46] === seed1/in_the_wild: already scored, skipping ===
+[07:22:46] === seed1/arabic: already scored, skipping ===
+[07:22:46] === seed2/asvspoof2019: already scored, skipping ===
+[07:22:46] === seed2/dataset2: already scored, skipping ===
+[07:22:46] === seed2/in_the_wild: already scored, skipping ===
+[07:22:46] === seed2/arabic: already scored, skipping ===
+[07:22:46] === seed3/asvspoof2019 ===
+[07:22:46]   source 10000 clips from ['arabic', 'dataset2', 'in_the_wild', 'mlaad'] | target 5580
+[07:23:39]   seed3/asvspoof2019 epoch 1/8  loss 0.3807
+[07:24:30]   seed3/asvspoof2019 epoch 2/8  loss 0.1316
+[07:25:21]   seed3/asvspoof2019 epoch 3/8  loss 0.0669
+[07:26:12]   seed3/asvspoof2019 epoch 4/8  loss 0.0628
+[07:27:03]   seed3/asvspoof2019 epoch 5/8  loss 0.0404
+[07:27:53]   seed3/asvspoof2019 epoch 6/8  loss 0.0564
+[07:28:44]   seed3/asvspoof2019 epoch 7/8  loss 0.0355
+[07:29:35]   seed3/asvspoof2019 epoch 8/8  loss 0.0370
+[07:30:00]   source   EER   3.64  AUC 0.993  acc@0.5  79.0  (0.4 min)
+[07:32:11]   tent     EER  49.52  AUC 0.505  acc@0.5  53.8  (2.2 min)
+[07:36:01]   st_only  EER   3.16  AUC 0.995  acc@0.5  96.9  (3.8 min)
+[07:41:35]   ours     EER   2.63  AUC 0.996  acc@0.5  89.9  (5.6 min)
+[07:42:25]   bn_only  EER   3.64  AUC 0.993  acc@0.5  79.0  (0.8 min)
+[07:42:51]   oracle epoch 1/4  loss 0.1586
+[07:43:18]   oracle epoch 2/4  loss 0.0593
+[07:43:44]   oracle epoch 3/4  loss 0.0389
+[07:44:11]   oracle epoch 4/4  loss 0.0303
+[07:44:35]   oracle   EER   0.82  AUC 1.000  acc@0.5  96.8  (2.2 min)
+[07:47:35]   inductive: source EER 3.56 -> ours EER 2.15
+[07:47:43]   MLAAD held-out-language fake-recall: 93.3%  (langs ['mt', 'sl', 'hu', 'hr', 'fi', 'lt'])
+[07:47:53]   seed3/asvspoof2019/rawnet2lite epoch 1/8  loss 0.5812
+[07:48:02]   seed3/asvspoof2019/rawnet2lite epoch 2/8  loss 0.4800
+[07:48:11]   seed3/asvspoof2019/rawnet2lite epoch 3/8  loss 0.4295
+[07:48:21]   seed3/asvspoof2019/rawnet2lite epoch 4/8  loss 0.4104
+[07:48:30]   seed3/asvspoof2019/rawnet2lite epoch 5/8  loss 0.3882
+[07:48:39]   seed3/asvspoof2019/rawnet2lite epoch 6/8  loss 0.3842
+[07:48:48]   seed3/asvspoof2019/rawnet2lite epoch 7/8  loss 0.3643
+[07:48:58]   seed3/asvspoof2019/rawnet2lite epoch 8/8  loss 0.3596
+[07:49:00]   rawnet2lite(scratch) EER 45.86  AUC 0.563
+[07:49:00] === seed3/dataset2 ===
+[07:49:00]   source 10000 clips from ['arabic', 'asvspoof2019', 'in_the_wild', 'mlaad'] | target 4447
+[07:49:52]   seed3/dataset2 epoch 1/8  loss 0.3106
+[07:50:43]   seed3/dataset2 epoch 2/8  loss 0.0818
+[07:51:34]   seed3/dataset2 epoch 3/8  loss 0.0587
+[07:52:25]   seed3/dataset2 epoch 4/8  loss 0.0405
+[07:53:16]   seed3/dataset2 epoch 5/8  loss 0.0332
+[07:54:07]   seed3/dataset2 epoch 6/8  loss 0.0316
+[07:54:57]   seed3/dataset2 epoch 7/8  loss 0.0287
+[07:55:48]   seed3/dataset2 epoch 8/8  loss 0.0210
+[07:56:08]   source   EER  35.13  AUC 0.712  acc@0.5  65.5  (0.3 min)
+[07:57:53]   tent     EER  34.48  AUC 0.735  acc@0.5  61.7  (1.7 min)
+[08:00:55]   st_only  EER  35.35  AUC 0.702  acc@0.5  64.8  (3.0 min)
+[08:05:22]   ours     EER  36.11  AUC 0.705  acc@0.5  63.5  (4.4 min)
+[08:06:01]   bn_only  EER  35.13  AUC 0.712  acc@0.5  65.5  (0.7 min)
+[08:06:22]   oracle epoch 1/4  loss 0.6393
+[08:06:43]   oracle epoch 2/4  loss 0.3878
+[08:07:05]   oracle epoch 3/4  loss 0.3036
+[08:07:26]   oracle epoch 4/4  loss 0.2557
+[08:07:45]   oracle   EER  12.01  AUC 0.952  acc@0.5  79.6  (1.7 min)
+[08:10:08]   inductive: source EER 35.03 -> ours EER 35.20
+[08:10:17]   MLAAD held-out-language fake-recall: 89.6%  (langs ['mt', 'sl', 'hu', 'hr', 'fi', 'lt'])
+[08:10:26]   seed3/dataset2/rawnet2lite epoch 1/8  loss 0.5684
+[08:10:36]   seed3/dataset2/rawnet2lite epoch 2/8  loss 0.4580
+[08:10:45]   seed3/dataset2/rawnet2lite epoch 3/8  loss 0.4202
+[08:10:54]   seed3/dataset2/rawnet2lite epoch 4/8  loss 0.3891
+[08:11:03]   seed3/dataset2/rawnet2lite epoch 5/8  loss 0.3724
+[08:11:13]   seed3/dataset2/rawnet2lite epoch 6/8  loss 0.3522
+[08:11:22]   seed3/dataset2/rawnet2lite epoch 7/8  loss 0.3415
+[08:11:31]   seed3/dataset2/rawnet2lite epoch 8/8  loss 0.3130
+[08:11:33]   rawnet2lite(scratch) EER 48.05  AUC 0.507
+[08:11:33] === seed3/in_the_wild ===
+[08:11:33]   source 10000 clips from ['arabic', 'asvspoof2019', 'dataset2', 'mlaad'] | target 6000
+[08:12:26]   seed3/in_the_wild epoch 1/8  loss 0.3618
+[08:13:17]   seed3/in_the_wild epoch 2/8  loss 0.1161
+[08:14:08]   seed3/in_the_wild epoch 3/8  loss 0.0689
+[08:14:59]   seed3/in_the_wild epoch 4/8  loss 0.0487
+[08:15:50]   seed3/in_the_wild epoch 5/8  loss 0.0404
+[08:16:40]   seed3/in_the_wild epoch 6/8  loss 0.0287
+[08:17:31]   seed3/in_the_wild epoch 7/8  loss 0.0318
+[08:18:22]   seed3/in_the_wild epoch 8/8  loss 0.0309
+[08:18:49]   source   EER  14.05  AUC 0.922  acc@0.5  70.9  (0.4 min)
+[08:21:10]   tent     EER  37.57  AUC 0.624  acc@0.5  60.5  (2.4 min)
+[08:25:16]   st_only  EER  12.73  AUC 0.925  acc@0.5  86.2  (4.1 min)
+[08:31:16]   ours     EER  11.27  AUC 0.958  acc@0.5  88.4  (6.0 min)
+[08:32:09]   bn_only  EER  14.05  AUC 0.922  acc@0.5  70.9  (0.9 min)
+[08:32:37]   oracle epoch 1/4  loss 0.4042
+[08:33:06]   oracle epoch 2/4  loss 0.1272
+[08:33:34]   oracle epoch 3/4  loss 0.1007
+[08:34:03]   oracle epoch 4/4  loss 0.0891
+[08:34:29]   oracle   EER   3.88  AUC 0.994  acc@0.5  85.6  (2.3 min)
+[08:37:42]   inductive: source EER 13.80 -> ours EER 11.77
+[08:37:51]   MLAAD held-out-language fake-recall: 96.9%  (langs ['mt', 'sl', 'hu', 'hr', 'fi', 'lt'])
+[08:38:00]   seed3/in_the_wild/rawnet2lite epoch 1/8  loss 0.6544
+[08:38:10]   seed3/in_the_wild/rawnet2lite epoch 2/8  loss 0.5718
+[08:38:19]   seed3/in_the_wild/rawnet2lite epoch 3/8  loss 0.4891
+[08:38:28]   seed3/in_the_wild/rawnet2lite epoch 4/8  loss 0.4442
+[08:38:37]   seed3/in_the_wild/rawnet2lite epoch 5/8  loss 0.4092
+[08:38:47]   seed3/in_the_wild/rawnet2lite epoch 6/8  loss 0.3880
+[08:38:56]   seed3/in_the_wild/rawnet2lite epoch 7/8  loss 0.3550
+[08:39:05]   seed3/in_the_wild/rawnet2lite epoch 8/8  loss 0.3339
+[08:39:07]   rawnet2lite(scratch) EER 39.17  AUC 0.650
+[08:39:07] === seed3/arabic ===
+[08:39:07]   source 10000 clips from ['asvspoof2019', 'dataset2', 'in_the_wild', 'mlaad'] | target 5570
+[08:40:00]   seed3/arabic epoch 1/8  loss 0.3235
+[08:40:51]   seed3/arabic epoch 2/8  loss 0.0919
+[08:41:42]   seed3/arabic epoch 3/8  loss 0.0740
+[08:42:32]   seed3/arabic epoch 4/8  loss 0.0475
+[08:43:23]   seed3/arabic epoch 5/8  loss 0.0388
+[08:44:14]   seed3/arabic epoch 6/8  loss 0.0338
+[08:45:05]   seed3/arabic epoch 7/8  loss 0.0328
+[08:45:56]   seed3/arabic epoch 8/8  loss 0.0314
+[08:46:21]   source   EER  20.52  AUC 0.866  acc@0.5  58.4  (0.4 min)
+[08:48:32]   tent     EER  49.69  AUC 0.503  acc@0.5  53.9  (2.2 min)
+[08:52:21]   st_only  EER  21.24  AUC 0.860  acc@0.5  78.7  (3.8 min)
+[08:57:55]   ours     EER  20.23  AUC 0.869  acc@0.5  78.6  (5.6 min)
+[08:58:44]   bn_only  EER  20.52  AUC 0.866  acc@0.5  58.4  (0.8 min)
+[08:59:10]   oracle epoch 1/4  loss 0.7600
+[08:59:37]   oracle epoch 2/4  loss 0.3777
+[09:00:03]   oracle epoch 3/4  loss 0.3102
+[09:00:29]   oracle epoch 4/4  loss 0.2585
+[09:01:05]   oracle   EER   9.08  AUC 0.971  acc@0.5  85.4  (2.4 min)
+[09:04:04]   inductive: source EER 20.46 -> ours EER 21.08
+[09:04:13]   MLAAD held-out-language fake-recall: 98.9%  (langs ['mt', 'sl', 'hu', 'hr', 'fi', 'lt'])
+[09:04:22]   seed3/arabic/rawnet2lite epoch 1/8  loss 0.5971
+[09:04:31]   seed3/arabic/rawnet2lite epoch 2/8  loss 0.4903
+[09:04:41]   seed3/arabic/rawnet2lite epoch 3/8  loss 0.4453
+[09:04:50]   seed3/arabic/rawnet2lite epoch 4/8  loss 0.4150
+[09:04:59]   seed3/arabic/rawnet2lite epoch 5/8  loss 0.3913
+[09:05:08]   seed3/arabic/rawnet2lite epoch 6/8  loss 0.3815
+[09:05:17]   seed3/arabic/rawnet2lite epoch 7/8  loss 0.3698
+[09:05:27]   seed3/arabic/rawnet2lite epoch 8/8  loss 0.3491
+[09:05:29]   rawnet2lite(scratch) EER 61.69  AUC 0.349
+[09:05:29] === seed4/asvspoof2019 ===
+[09:05:29]   source 10000 clips from ['arabic', 'dataset2', 'in_the_wild', 'mlaad'] | target 5580
+[09:06:21]   seed4/asvspoof2019 epoch 1/8  loss 0.3675
+[09:07:12]   seed4/asvspoof2019 epoch 2/8  loss 0.1134
+[09:08:03]   seed4/asvspoof2019 epoch 3/8  loss 0.0800
+[09:08:54]   seed4/asvspoof2019 epoch 4/8  loss 0.0517
+[09:09:45]   seed4/asvspoof2019 epoch 5/8  loss 0.0529
+[09:10:36]   seed4/asvspoof2019 epoch 6/8  loss 0.0386
+[09:11:27]   seed4/asvspoof2019 epoch 7/8  loss 0.0242
+[09:12:17]   seed4/asvspoof2019 epoch 8/8  loss 0.0400
+[09:12:42]   source   EER   5.50  AUC 0.989  acc@0.5  82.2  (0.4 min)
+[09:14:53]   tent     EER   3.42  AUC 0.991  acc@0.5  96.4  (2.2 min)
+[09:18:43]   st_only  EER   4.07  AUC 0.991  acc@0.5  95.6  (3.8 min)
+[09:24:17]   ours     EER   3.10  AUC 0.996  acc@0.5  90.2  (5.6 min)
+[09:25:06]   bn_only  EER   5.50  AUC 0.989  acc@0.5  82.2  (0.8 min)
+[09:25:33]   oracle epoch 1/4  loss 0.1868
+[09:25:59]   oracle epoch 2/4  loss 0.0666
+[09:26:26]   oracle epoch 3/4  loss 0.0498
+[09:26:53]   oracle epoch 4/4  loss 0.0333
+[09:27:17]   oracle   EER   0.73  AUC 0.999  acc@0.5  99.2  (2.2 min)
+[09:30:17]   inductive: source EER 5.63 -> ours EER 3.05
+[09:30:25]   MLAAD held-out-language fake-recall: 97.2%  (langs ['mt', 'sl', 'hu', 'hr', 'fi', 'lt'])
+[09:30:35]   seed4/asvspoof2019/rawnet2lite epoch 1/8  loss 0.5816
+[09:30:44]   seed4/asvspoof2019/rawnet2lite epoch 2/8  loss 0.4839
+[09:30:53]   seed4/asvspoof2019/rawnet2lite epoch 3/8  loss 0.4451
+[09:31:02]   seed4/asvspoof2019/rawnet2lite epoch 4/8  loss 0.4189
+[09:31:12]   seed4/asvspoof2019/rawnet2lite epoch 5/8  loss 0.4107
+[09:31:21]   seed4/asvspoof2019/rawnet2lite epoch 6/8  loss 0.3889
+[09:31:30]   seed4/asvspoof2019/rawnet2lite epoch 7/8  loss 0.3835
+[09:31:39]   seed4/asvspoof2019/rawnet2lite epoch 8/8  loss 0.3670
+[09:31:41]   rawnet2lite(scratch) EER 51.79  AUC 0.481
+[09:31:41] === seed4/dataset2 ===
+[09:31:41]   source 10000 clips from ['arabic', 'asvspoof2019', 'in_the_wild', 'mlaad'] | target 4447
+[09:32:34]   seed4/dataset2 epoch 1/8  loss 0.2811
+[09:33:25]   seed4/dataset2 epoch 2/8  loss 0.0817
+[09:34:16]   seed4/dataset2 epoch 3/8  loss 0.0525
+[09:35:06]   seed4/dataset2 epoch 4/8  loss 0.0346
+[09:35:57]   seed4/dataset2 epoch 5/8  loss 0.0259
+[09:36:48]   seed4/dataset2 epoch 6/8  loss 0.0321
+[09:37:39]   seed4/dataset2 epoch 7/8  loss 0.0250
+[09:38:30]   seed4/dataset2 epoch 8/8  loss 0.0226
+[09:38:50]   source   EER  33.98  AUC 0.716  acc@0.5  65.8  (0.3 min)
+[09:40:34]   tent     EER  33.65  AUC 0.669  acc@0.5  64.9  (1.7 min)
+[09:43:37]   st_only  EER  33.80  AUC 0.695  acc@0.5  65.2  (3.0 min)
+[09:48:04]   ours     EER  33.80  AUC 0.721  acc@0.5  66.1  (4.4 min)
+[09:48:43]   bn_only  EER  33.98  AUC 0.716  acc@0.5  65.8  (0.7 min)
+[09:49:04]   oracle epoch 1/4  loss 0.6109
+[09:49:25]   oracle epoch 2/4  loss 0.3588
+[09:49:46]   oracle epoch 3/4  loss 0.2906
+[09:50:08]   oracle epoch 4/4  loss 0.2461
+[09:50:27]   oracle   EER  14.82  AUC 0.931  acc@0.5  81.0  (1.7 min)
+[09:52:50]   inductive: source EER 33.14 -> ours EER 33.27
+[09:52:59]   MLAAD held-out-language fake-recall: 96.3%  (langs ['mt', 'sl', 'hu', 'hr', 'fi', 'lt'])
+[09:53:08]   seed4/dataset2/rawnet2lite epoch 1/8  loss 0.5957
+[09:53:17]   seed4/dataset2/rawnet2lite epoch 2/8  loss 0.4714
+[09:53:27]   seed4/dataset2/rawnet2lite epoch 3/8  loss 0.4216
+[09:53:36]   seed4/dataset2/rawnet2lite epoch 4/8  loss 0.3761
+[09:53:45]   seed4/dataset2/rawnet2lite epoch 5/8  loss 0.3571
+[09:53:54]   seed4/dataset2/rawnet2lite epoch 6/8  loss 0.3296
+[09:54:04]   seed4/dataset2/rawnet2lite epoch 7/8  loss 0.3070
+[09:54:13]   seed4/dataset2/rawnet2lite epoch 8/8  loss 0.2955
+[09:54:15]   rawnet2lite(scratch) EER 53.41  AUC 0.445
+[09:54:15] === seed4/in_the_wild ===
+[09:54:15]   source 10000 clips from ['arabic', 'asvspoof2019', 'dataset2', 'mlaad'] | target 6000
+[09:55:07]   seed4/in_the_wild epoch 1/8  loss 0.3684
+[09:55:58]   seed4/in_the_wild epoch 2/8  loss 0.0997
+[09:56:49]   seed4/in_the_wild epoch 3/8  loss 0.0737
+[09:57:40]   seed4/in_the_wild epoch 4/8  loss 0.0415
+[09:58:30]   seed4/in_the_wild epoch 5/8  loss 0.0295
+[09:59:21]   seed4/in_the_wild epoch 6/8  loss 0.0354
+[10:00:12]   seed4/in_the_wild epoch 7/8  loss 0.0273
+[10:01:03]   seed4/in_the_wild epoch 8/8  loss 0.0237
+[10:01:30]   source   EER  14.87  AUC 0.934  acc@0.5  76.3  (0.4 min)
+[10:03:51]   tent     EER  16.17  AUC 0.848  acc@0.5  82.1  (2.4 min)
+[10:07:57]   st_only  EER  12.90  AUC 0.946  acc@0.5  86.9  (4.1 min)
+[10:13:57]   ours     EER  12.40  AUC 0.953  acc@0.5  87.4  (6.0 min)
+[10:14:50]   bn_only  EER  14.87  AUC 0.934  acc@0.5  76.3  (0.9 min)
+[10:15:18]   oracle epoch 1/4  loss 0.3021
+[10:15:47]   oracle epoch 2/4  loss 0.1257
+[10:16:15]   oracle epoch 3/4  loss 0.0961
+[10:16:44]   oracle epoch 4/4  loss 0.0832
+[10:17:10]   oracle   EER   4.50  AUC 0.991  acc@0.5  88.7  (2.3 min)
+[10:20:23]   inductive: source EER 15.47 -> ours EER 13.83
+[10:20:32]   MLAAD held-out-language fake-recall: 96.0%  (langs ['mt', 'sl', 'hu', 'hr', 'fi', 'lt'])
+[10:20:41]   seed4/in_the_wild/rawnet2lite epoch 1/8  loss 0.6491
+[10:20:51]   seed4/in_the_wild/rawnet2lite epoch 2/8  loss 0.5777
+[10:21:00]   seed4/in_the_wild/rawnet2lite epoch 3/8  loss 0.5225
+[10:21:09]   seed4/in_the_wild/rawnet2lite epoch 4/8  loss 0.4735
+[10:21:18]   seed4/in_the_wild/rawnet2lite epoch 5/8  loss 0.4828
+[10:21:28]   seed4/in_the_wild/rawnet2lite epoch 6/8  loss 0.5308
+[10:21:37]   seed4/in_the_wild/rawnet2lite epoch 7/8  loss 0.4683
+[10:21:46]   seed4/in_the_wild/rawnet2lite epoch 8/8  loss 0.4243
+[10:21:48]   rawnet2lite(scratch) EER 37.72  AUC 0.668
+[10:21:48] === seed4/arabic ===
+[10:21:48]   source 10000 clips from ['asvspoof2019', 'dataset2', 'in_the_wild', 'mlaad'] | target 5570
+[10:22:41]   seed4/arabic epoch 1/8  loss 0.3578

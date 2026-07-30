@@ -1,0 +1,134 @@
+[11:51:35] manifest:
+corpus        label
+arabic        fake      16991
+              real       2570
+asvspoof2019  fake      22800
+              real       2580
+dataset2      fake       2173
+              real       2274
+in_the_wild   fake      11816
+              real      19963
+mlaad         fake     154000
+[11:51:35] cache pool: 39597 clips
+[11:51:54] cache ready: (39597, 64000) = 5.07 GB (19s)
+[11:51:54] === seed0/asvspoof2019 ===
+[11:53:03]   seed0/asvspoof2019 epoch 5/40 loss 0.3990 lr 9.62e-04
+[11:54:13]   seed0/asvspoof2019 epoch 10/40 loss 0.3475 lr 8.54e-04
+[11:55:22]   seed0/asvspoof2019 epoch 15/40 loss 0.3173 lr 6.91e-04
+[11:56:33]   seed0/asvspoof2019 epoch 20/40 loss 0.2785 lr 5.00e-04
+[11:57:43]   seed0/asvspoof2019 epoch 25/40 loss 0.2316 lr 3.09e-04
+[11:58:52]   seed0/asvspoof2019 epoch 30/40 loss 0.1927 lr 1.46e-04
+[12:00:00]   seed0/asvspoof2019 epoch 35/40 loss 0.1673 lr 3.81e-05
+[12:01:09]   seed0/asvspoof2019 epoch 40/40 loss 0.1538 lr 0.00e+00
+[12:01:15]   RawNet2Lite-v2 EER 43.39  AUC 0.588  (9.3 min)
+[12:01:15] === seed0/dataset2 ===
+[12:02:23]   seed0/dataset2 epoch 5/40 loss 0.3717 lr 9.62e-04
+[12:03:31]   seed0/dataset2 epoch 10/40 loss 0.2984 lr 8.54e-04
+[12:04:40]   seed0/dataset2 epoch 15/40 loss 0.2244 lr 6.91e-04
+[12:05:48]   seed0/dataset2 epoch 20/40 loss 0.1800 lr 5.00e-04
+[12:06:56]   seed0/dataset2 epoch 25/40 loss 0.1308 lr 3.09e-04
+[12:08:07]   seed0/dataset2 epoch 30/40 loss 0.0924 lr 1.46e-04
+[12:09:18]   seed0/dataset2 epoch 35/40 loss 0.0749 lr 3.81e-05
+[12:10:27]   seed0/dataset2 epoch 40/40 loss 0.0640 lr 0.00e+00
+[12:10:32]   RawNet2Lite-v2 EER 53.70  AUC 0.449  (9.3 min)
+[12:10:32] === seed0/in_the_wild ===
+[12:11:40]   seed0/in_the_wild epoch 5/40 loss 0.4409 lr 9.62e-04
+[12:12:50]   seed0/in_the_wild epoch 10/40 loss 0.3634 lr 8.54e-04
+[12:14:00]   seed0/in_the_wild epoch 15/40 loss 0.3133 lr 6.91e-04
+[12:15:54]   seed0/in_the_wild epoch 20/40 loss 0.2554 lr 5.00e-04
+[12:18:09]   seed0/in_the_wild epoch 25/40 loss 0.2083 lr 3.09e-04
+[12:20:27]   seed0/in_the_wild epoch 30/40 loss 0.1578 lr 1.46e-04
+[12:22:03]   seed0/in_the_wild epoch 35/40 loss 0.1252 lr 3.81e-05
+[12:23:12]   seed0/in_the_wild epoch 40/40 loss 0.1115 lr 0.00e+00
+[12:23:18]   RawNet2Lite-v2 EER 41.88  AUC 0.617  (12.8 min)
+[12:23:18] === seed0/arabic ===
+[12:24:26]   seed0/arabic epoch 5/40 loss 0.4122 lr 9.62e-04
+[12:25:34]   seed0/arabic epoch 10/40 loss 0.3387 lr 8.54e-04
+[12:26:42]   seed0/arabic epoch 15/40 loss 0.2907 lr 6.91e-04
+[12:27:50]   seed0/arabic epoch 20/40 loss 0.2446 lr 5.00e-04
+[12:28:59]   seed0/arabic epoch 25/40 loss 0.2022 lr 3.09e-04
+[12:30:07]   seed0/arabic epoch 30/40 loss 0.1548 lr 1.46e-04
+[12:31:15]   seed0/arabic epoch 35/40 loss 0.1290 lr 3.81e-05
+[12:32:23]   seed0/arabic epoch 40/40 loss 0.1198 lr 0.00e+00
+[12:32:28]   RawNet2Lite-v2 EER 62.44  AUC 0.334  (9.2 min)
+[12:32:28] === seed1/asvspoof2019 ===
+[12:33:36]   seed1/asvspoof2019 epoch 5/40 loss 0.4053 lr 9.62e-04
+[12:34:44]   seed1/asvspoof2019 epoch 10/40 loss 0.3612 lr 8.54e-04
+[12:35:52]   seed1/asvspoof2019 epoch 15/40 loss 0.3186 lr 6.91e-04
+[12:37:00]   seed1/asvspoof2019 epoch 20/40 loss 0.2700 lr 5.00e-04
+[12:38:08]   seed1/asvspoof2019 epoch 25/40 loss 0.2400 lr 3.09e-04
+[12:39:16]   seed1/asvspoof2019 epoch 30/40 loss 0.2047 lr 1.46e-04
+[12:40:24]   seed1/asvspoof2019 epoch 35/40 loss 0.1675 lr 3.81e-05
+[12:41:32]   seed1/asvspoof2019 epoch 40/40 loss 0.1589 lr 0.00e+00
+[12:41:38]   RawNet2Lite-v2 EER 44.59  AUC 0.585  (9.2 min)
+[12:41:38] === seed1/dataset2 ===
+[12:42:46]   seed1/dataset2 epoch 5/40 loss 0.3850 lr 9.62e-04
+[12:43:54]   seed1/dataset2 epoch 10/40 loss 0.3389 lr 8.54e-04
+[12:45:02]   seed1/dataset2 epoch 15/40 loss 0.2700 lr 6.91e-04
+[12:46:11]   seed1/dataset2 epoch 20/40 loss 0.2108 lr 5.00e-04
+[12:47:21]   seed1/dataset2 epoch 25/40 loss 0.1649 lr 3.09e-04
+[12:48:32]   seed1/dataset2 epoch 30/40 loss 0.1205 lr 1.46e-04
+[12:49:42]   seed1/dataset2 epoch 35/40 loss 0.0948 lr 3.81e-05
+[12:50:51]   seed1/dataset2 epoch 40/40 loss 0.0830 lr 0.00e+00
+[12:50:56]   RawNet2Lite-v2 EER 51.23  AUC 0.478  (9.3 min)
+[12:50:56] === seed1/in_the_wild ===
+[12:52:05]   seed1/in_the_wild epoch 5/40 loss 0.4283 lr 9.62e-04
+[12:53:13]   seed1/in_the_wild epoch 10/40 loss 0.3544 lr 8.54e-04
+[12:54:21]   seed1/in_the_wild epoch 15/40 loss 0.3089 lr 6.91e-04
+[12:55:29]   seed1/in_the_wild epoch 20/40 loss 0.2520 lr 5.00e-04
+[12:56:39]   seed1/in_the_wild epoch 25/40 loss 0.2022 lr 3.09e-04
+[12:57:48]   seed1/in_the_wild epoch 30/40 loss 0.1606 lr 1.46e-04
+[12:58:56]   seed1/in_the_wild epoch 35/40 loss 0.1321 lr 3.81e-05
+[13:00:04]   seed1/in_the_wild epoch 40/40 loss 0.1215 lr 0.00e+00
+[13:00:10]   RawNet2Lite-v2 EER 42.78  AUC 0.604  (9.2 min)
+[13:00:10] === seed1/arabic ===
+[13:01:18]   seed1/arabic epoch 5/40 loss 0.4277 lr 9.62e-04
+[13:02:27]   seed1/arabic epoch 10/40 loss 0.3534 lr 8.54e-04
+[13:03:35]   seed1/arabic epoch 15/40 loss 0.3057 lr 6.91e-04
+[13:04:43]   seed1/arabic epoch 20/40 loss 0.2505 lr 5.00e-04
+[13:05:51]   seed1/arabic epoch 25/40 loss 0.2109 lr 3.09e-04
+[13:06:59]   seed1/arabic epoch 30/40 loss 0.1751 lr 1.46e-04
+[13:08:08]   seed1/arabic epoch 35/40 loss 0.1359 lr 3.81e-05
+[13:09:17]   seed1/arabic epoch 40/40 loss 0.1304 lr 0.00e+00
+[13:09:22]   RawNet2Lite-v2 EER 60.25  AUC 0.377  (9.2 min)
+[13:09:22] === seed2/asvspoof2019 ===
+[13:10:30]   seed2/asvspoof2019 epoch 5/40 loss 0.4190 lr 9.62e-04
+[13:11:38]   seed2/asvspoof2019 epoch 10/40 loss 0.3471 lr 8.54e-04
+[13:12:46]   seed2/asvspoof2019 epoch 15/40 loss 0.2969 lr 6.91e-04
+[13:13:54]   seed2/asvspoof2019 epoch 20/40 loss 0.2615 lr 5.00e-04
+[13:15:02]   seed2/asvspoof2019 epoch 25/40 loss 0.2189 lr 3.09e-04
+[13:16:11]   seed2/asvspoof2019 epoch 30/40 loss 0.1830 lr 1.46e-04
+[13:17:19]   seed2/asvspoof2019 epoch 35/40 loss 0.1546 lr 3.81e-05
+[13:18:27]   seed2/asvspoof2019 epoch 40/40 loss 0.1462 lr 0.00e+00
+[13:18:32]   RawNet2Lite-v2 EER 47.11  AUC 0.550  (9.2 min)
+[13:18:32] === seed2/dataset2 ===
+[13:19:41]   seed2/dataset2 epoch 5/40 loss 0.3943 lr 9.62e-04
+[13:20:49]   seed2/dataset2 epoch 10/40 loss 0.3142 lr 8.54e-04
+[13:21:58]   seed2/dataset2 epoch 15/40 loss 0.2610 lr 6.91e-04
+[13:23:07]   seed2/dataset2 epoch 20/40 loss 0.2115 lr 5.00e-04
+[13:24:15]   seed2/dataset2 epoch 25/40 loss 0.1672 lr 3.09e-04
+[13:25:24]   seed2/dataset2 epoch 30/40 loss 0.1239 lr 1.46e-04
+[13:26:32]   seed2/dataset2 epoch 35/40 loss 0.0915 lr 3.81e-05
+[13:27:40]   seed2/dataset2 epoch 40/40 loss 0.0846 lr 0.00e+00
+[13:27:44]   RawNet2Lite-v2 EER 50.37  AUC 0.495  (9.2 min)
+[13:27:44] === seed2/in_the_wild ===
+[13:28:53]   seed2/in_the_wild epoch 5/40 loss 0.4440 lr 9.62e-04
+[13:30:03]   seed2/in_the_wild epoch 10/40 loss 0.3839 lr 8.54e-04
+[13:31:14]   seed2/in_the_wild epoch 15/40 loss 0.3565 lr 6.91e-04
+[13:32:25]   seed2/in_the_wild epoch 20/40 loss 0.3129 lr 5.00e-04
+[13:33:37]   seed2/in_the_wild epoch 25/40 loss 0.2621 lr 3.09e-04
+[13:34:48]   seed2/in_the_wild epoch 30/40 loss 0.2086 lr 1.46e-04
+[13:35:58]   seed2/in_the_wild epoch 35/40 loss 0.1845 lr 3.81e-05
+[13:37:09]   seed2/in_the_wild epoch 40/40 loss 0.1758 lr 0.00e+00
+[13:37:15]   RawNet2Lite-v2 EER 40.93  AUC 0.631  (9.5 min)
+[13:37:15] === seed2/arabic ===
+[13:38:25]   seed2/arabic epoch 5/40 loss 0.4194 lr 9.62e-04
+[13:39:34]   seed2/arabic epoch 10/40 loss 0.3370 lr 8.54e-04
+[13:40:43]   seed2/arabic epoch 15/40 loss 0.2987 lr 6.91e-04
+[13:41:54]   seed2/arabic epoch 20/40 loss 0.2470 lr 5.00e-04
+[13:43:02]   seed2/arabic epoch 25/40 loss 0.1979 lr 3.09e-04
+[13:44:11]   seed2/arabic epoch 30/40 loss 0.1510 lr 1.46e-04
+[13:45:22]   seed2/arabic epoch 35/40 loss 0.1277 lr 3.81e-05
+[13:46:32]   seed2/arabic epoch 40/40 loss 0.1159 lr 0.00e+00
+[13:46:38]   RawNet2Lite-v2 EER 59.66  AUC 0.365  (9.4 min)
+[13:46:38] DONE in 114.7 min

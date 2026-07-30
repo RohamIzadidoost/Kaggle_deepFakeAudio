@@ -1,0 +1,22 @@
+[15:26:37] === Protocol A | SMOKE=False | bf16=True ===
+[15:26:39] 2019-LA train: 25380 clips (2580 bonafide / 22800 spoof)
+[15:26:39] DF eval (phase=eval, on disk): 400435 clips (11136 bonafide / 389299 spoof)
+[15:26:41] training source model on 2019-LA train only
+[15:26:47]   train pool 25380 clips = 3.25 GB (pinned CPU)
+[15:28:57]   source epoch 1/8 loss 0.0440 lr 1.92e-04
+[15:31:06]   source epoch 2/8 loss 0.0080 lr 1.71e-04
+[15:33:11]   source epoch 3/8 loss 0.0055 lr 1.38e-04
+[15:35:18]   source epoch 4/8 loss 0.0020 lr 1.00e-04
+[15:37:24]   source epoch 5/8 loss 0.0028 lr 6.17e-05
+[15:39:30]   source epoch 6/8 loss 0.0026 lr 2.93e-05
+[15:41:36]   source epoch 7/8 loss 0.0004 lr 7.61e-06
+[15:43:42]   source epoch 8/8 loss 0.0001 lr 0.00e+00
+[15:43:43] saved ckpt_protocol_a.pt
+[15:43:43] scoring DF eval with the source model
+[15:44:00]     source scored 4096/400435  234 clips/s  eta 28.2 min
+[15:46:36]     source scored 40960/400435  237 clips/s  eta 25.3 min
+[15:49:28]     source scored 81920/400435  237 clips/s  eta 22.4 min
+[15:52:25]     source scored 122880/400435  235 clips/s  eta 19.7 min
+[15:55:19]     source scored 163840/400435  235 clips/s  eta 16.8 min
+[15:58:15]     source scored 204800/400435  235 clips/s  eta 13.9 min
+[16:01:10]     source scored 245760/400435  235 clips/s  eta 11.0 min

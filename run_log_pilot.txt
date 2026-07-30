@@ -1,0 +1,61 @@
+[11:46:42] PILOT=True | device cuda NVIDIA GeForce RTX 3080 | bf16 True
+[11:46:42] batch=32 lr=0.0002 source_epochs=6 targets=['in_the_wild']
+[11:46:42] already present: data/asvspoof2019_LA
+[11:46:42] already present: data/in_the_wild
+[11:46:42] already present: data/dataset_2
+[11:46:42] already present: data/mlaad
+[11:46:42] already present: data/arabic_arad
+[11:46:43] manifest:
+corpus        label
+arabic        fake      16991
+              real       2570
+asvspoof2019  fake      22800
+              real       2580
+dataset2      fake       2173
+              real       2274
+in_the_wild   fake      11816
+              real      19963
+mlaad         fake     154000
+[11:46:43] MLAAD languages: ['ar', 'bg', 'bn', 'cs', 'da', 'de', 'el', 'en', 'es', 'et', 'fa', 'fi', 'fr', 'ga', 'hi', 'hr', 'hu', 'it', 'ja', 'ko', 'lt', 'lv', 'mt', 'nl', 'pl', 'pt', 'ro', 'ru', 'sk', 'sl', 'sv', 'sw', 'th', 'tk', 'tr', 'uk', 'vi', 'zh-cn']
+[11:46:43] MLAAD held-out languages (never seen in training): [np.str_('mt'), np.str_('sl'), np.str_('hu'), np.str_('hr'), np.str_('fi'), np.str_('lt')]
+[11:46:43] cache pool: 2360 clips
+corpus        label
+arabic        fake       40
+              real       40
+asvspoof2019  fake       40
+              real       40
+dataset2      fake       40
+              real       40
+in_the_wild   fake       40
+              real       40
+mlaad         fake     2040
+[11:46:46] cache ready: (2360, 64000) fp16 = 0.30 GB on GPU (3s)
+[11:46:49] encoder runs under autocast: True
+[11:46:49] === seed0/in_the_wild ===
+[11:46:49]   source 48 clips from ['arabic', 'asvspoof2019', 'dataset2', 'mlaad'] | target 48
+[11:46:52]   seed0/in_the_wild epoch 1/6  loss 9.1672
+[11:46:53]   seed0/in_the_wild epoch 2/6  loss 7.7101
+[11:46:53]   seed0/in_the_wild epoch 3/6  loss 2.8405
+[11:46:53]   seed0/in_the_wild epoch 4/6  loss 2.8290
+[11:46:53]   seed0/in_the_wild epoch 5/6  loss 1.7478
+[11:46:53]   seed0/in_the_wild epoch 6/6  loss 0.9758
+[11:46:54]   source   EER  41.67  AUC 0.542  acc@0.5  50.0  (0.0 min)
+[11:46:55]   tent     EER  37.50  AUC 0.660  acc@0.5  50.0  (0.0 min)
+[11:46:57]   st_only  EER  50.00  AUC 0.457  acc@0.5  47.9  (0.0 min)
+[11:47:00]   ours     EER  41.67  AUC 0.595  acc@0.5  60.4  (0.0 min)
+[11:47:00]   bn_only  EER  41.67  AUC 0.542  acc@0.5  50.0  (0.0 min)
+[11:47:01]   oracle epoch 1/4  loss 1.6805
+[11:47:01]   oracle epoch 2/4  loss 0.8091
+[11:47:01]   oracle epoch 3/4  loss 1.1593
+[11:47:01]   oracle epoch 4/4  loss 0.8228
+[11:47:01]   oracle   EER  10.42  AUC 0.906  acc@0.5  70.8  (0.0 min)
+[11:47:03]   inductive: source EER 25.17 -> ours EER 45.80
+[11:47:11]   MLAAD held-out-language fake-recall: 91.8%  (langs [np.str_('mt'), np.str_('sl'), np.str_('hu'), np.str_('hr'), np.str_('fi'), np.str_('lt')])
+[11:47:11]   seed0/in_the_wild/rawnet2lite epoch 1/6  loss 0.7495
+[11:47:11]   seed0/in_the_wild/rawnet2lite epoch 2/6  loss 0.6407
+[11:47:11]   seed0/in_the_wild/rawnet2lite epoch 3/6  loss 0.5840
+[11:47:11]   seed0/in_the_wild/rawnet2lite epoch 4/6  loss 0.5597
+[11:47:11]   seed0/in_the_wild/rawnet2lite epoch 5/6  loss 0.5032
+[11:47:11]   seed0/in_the_wild/rawnet2lite epoch 6/6  loss 0.4353
+[11:47:11]   rawnet2lite(scratch) EER 72.92  AUC 0.227
+[11:47:12] GRID COMPLETE in 0.4 min | peak GPU 5.9 GB

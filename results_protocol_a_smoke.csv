@@ -1,0 +1,4 @@
+method,setting,eer,auc,n_scored,n_missing,threshold,smoke
+source,official_eval,40.125,0.6472,800,533128,0.557875,True
+ours,official_eval,54.25,0.5025,800,533128,0.928926,True
+ours,disjoint_eval,53.334,0.5087,600,-1,-1,True

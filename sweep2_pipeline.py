@@ -46,7 +46,7 @@ import torch, torch.nn as nn, torch.nn.functional as F, torchaudio, soundfile as
 from sklearn.metrics import roc_curve, roc_auc_score, accuracy_score
 from tqdm.auto import tqdm
 
-PILOT = True   # <-- run this first (1 fold). Only then set False for the full matrix.
+PILOT = False  # sweep2 always runs the full seed set; no pilot mode here.
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 USE_BF16 = torch.cuda.is_available() and torch.cuda.is_bf16_supported()
@@ -74,19 +74,32 @@ if PILOT:
     SOURCE_PER_CLASS, TARGET_PER_CLASS, MAX_PER_CORPUS_CLASS = 5000, 3000, 6000
     RUN_ORACLE, RUN_RAWNET, RUN_BN_ONLY = True, True, True
 else:
-    # extending 3 -> 5 seeds (reuses seed 0-2 checkpoints/results automatically,
-    # only seeds 3-4 train fresh): tightens seed variance, strengthens the
-    # AUC-vs-gain correlation (n=12 -> n=20), and enables real significance
-    # testing instead of "k/N seeds improved" language.
-    SEEDS, TARGETS = [0, 1, 2, 3, 4], EER_TARGETS
+    SEEDS, TARGETS = [0, 1, 2], EER_TARGETS
     SOURCE_EPOCHS, TTA_EPOCHS = 8, 4
     SOURCE_PER_CLASS, TARGET_PER_CLASS, MAX_PER_CORPUS_CLASS = 5000, 3000, 6000
     RUN_ORACLE, RUN_RAWNET, RUN_BN_ONLY = True, True, True
 
-SUFFIX = "_pilot" if PILOT else "_ext"
+# ---------------------------------------------------------------------------
+#  SWEEP2: adaptation-only grid. Reuses the *existing* source checkpoints from
+#  the completed extended run -- no source training happens in this script.
+#  Separate results/log filenames so nothing can collide with results_ext.csv.
+# ---------------------------------------------------------------------------
+SUFFIX = "_sweep2"
 RESULTS_CSV, LOG_FILE = f"results{SUFFIX}.csv", f"run_log{SUFFIX}.txt"
-CKPT_DIR = f"ckpt{SUFFIX}"
-os.makedirs(CKPT_DIR, exist_ok=True)
+CKPT_DIR = "ckpt_ext"                 # <-- READ-ONLY reuse, never written here
+assert os.path.isdir(CKPT_DIR), f"{CKPT_DIR}/ not found -- unzip results_bundle.zip first"
+
+# Part A: consistency-weight mechanism test. The paper hypothesises that on a
+# LOW source-AUC target (dataset2, AUC .72) the consistency term amplifies bad
+# pseudo-labels and should HURT as lambda grows, while on a HIGH source-AUC
+# target (arabic, AUC .85) it should HELP. This tests that directly.
+LAM_GRID, LAM_TARGETS = [0.0, 0.1, 0.3, 1.0], ["dataset2", "arabic"]
+
+# Part B: adaptation-epoch compute/accuracy tradeoff (default E=4 -> E=8).
+E_GRID, E_TARGETS = [8], EER_TARGETS
+
+# never train anything in this script
+RUN_ORACLE, RUN_RAWNET, RUN_BN_ONLY = False, False, False
 
 def amp():
     return torch.amp.autocast("cuda", dtype=torch.bfloat16) if USE_BF16 else torch.amp.autocast("cuda", enabled=False)
@@ -409,7 +422,7 @@ def set_tta_params(model):
         for p in head.parameters():
             p.requires_grad_(True)
 
-def adapt(model, idx, use_st=True, use_cons=True, epochs=TTA_EPOCHS):
+def adapt(model, idx, use_st=True, use_cons=True, epochs=TTA_EPOCHS, lam=LAMBDA_CONS):
     set_tta_params(model)
     opt = torch.optim.Adam(trainable(model), lr=TTA_LR)
     for _ in range(epochs):
@@ -433,7 +446,7 @@ def adapt(model, idx, use_st=True, use_cons=True, epochs=TTA_EPOCHS):
                 if use_st and conf.any():
                     loss = loss + F.cross_entropy(logits[conf], bpl[conf])
                 if use_cons:
-                    loss = loss + LAMBDA_CONS * F.mse_loss(torch.softmax(model(augment(x))[0], 1), p.detach())
+                    loss = loss + lam * F.mse_loss(torch.softmax(model(augment(x))[0], 1), p.detach())
             if loss.requires_grad:
                 loss.backward(); opt.step()
     return model
@@ -477,127 +490,121 @@ def oracle(model, idx_labeled, epochs=TTA_EPOCHS):
 
 # %%
 def record(**row):
-    pd.DataFrame([row]).to_csv(RESULTS_CSV, mode="a", header=not os.path.exists(RESULTS_CSV), index=False)
+    pd.DataFrame([row]).to_csv(RESULTS_CSV, mode="a",
+                               header=not os.path.exists(RESULTS_CSV), index=False)
+
+# --- guard: the data pool must match the extended run or nothing is comparable ---
+EXPECT_LANGS = ["mt", "sl", "hu", "hr", "fi", "lt"]
+if sorted(HELDOUT_LANGS) != sorted(EXPECT_LANGS):
+    log(f"!! FATAL: HELDOUT_LANGS={sorted(HELDOUT_LANGS)} != {sorted(EXPECT_LANGS)} "
+        "-- source pool differs from the extended run, results would not be comparable")
+    raise SystemExit(1)
+
+# --- expected source EERs, used to verify each checkpoint loaded correctly ---
+EXPECTED = {}
+if os.path.exists("results_ext.csv"):
+    _e = pd.read_csv("results_ext.csv")
+    _e = _e[(_e.family == "xlsr") & (_e.setting == "transductive") & (_e.method == "source")]
+    for _, r in _e.iterrows():
+        EXPECTED[(int(r["seed"]), r["target"])] = float(r["eer"])
+    log(f"ckpt verification: loaded {len(EXPECTED)} expected source EERs from results_ext.csv")
+else:
+    log("!! results_ext.csv not found -- cannot verify checkpoints, proceeding unverified")
+
+JOBS = []
+for _s in SEEDS:
+    for _t in LAM_TARGETS:
+        for _l in LAM_GRID:
+            JOBS.append(dict(part="lambda", seed=_s, target=_t, lam=_l, epochs=TTA_EPOCHS))
+for _s in SEEDS:
+    for _t in E_TARGETS:
+        for _E in E_GRID:
+            JOBS.append(dict(part="epochs", seed=_s, target=_t, lam=LAMBDA_CONS, epochs=_E))
+
+# --- resume support: skip anything already in the CSV ---
+done = set()
+if os.path.exists(RESULTS_CSV):
+    _d = pd.read_csv(RESULTS_CSV)
+    done = {(str(r["part"]), int(r["seed"]), str(r["target"]), float(r["lam"]), int(r["epochs"]))
+            for _, r in _d.iterrows()}
+    log(f"resume: {len(done)} jobs already recorded, will skip them")
+
+def _key(j):
+    return (j["part"], int(j["seed"]), j["target"], float(j["lam"]), int(j["epochs"]))
+
+JOBS = [j for j in JOBS if _key(j) not in done]
+log(f"{len(JOBS)} adaptation jobs to run "
+    f"(part A lambda: {len(SEEDS)}x{len(LAM_TARGETS)}x{len(LAM_GRID)}, "
+    f"part B epochs: {len(SEEDS)}x{len(E_TARGETS)}x{len(E_GRID)})")
+
+by_pair = {}
+for j in JOBS:
+    by_pair.setdefault((j["seed"], j["target"]), []).append(j)
 
 grid_t0 = time.time()
-_prior = (pd.read_csv(RESULTS_CSV)[["seed", "target", "setting"]]
-         if os.path.exists(RESULTS_CSV) else pd.DataFrame(columns=["seed", "target", "setting"]))
+for (seed, target), jobs in by_pair.items():
+    torch.manual_seed(seed); np.random.seed(seed)
 
-for seed in SEEDS:
-    for target in TARGETS:
-        tag = f"seed{seed}/{target}"
-        # skip whole fold if already scored (checkpoint reuse alone would
-        # re-score and duplicate rows in RESULTS_CSV -- this extends the seed
-        # count without re-doing or duplicating seeds 0-2)
-        already = ((_prior.seed == seed) & (_prior.target == target)
-                  & (_prior.setting == "transductive")).any()
-        if already:
-            log(f"=== {tag}: already scored, skipping ===")
-            continue
+    # reproduce the extended run's exact subsets (both samplers are seed-deterministic)
+    src_pool = pool[(pool.corpus != target) & (pool.corpus != "mlaad")]
+    src_pool = pd.concat([src_pool, mlaad_pool])
+    _ = sample_source(src_pool, SOURCE_PER_CLASS, seed)          # parity with ext run
+    tgt_df = sample_target(pool[pool.corpus == target], TARGET_PER_CLASS, seed)
+    tgt_idx = idx_of(tgt_df)
 
-        torch.manual_seed(seed); np.random.seed(seed)
-        log(f"=== {tag} ===")
+    ckpt = f"{CKPT_DIR}/source_{target}_seed{seed}.pt"
+    if not os.path.exists(ckpt):
+        log(f"!! {ckpt} missing -- SKIPPING seed{seed}/{target} (refusing to retrain: "
+            "a freshly trained source would not be comparable to the extended run)")
+        continue
 
-        src_pool = pool[(pool.corpus != target) & (pool.corpus != "mlaad")]
-        src_pool = pd.concat([src_pool, mlaad_pool])       # always include MLAAD diversity
-        src_df = sample_source(src_pool, SOURCE_PER_CLASS, seed)
-        tgt_df = sample_target(pool[pool.corpus == target], TARGET_PER_CLASS, seed)
-        src_idx, tgt_idx = idx_of(src_df), idx_of(tgt_df)
-        log(f"  source {len(src_df)} clips from {sorted(src_df.corpus.unique())} | target {len(tgt_df)}")
+    source = XLSRDetector(encoder_amp=ENCODER_AMP).to(DEVICE)
+    source.load_state_dict(torch.load(ckpt, map_location=DEVICE), strict=False)
+    m0, _, _ = metrics(source, tgt_idx)
+    exp = EXPECTED.get((seed, target))
+    log(f"=== seed{seed}/{target} | n={len(tgt_idx)} | {len(jobs)} jobs | "
+        f"ckpt source EER {m0['eer']:.2f}"
+        + (f" (ext run: {exp:.2f})" if exp is not None else " (unverified)"))
+    if exp is not None and abs(m0["eer"] - exp) > 0.5:
+        log(f"  !! MISMATCH vs results_ext.csv ({m0['eer']:.2f} vs {exp:.2f}) -- skipping this "
+            "pair; checkpoint or data pool differs, results would not be comparable")
+        del source; torch.cuda.empty_cache(); continue
 
-        # --- XLS-R source ---
-        ckpt = f"{CKPT_DIR}/source_{target}_seed{seed}.pt"
-        source = XLSRDetector(encoder_amp=ENCODER_AMP).to(DEVICE)
-        if os.path.exists(ckpt):
-            source.load_state_dict(torch.load(ckpt, map_location=DEVICE), strict=False)
-            log(f"  loaded {ckpt}")
-        else:
-            fit(source, src_idx, SOURCE_EPOCHS, tag=tag)
-            torch.save({n: p.detach().cpu() for n, p in source.named_parameters() if p.requires_grad}, ckpt)
-
-        methods = {"source": None, "tent": lambda m, i: tent(m, i),
-                  "st_only": lambda m, i: adapt(m, i, use_st=True, use_cons=False),
-                  "ours": lambda m, i: adapt(m, i, use_st=True, use_cons=True)}
-        if RUN_BN_ONLY:
-            methods["bn_only"] = lambda m, i: bn_only(m, i)
-        if RUN_ORACLE:
-            methods["oracle"] = lambda m, i: oracle(m, i)
-
-        for name, fn in methods.items():
-            try:
-                t0 = time.time()
-                model = source if fn is None else fn(copy.deepcopy(source), tgt_idx)
-                m, y, s = metrics(model, tgt_idx)
-                record(seed=seed, target=target, method=name, setting="transductive", family="xlsr",
-                       eer=round(m["eer"], 3), auc=round(m["auc"], 4), acc=round(m["acc"], 2),
-                       n=len(tgt_idx), minutes=round((time.time() - t0) / 60, 1))
-                log(f"  {name:8s} EER {m['eer']:6.2f}  AUC {m['auc']:.3f}  acc@0.5 {m['acc']:5.1f}  ({(time.time()-t0)/60:.1f} min)")
-                if fn is not None:
-                    del model; torch.cuda.empty_cache()
-            except Exception as e:
-                log(f"  !! {name} failed: {type(e).__name__}: {e}")
-
-        # inductive check
+    for j in jobs:
         try:
-            half = len(tgt_idx) // 2
-            perm = torch.randperm(len(tgt_idx), device=DEVICE)
-            a_idx, b_idx = tgt_idx[perm[:half]], tgt_idx[perm[half:]]
-            m_src, _, _ = metrics(source, b_idx)
-            model = adapt(copy.deepcopy(source), a_idx)
-            m_ada, _, _ = metrics(model, b_idx)
-            record(seed=seed, target=target, method="source", setting="inductive", family="xlsr",
-                   eer=round(m_src["eer"], 3), auc=round(m_src["auc"], 4), acc=round(m_src["acc"], 2), n=len(b_idx), minutes=0)
-            record(seed=seed, target=target, method="ours", setting="inductive", family="xlsr",
-                   eer=round(m_ada["eer"], 3), auc=round(m_ada["auc"], 4), acc=round(m_ada["acc"], 2), n=len(b_idx), minutes=0)
-            log(f"  inductive: source EER {m_src['eer']:.2f} -> ours EER {m_ada['eer']:.2f}")
+            t0 = time.time()
+            torch.manual_seed(seed); np.random.seed(seed)   # isolate the knob under test
+            model = adapt(copy.deepcopy(source), tgt_idx, use_st=True,
+                          use_cons=(j["lam"] > 0), lam=j["lam"], epochs=j["epochs"])
+            m, _, _ = metrics(model, tgt_idx)
+            record(part=j["part"], seed=seed, target=target, lam=j["lam"], epochs=j["epochs"],
+                   method="ours", setting="transductive", family="xlsr",
+                   eer=round(m["eer"], 3), auc=round(m["auc"], 4), acc=round(m["acc"], 2),
+                   source_eer=round(m0["eer"], 3), n=len(tgt_idx),
+                   minutes=round((time.time() - t0) / 60, 1))
+            log(f"  [{j['part']:6s}] lam={j['lam']:<4} E={j['epochs']}: "
+                f"EER {m['eer']:6.2f} (src {m0['eer']:5.2f}, delta {m['eer']-m0['eer']:+.2f})  "
+                f"AUC {m['auc']:.3f}  ({(time.time()-t0)/60:.1f} min)")
             del model; torch.cuda.empty_cache()
         except Exception as e:
-            log(f"  !! inductive failed: {type(e).__name__}: {e}")
+            log(f"  !! lam={j['lam']} E={j['epochs']} failed: {type(e).__name__}: {e}")
 
-        # MLAAD held-out-language fake-recall diagnostic (source model, no adaptation)
-        try:
-            ho_idx = idx_of(mlaad_heldout)
-            y_ho, s_ho = score(source, ho_idx)
-            recall = float((s_ho >= 0.5).mean()) * 100      # all-fake set -> recall = detection rate
-            record(seed=seed, target=target, method="mlaad_heldout_lang_recall", setting="diagnostic",
-                   family="xlsr", eer=float("nan"), auc=float("nan"), acc=round(recall, 2), n=len(ho_idx), minutes=0)
-            log(f"  MLAAD held-out-language fake-recall: {recall:.1f}%  (langs {HELDOUT_LANGS})")
-        except Exception as e:
-            log(f"  !! mlaad diagnostic failed: {type(e).__name__}: {e}")
+    del source; torch.cuda.empty_cache()
 
-        # RawNet2-lite: same protocol, from scratch, no SSL
-        if RUN_RAWNET:
-            try:
-                rn = RawNet2Lite().to(DEVICE)
-                for p in rn.parameters():
-                    p.requires_grad_(True)
-                fit(rn, src_idx, SOURCE_EPOCHS, tag=f"{tag}/rawnet2lite", lr=1e-3)
-                m, _, _ = metrics(rn, tgt_idx)
-                record(seed=seed, target=target, method="source", setting="transductive", family="rawnet2lite",
-                       eer=round(m["eer"], 3), auc=round(m["auc"], 4), acc=round(m["acc"], 2), n=len(tgt_idx), minutes=0)
-                log(f"  rawnet2lite(scratch) EER {m['eer']:.2f}  AUC {m['auc']:.3f}")
-                del rn; torch.cuda.empty_cache()
-            except Exception as e:
-                log(f"  !! rawnet2lite failed: {type(e).__name__}: {e}")
+log(f"SWEEP2 COMPLETE in {(time.time()-grid_t0)/60:.1f} min | "
+    f"peak GPU {torch.cuda.max_memory_allocated()/1e9:.1f} GB")
 
-        del source; torch.cuda.empty_cache()
-
-log(f"GRID COMPLETE in {(time.time()-grid_t0)/60:.1f} min | peak GPU {torch.cuda.max_memory_allocated()/1e9:.1f} GB")
-
-# %% [markdown]
-# ## 7. Summary
-
-# %%
-res = pd.read_csv(RESULTS_CSV)
-t = (res[res.setting == "transductive"].groupby(["family", "target", "method"])
-     .agg(eer_mean=("eer", "mean"), eer_std=("eer", "std"), auc_mean=("auc", "mean"), n=("eer", "size"))
-     .round(3).reset_index())
-print(t.to_string(index=False))
-print()
-print(res[res.setting == "inductive"].groupby(["target", "method"])
-      .agg(eer_mean=("eer", "mean"), auc_mean=("auc", "mean")).round(3).to_string())
-print()
-diag = res[res.setting == "diagnostic"]
-if len(diag):
-    print("--- MLAAD held-out-language fake-recall ---")
-    print(diag.groupby("target").agg(recall_mean=("acc", "mean"), recall_std=("acc", "std")).round(2).to_string())
+# ---------------------------- summary ----------------------------
+if os.path.exists(RESULTS_CSV):
+    res = pd.read_csv(RESULTS_CSV)
+    log("\n===== PART A: consistency weight (lambda), mean EER over seeds =====")
+    a = res[res.part == "lambda"]
+    if len(a):
+        log("\n" + a.pivot_table(index="lam", columns="target", values="eer",
+                                 aggfunc="mean").round(2).to_string())
+        log("\n(source EER for reference)")
+        log("\n" + a.groupby("target")["source_eer"].mean().round(2).to_string())
+    log("\n===== PART B: adaptation epochs E=8 vs the E=4 default =====")
+    b = res[res.part == "epochs"]
+    if len(b):
+        log("\n" + b.groupby("target")[["source_eer", "eer"]].mean().round(2).to_string())

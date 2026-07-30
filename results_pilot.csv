@@ -1,0 +1,11 @@
+seed,target,method,setting,family,eer,auc,acc,n,minutes
+0,in_the_wild,source,transductive,xlsr,41.667,0.5417,50.0,48,0.0
+0,in_the_wild,tent,transductive,xlsr,37.5,0.6597,50.0,48,0.0
+0,in_the_wild,st_only,transductive,xlsr,50.0,0.4566,47.92,48,0.0
+0,in_the_wild,ours,transductive,xlsr,41.667,0.5955,60.42,48,0.0
+0,in_the_wild,bn_only,transductive,xlsr,41.667,0.5417,50.0,48,0.0
+0,in_the_wild,oracle,transductive,xlsr,10.417,0.9062,70.83,48,0.0
+0,in_the_wild,source,inductive,xlsr,25.175,0.6503,45.83,24,0
+0,in_the_wild,ours,inductive,xlsr,45.804,0.4615,45.83,24,0
+0,in_the_wild,mlaad_heldout_lang_recall,diagnostic,xlsr,,,91.85,2000,0
+0,in_the_wild,source,transductive,rawnet2lite,72.917,0.2266,50.0,48,0

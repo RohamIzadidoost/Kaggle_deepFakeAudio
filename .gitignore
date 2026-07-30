@@ -29,7 +29,12 @@ Untitled.ipynb
 *.log
 *.out
 *.synctex.gz
+*.fls
+*.fdb_latexmk
+*.xdv
 output.pdf
+main.pdf
+main_fa.pdf
 
 # temp sample lists (contain absolute paths)
 explanations/_*.csv
