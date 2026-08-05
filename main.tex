@@ -244,7 +244,20 @@ Sec.~\ref{sec:main-results} shows, this mechanism is not universal: on one of
 our four targets (LibriSpeech-TTS) the source AUC is already only $\sim\!0.72$,
 close enough to chance that even the extreme quantiles are not reliably
 correct, and the whole premise of the method is weaker---which is exactly where
-adaptation stops helping.
+adaptation stops helping. We therefore state the method's scope explicitly,
+as a precondition rather than an afterthought: it targets
+\emph{moderately class-balanced, high-initial-AUC} adaptation regimes. Both
+assumptions are load-bearing. High initial AUC is required because the
+extreme-quantile pseudo-labels are only trustworthy when ranking is already
+reasonably reliable (Sec.~\ref{sec:limitations} quantifies this via the
+AUC--gain correlation). Balance is required because the fixed-quantile split
+$Q_q$ vs.\ $Q_{1-q}$ implicitly allocates equal confident-label budget to both
+classes; under severe prior skew this budget is mismatched to the true class
+proportions and the confident tails become unreliable even when AUC is high
+(Sec.~\ref{sec:limitations} works through this failure mode on the
+class-imbalanced ASVspoof2021-DF protocol). Outside this scope---low-AUC or
+severely imbalanced targets---the method as specified here is not expected to
+help and, as we show, can actively hurt.
 
 \begin{figure*}[t]
 \centering
@@ -894,6 +907,7 @@ the full method on LibriSpeech-TTS, and we do not paper over this by tuning
 $\lambda$ per target after the fact.
 
 \section{Discussion and Limitations}
+\label{sec:limitations}
 The method is unsupervised in labels but \emph{transductive}: it uses unlabeled
 target inputs at adaptation time, a standard TTA setting that we state
 explicitly; the inductive check (Sec.~\ref{sec:inductive}) addresses the

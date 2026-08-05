@@ -209,16 +209,17 @@ if __name__ == "__main__":
     for ax, Z, title, acc in [(axes[0], Z_before, "Before adaptation", acc_before),
                               (axes[1], Z_after, "After adaptation", acc_after)]:
         ax.scatter(Z[:n, 0], Z[:n, 1], c=["#2ca02c" if v == 0 else "#d62728" for v in y_src],
-                  marker="o", s=10, alpha=0.5, label="source (o)")
+                  marker="o", s=10, alpha=0.4, label="source (o)")
         ax.scatter(Z[n:, 0], Z[n:, 1], c=["#2ca02c" if v == 0 else "#d62728" for v in y_tgt],
-                  marker="^", s=14, alpha=0.7, label="target ($\\triangle$)")
-        ax.set_title(f"{title}\ndomain-probe acc={acc*100:.0f}%")
+                  marker="^", s=22, alpha=0.9, edgecolors="black", linewidths=0.3,
+                  label="target ($\\triangle$)")
+        ax.set_title(f"{title}\ndomain-probe acc={acc*100:.0f}%", fontsize=11)
         ax.set_xticks([]); ax.set_yticks([])
-    handles = [plt.Line2D([0], [0], marker="o", color="w", markerfacecolor="gray", label="source", markersize=7),
-              plt.Line2D([0], [0], marker="^", color="w", markerfacecolor="gray", label="target", markersize=8),
-              plt.Line2D([0], [0], marker="s", color="w", markerfacecolor="#2ca02c", label="real", markersize=8),
-              plt.Line2D([0], [0], marker="s", color="w", markerfacecolor="#d62728", label="fake", markersize=8)]
-    fig.legend(handles=handles, loc="lower center", ncol=4, fontsize=8, bbox_to_anchor=(0.5, -0.02))
+    handles = [plt.Line2D([0], [0], marker="o", color="w", markerfacecolor="gray", label="source (circle)", markersize=9),
+              plt.Line2D([0], [0], marker="^", color="w", markerfacecolor="gray", label="target (triangle)", markersize=10),
+              plt.Line2D([0], [0], marker="s", color="w", markerfacecolor="#2ca02c", label="real", markersize=10),
+              plt.Line2D([0], [0], marker="s", color="w", markerfacecolor="#d62728", label="fake", markersize=10)]
+    fig.legend(handles=handles, loc="lower center", ncol=4, fontsize=10, bbox_to_anchor=(0.5, -0.02))
     fig.tight_layout(rect=[0, 0.05, 1, 1])
     fig.savefig("fig_embedding_geometry.png", dpi=150)
     print("wrote fig_embedding_geometry.png")

@@ -531,7 +531,7 @@ if RUN_TSNE:
             fig, axes = plt.subplots(2, len(files), figsize=(4 * len(files), 7.5), squeeze=False)
             for col, f in enumerate(files):
                 d = np.load(f)
-                name = os.path.basename(f).split("_")[1]
+                name = os.path.basename(f)[len("emb_"):].rsplit("_seed", 1)[0]
                 for row, (tagE, Es, Et) in enumerate([("source", d["Es0"], d["Et0"]),
                                                       ("adapted", d["Es1"], d["Et1"])]):
                     n = min(600, len(Es), len(Et))
@@ -541,10 +541,10 @@ if RUN_TSNE:
                     ax = axes[row][col]
                     ax.scatter(Z[:n, 0], Z[:n, 1], s=4, alpha=.5, label="source", color="#1f77b4")
                     ax.scatter(Z[n:, 0], Z[n:, 1], s=4, alpha=.5, label="target", color="#ff7f0e")
-                    ax.set_title(f"{name} ({tagE})", fontsize=9)
+                    ax.set_title(f"{name} ({tagE})", fontsize=10)
                     ax.set_xticks([]); ax.set_yticks([])
                     if row == 0 and col == 0:
-                        ax.legend(fontsize=7, markerscale=2)
+                        ax.legend(fontsize=9, markerscale=3)
             fig.tight_layout(); fig.savefig(f"{OUT_DIR}/fig_tsne.png", dpi=150)
             log(f"  wrote {OUT_DIR}/fig_tsne.png")
         else:

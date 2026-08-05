@@ -129,7 +129,12 @@ source$\to$target shift (Fig.~\ref{fig:scores}). We therefore trust score
 \emph{order}: the extreme quantiles of unlabeled target scores are
 higher-precision pseudo-labels than a fixed threshold, even when $s_\theta$ is
 mis-calibrated---though this premise weakens when source AUC on the target is
-itself low (Sec.~\ref{sec:results}).
+itself low (Sec.~\ref{sec:results}). We scope the method accordingly: it
+targets \emph{moderately class-balanced, high-initial-AUC} adaptation
+regimes---the fixed-quantile split $Q_q$ vs.\ $Q_{1-q}$ implicitly assumes
+both a reliable source ranking and roughly balanced target classes, and
+Sec.~\ref{sec:results} and Sec.~V show what happens when each assumption
+breaks.
 
 \textbf{Test-time adaptation.} Each epoch, we assign confident pseudo-labels
 from the $q$- and $(1{-}q)$-quantiles of target scores, ignoring the middle;
@@ -228,7 +233,9 @@ mechanism is not just cheaper but also more effective.
 \centering
 \caption{Test-time adaptation vs.\ two train-time domain-generalisation
 baselines, mean EER\,\%\,/\,AUC (DANN, ASDG: 3 seeds; Source, Ours: as
-Table~\ref{tab:main}).}
+Table~\ref{tab:main}). ASDG ran locally on different hardware from the rest
+of this table, so its wall-clock time is omitted rather than compared
+directly.}
 \label{tab:dann}
 \resizebox{\columnwidth}{!}{%
 \begin{tabular}{@{}lcccc@{}}
