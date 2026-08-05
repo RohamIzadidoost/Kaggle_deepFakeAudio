@@ -20,3 +20,58 @@
 [15:55:19]     source scored 163840/400435  235 clips/s  eta 16.8 min
 [15:58:15]     source scored 204800/400435  235 clips/s  eta 13.9 min
 [16:01:10]     source scored 245760/400435  235 clips/s  eta 11.0 min
+[16:04:09]     source scored 286720/400435  234 clips/s  eta 8.1 min
+[16:07:02]     source scored 327680/400435  234 clips/s  eta 5.2 min
+[16:09:56]     source scored 368640/400435  234 clips/s  eta 2.3 min
+[16:12:10]     source scored 400435/400435  235 clips/s  eta 0.0 min
+[16:12:11]   source                 official DF EER  26.33%  AUC 0.8696  n_scored 400435  n_missing 133493
+[16:12:11] adapting on 20000 unlabeled DF eval clips (no labels used)
+[16:12:14]   adapt pool 20000 clips = 2.56 GB (pinned CPU)
+[16:16:33]   adapt epoch 1/4  confident 15927/20000
+[16:20:52]   adapt epoch 2/4  confident 14386/20000
+[16:25:11]   adapt epoch 3/4  confident 12908/20000
+[16:29:30]   adapt epoch 4/4  confident 14261/20000
+[16:29:30] scoring DF eval with the adapted model
+[16:29:47]     ours scored 4096/400435  241 clips/s  eta 27.4 min
+[16:32:21]     ours scored 40960/400435  240 clips/s  eta 24.9 min
+[16:35:11]     ours scored 81920/400435  241 clips/s  eta 22.1 min
+[16:38:01]     ours scored 122880/400435  241 clips/s  eta 19.2 min
+[16:40:51]     ours scored 163840/400435  241 clips/s  eta 16.4 min
+[16:43:41]     ours scored 204800/400435  241 clips/s  eta 13.6 min
+[16:46:32]     ours scored 245760/400435  240 clips/s  eta 10.7 min
+[16:49:22]     ours scored 286720/400435  240 clips/s  eta 7.9 min
+[16:52:13]     ours scored 327680/400435  240 clips/s  eta 5.0 min
+[16:55:03]     ours scored 368640/400435  241 clips/s  eta 2.2 min
+[16:57:15]     ours scored 400435/400435  241 clips/s  eta 0.0 min
+[16:57:16]   ours                   official DF EER  42.45%  AUC 0.6862  n_scored 400435  n_missing 133493
+[16:57:16]   ours (disjoint)        EER  42.44%  AUC 0.6859  n 380435
+[16:57:16] DONE in 90.6 min | peak GPU 5.6 GB
+[11:39:10] === Protocol A | SMOKE=False | bf16=True ===
+[11:39:11] 2019-LA train: 25380 clips (2580 bonafide / 22800 spoof)
+[11:39:11] DF eval (phase=eval, on disk): 400435 clips (11136 bonafide / 389299 spoof)
+[11:39:14] loaded existing source checkpoint ckpt_protocol_a.pt (delete it to retrain)
+[11:39:14] already recorded: {'source', 'ours'}
+[11:39:14] source already recorded, skipping re-score
+[11:39:14] ours (naive) already recorded, skipping
+[11:39:14] [prior-aware] adapting on 20000 unlabeled DF eval clips (prevalence-weighted budget, no labels used)
+[11:39:18]   adapt pool 20000 clips = 2.56 GB (pinned CPU)  prior_aware=True
+[11:40:38]   estimated P(real) = 0.0263  ->  pseudo-real budget 0.0158  pseudo-fake budget 0.5842
+[11:45:01]   adapt epoch 1/4  confident 16807/20000
+[11:49:27]   adapt epoch 2/4  confident 15866/20000
+[11:53:53]   adapt epoch 3/4  confident 16840/20000
+[11:58:20]   adapt epoch 4/4  confident 17972/20000
+[11:58:20] scoring DF eval with the prior-aware-adapted model
+[11:58:38]     ours_prior scored 4096/400435  232 clips/s  eta 28.5 min
+[12:01:16]     ours_prior scored 40960/400435  232 clips/s  eta 25.8 min
+[12:04:10]     ours_prior scored 81920/400435  234 clips/s  eta 22.7 min
+[12:07:05]     ours_prior scored 122880/400435  234 clips/s  eta 19.8 min
+[12:10:01]     ours_prior scored 163840/400435  234 clips/s  eta 16.9 min
+[12:12:57]     ours_prior scored 204800/400435  234 clips/s  eta 14.0 min
+[12:15:53]     ours_prior scored 245760/400435  233 clips/s  eta 11.0 min
+[12:18:50]     ours_prior scored 286720/400435  233 clips/s  eta 8.1 min
+[12:21:43]     ours_prior scored 327680/400435  234 clips/s  eta 5.2 min
+[12:24:34]     ours_prior scored 368640/400435  234 clips/s  eta 2.3 min
+[12:26:51]     ours_prior scored 400435/400435  234 clips/s  eta 0.0 min
+[12:26:52]   ours_prior             official DF EER  32.58%  AUC 0.8197  n_scored 400435  n_missing 133493
+[12:26:52]   ours_prior (disjoint)  EER  32.57%  AUC 0.8198  n 380435
+[12:26:52] DONE in 47.7 min | peak GPU 5.4 GB

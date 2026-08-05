@@ -1,0 +1,78 @@
+[12:34:01] === Protocol A | SMOKE=False | bf16=True ===
+[12:34:02] 2019-LA train: 25380 clips (2580 bonafide / 22800 spoof)
+[12:34:02] DF eval (phase=eval, on disk): 400435 clips (11136 bonafide / 389299 spoof)
+[12:34:04] training source model on 2019-LA train only
+[12:34:11]   train pool 25380 clips = 3.25 GB (pinned CPU)
+[12:36:56]   source epoch 1/16 loss 0.0858 lr 1.98e-04
+[12:39:41]   source epoch 2/16 loss 0.0249 lr 1.92e-04
+[12:42:25]   source epoch 3/16 loss 0.0162 lr 1.83e-04
+[12:45:09]   source epoch 4/16 loss 0.0128 lr 1.71e-04
+[12:47:55]   source epoch 5/16 loss 0.0133 lr 1.56e-04
+[12:50:41]   source epoch 6/16 loss 0.0113 lr 1.38e-04
+[12:53:26]   source epoch 7/16 loss 0.0085 lr 1.20e-04
+[12:56:12]   source epoch 8/16 loss 0.0074 lr 1.00e-04
+[12:58:57]   source epoch 9/16 loss 0.0071 lr 8.05e-05
+[13:01:42]   source epoch 10/16 loss 0.0049 lr 6.17e-05
+[13:04:27]   source epoch 11/16 loss 0.0063 lr 4.44e-05
+[13:07:14]   source epoch 12/16 loss 0.0030 lr 2.93e-05
+[13:10:05]   source epoch 13/16 loss 0.0034 lr 1.69e-05
+[13:12:56]   source epoch 14/16 loss 0.0032 lr 7.61e-06
+[13:15:47]   source epoch 15/16 loss 0.0023 lr 1.92e-06
+[13:18:38]   source epoch 16/16 loss 0.0031 lr 0.00e+00
+[13:18:38] saved ckpt_protocol_a_rawboost.pt
+[13:18:38] already recorded: {'ours_prior', 'ours', 'source'}
+[13:18:38] scoring DF eval with the source_rawboost model
+[13:18:56]     source_rawboost scored 4096/400435  232 clips/s  eta 28.5 min
+[13:21:34]     source_rawboost scored 40960/400435  233 clips/s  eta 25.8 min
+[13:24:28]     source_rawboost scored 81920/400435  234 clips/s  eta 22.7 min
+[13:27:23]     source_rawboost scored 122880/400435  234 clips/s  eta 19.7 min
+[13:30:17]     source_rawboost scored 163840/400435  234 clips/s  eta 16.8 min
+[13:33:13]     source_rawboost scored 204800/400435  234 clips/s  eta 13.9 min
+[13:36:10]     source_rawboost scored 245760/400435  234 clips/s  eta 11.0 min
+[13:39:03]     source_rawboost scored 286720/400435  234 clips/s  eta 8.1 min
+[13:41:52]     source_rawboost scored 327680/400435  235 clips/s  eta 5.2 min
+[13:44:41]     source_rawboost scored 368640/400435  236 clips/s  eta 2.2 min
+[13:46:55]     source_rawboost scored 400435/400435  236 clips/s  eta 0.0 min
+[13:46:56]   source_rawboost        official DF EER  26.52%  AUC 0.8589  n_scored 400435  n_missing 133493
+[13:46:56] [naive] adapting on 20000 unlabeled DF eval clips (symmetric Q, no labels used)
+[13:46:59]   adapt pool 20000 clips = 2.56 GB (pinned CPU)  prior_aware=False
+[13:51:20]   adapt epoch 1/4  confident 14419/20000
+[13:55:38]   adapt epoch 2/4  confident 14502/20000
+[13:59:56]   adapt epoch 3/4  confident 14440/20000
+[14:04:14]   adapt epoch 4/4  confident 14506/20000
+[14:04:14] scoring DF eval with the naive-adapted (ours_rawboost) model
+[14:04:31]     ours_rawboost scored 4096/400435  241 clips/s  eta 27.4 min
+[14:07:04]     ours_rawboost scored 40960/400435  241 clips/s  eta 24.8 min
+[14:09:54]     ours_rawboost scored 81920/400435  241 clips/s  eta 22.0 min
+[14:12:45]     ours_rawboost scored 122880/400435  241 clips/s  eta 19.2 min
+[14:15:35]     ours_rawboost scored 163840/400435  241 clips/s  eta 16.4 min
+[14:18:29]     ours_rawboost scored 204800/400435  240 clips/s  eta 13.6 min
+[14:21:27]     ours_rawboost scored 245760/400435  238 clips/s  eta 10.8 min
+[14:24:24]     ours_rawboost scored 286720/400435  237 clips/s  eta 8.0 min
+[14:27:22]     ours_rawboost scored 327680/400435  236 clips/s  eta 5.1 min
+[14:30:19]     ours_rawboost scored 368640/400435  236 clips/s  eta 2.2 min
+[14:32:37]     ours_rawboost scored 400435/400435  235 clips/s  eta 0.0 min
+[14:32:38]   ours_rawboost          official DF EER  42.49%  AUC 0.6854  n_scored 400435  n_missing 133493
+[14:32:38]   ours_rawboost (disjoint) EER  42.49%  AUC 0.6855  n 380435
+[14:32:38] [prior-aware] adapting on 20000 unlabeled DF eval clips (prevalence-weighted budget, no labels used)
+[14:32:41]   adapt pool 20000 clips = 2.56 GB (pinned CPU)  prior_aware=True
+[14:34:05]   estimated P(real) = 0.4578  ->  pseudo-real budget 0.2747  pseudo-fake budget 0.3253
+[14:38:34]   adapt epoch 1/4  confident 12070/20000
+[14:42:58]   adapt epoch 2/4  confident 15025/20000
+[14:47:22]   adapt epoch 3/4  confident 14980/20000
+[14:51:46]   adapt epoch 4/4  confident 14962/20000
+[14:51:46] scoring DF eval with the prior-aware-adapted (ours_prior_rawboost) model
+[14:52:03]     ours_prior_rawboost scored 4096/400435  236 clips/s  eta 28.0 min
+[14:54:39]     ours_prior_rawboost scored 40960/400435  237 clips/s  eta 25.3 min
+[14:57:32]     ours_prior_rawboost scored 81920/400435  237 clips/s  eta 22.4 min
+[15:00:25]     ours_prior_rawboost scored 122880/400435  237 clips/s  eta 19.5 min
+[15:03:18]     ours_prior_rawboost scored 163840/400435  237 clips/s  eta 16.7 min
+[15:06:11]     ours_prior_rawboost scored 204800/400435  237 clips/s  eta 13.8 min
+[15:09:04]     ours_prior_rawboost scored 245760/400435  237 clips/s  eta 10.9 min
+[15:11:57]     ours_prior_rawboost scored 286720/400435  237 clips/s  eta 8.0 min
+[15:14:50]     ours_prior_rawboost scored 327680/400435  237 clips/s  eta 5.1 min
+[15:17:40]     ours_prior_rawboost scored 368640/400435  237 clips/s  eta 2.2 min
+[15:19:52]     ours_prior_rawboost scored 400435/400435  237 clips/s  eta 0.0 min
+[15:19:53]   ours_prior_rawboost    official DF EER  42.46%  AUC 0.6878  n_scored 400435  n_missing 133493
+[15:19:53]   ours_prior_rawboost (disjoint) EER  42.48%  AUC 0.6878  n 380435
+[15:19:53] DONE in 165.9 min | peak GPU 6.8 GB

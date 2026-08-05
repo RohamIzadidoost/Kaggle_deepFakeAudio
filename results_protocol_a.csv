@@ -1,0 +1,11 @@
+method,setting,eer,auc,n_scored,n_missing,threshold,smoke
+source,official_eval,26.327,0.8696,400435,133493,0.975202,False
+ours,official_eval,42.455,0.6862,400435,133493,1.4e-05,False
+ours,disjoint_eval,42.444,0.6859,380435,-1,-1,False
+ours_prior,official_eval,32.575,0.8197,400435,133493,1.0,False
+ours_prior,disjoint_eval,32.569,0.8198,380435,-1,-1,False
+source_rawboost,official_eval,26.524,0.8589,400435,133493,0.004298,False
+ours_rawboost,official_eval,42.489,0.6854,400435,133493,0.533154,False
+ours_rawboost,disjoint_eval,42.489,0.6855,380435,-1,-1,False
+ours_prior_rawboost,official_eval,42.464,0.6878,400435,133493,1.1e-05,False
+ours_prior_rawboost,disjoint_eval,42.482,0.6878,380435,-1,-1,False

@@ -38,7 +38,7 @@ r = np.corrcoef(x, y)[0, 1]
 ax.axhline(0, color="black", linewidth=0.8, zorder=1)
 ax.set_xlabel("Source AUC (before adaptation)")
 ax.set_ylabel("EER gain: source $-$ ours (points)")
-ax.set_title(f"$r = {r:+.2f}$  ($n=12$)", fontsize=10)
+ax.set_title(f"$r = {r:+.2f}$  ($n={len(x)}$)", fontsize=10)
 ax.legend(fontsize=7.5, loc="lower right", framealpha=0.9)
 ax.grid(alpha=0.25, zorder=0)
 fig.tight_layout()

@@ -1,0 +1,157 @@
+\documentclass[11pt]{article}
+\usepackage[margin=2cm]{geometry}
+\usepackage{booktabs}
+\usepackage[table]{xcolor}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{parskip}
+
+\title{Result Tables}
+\author{Roham izadidoost}
+\date{31/jul}
+
+\begin{document}
+\maketitle
+
+\section*{Main results}
+Each column is a held-out target. each row is a different method
+(Source-only = no adaptation at all. BN-only = no-op control since our encoder has
+no BatchNorm stats. Tent = a known TTA baseline that collapses on 2 targets. 
+Self-training only = ours without consistency. Ours = full method. Oracle =
+supervised upper bound). Ours wins on 3 targets out of 4; each cell is
+EER\%\,/\,AUC, lower/higher is better.
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Method & ASVspoof2019 & LibriSpeech-TTS & In-the-Wild & Arabic \\
+\midrule
+Source-only & 4.76 / .990 & 34.36 / .720 & 12.57 / .944 & 22.59 / .854 \\
+BN-only (no-op) & 4.76 / .990 & 34.36 / .720 & 12.57 / .944 & 22.59 / .854 \\
+Tent & 3.70 / .987 & 34.74 / .690 & 26.53 / .743 & 47.66 / .524 \\
+Self-training only & 4.07 / .987 & \textbf{33.79} / .708 & 11.63 / .947 & 22.05 / .855 \\
+\rowcolor{green!12}\textbf{Ours (full TTA)} & \textbf{3.69} / .994 & 34.38 / .722 & \textbf{10.83} / .960 & \textbf{20.74} / .873 \\
+\midrule
+Oracle (supervised upper bound) & 0.70 / 1.000 & 12.54 / .950 & 3.65 / .994 & 9.14 / .970 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\newpage
+\section*{Gain decomposition}
+Splits the total EER change into two steps: $\Delta_1$ = effect of adding
+self-training alone, $\Delta_2$ = effect of then adding consistency on top.
+$\Delta_2$ is negative (helps) on 3 targets but +0.59 on LibriSpeech-TTS
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Target & Source EER & $\Delta_1$ (self-train) & $\Delta_2$ (consistency) \\
+\midrule
+ASVspoof2019 & 4.76 & $-0.69$ & $-0.39$ \\
+LibriSpeech-TTS & 34.36 & $-0.57$ & \cellcolor{red!10}$+0.59$ \\
+In-the-Wild & 12.57 & $-0.94$ & $-0.79$ \\
+Arabic & 22.59 & $-0.54$ & $-1.31$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\newpage
+\section*{Backbone comparison}
+XLS-R = our SSL-pretrained encoder. RawNet2Lite = same epochs, same data,
+but trained from random weights (no SSL pretrain). RawNet2Lite collapses everywhere
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}lcc@{}}
+\toprule
+Target & XLS-R (ours) & RawNet2Lite (no SSL) \\
+\midrule
+ASVspoof2019 & 4.76 / .990 & 47.47 / .539 \\
+LibriSpeech-TTS & 34.36 / .720 & 51.14 / .483 \\
+In-the-Wild & 12.57 / .944 & 39.35 / .649 \\
+Arabic & 22.59 / .854 & 57.01 / .411 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\newpage
+\section*{Comparison to train-time domain-adversarial training (DANN)}
+DANN sees the target's unlabeled audio during training (more access than we
+get) yet is worse than Source-only on 2 targets and barely better on the
+others. Ours beats DANN on every target at $\sim\!1/3$ the compute
+(9 vs.\ 30 min per target-seed).
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Target & Source & DANN (30 min) & Ours (9 min) \\
+\midrule
+ASVspoof2019 & 4.76 / .990 & 6.61 / .980 & \textbf{3.69} / .994 \\
+LibriSpeech-TTS & 34.36 / .720 & 34.81 / .724 & \textbf{34.38} / .722 \\
+In-the-Wild & 12.57 / .944 & 11.95 / .931 & \textbf{10.83} / .960 \\
+Arabic & 22.59 / .854 & 29.51 / .724 & \textbf{20.74} / .873 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\newpage
+\section*{Inductive check}
+Rules out ``the model just memorised the scored clips'': adapt on one half of
+the target, score on the disjoint other half. The main table's pattern
+replicates almost exactly (wins on 3 out of 4,), so the gain
+is real, not memorisation. 
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}lcc@{}}
+\toprule
+Target & Source (half) & Ours (disjoint half) \\
+\midrule
+ASVspoof2019 & 4.93 & \textbf{4.16} \\
+LibriSpeech-TTS & 34.49 & 34.70 \\
+In-the-Wild & 12.66 & \textbf{11.13} \\
+Arabic & 22.29 & \textbf{21.14} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\newpage
+\section*{Domain divergence before/after adaptation}
+$\hat d_\mathcal{A}$ and domain-probe
+accuracy both measure how easily a linear classifier can tell source from
+target embeddings apart; both go \emph{up} slightly after adaptation on every
+target, showing adaptation works by re-shaping the decision boundary, not by
+erasing domain identity (which is what DANN tries to do, and underperforms
+at) and i tries DANN but failed.
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+& \multicolumn{2}{c}{$\hat d_{\mathcal{A}}$} & \multicolumn{2}{c}{Domain probe acc.\ (\%)} \\
+Target & source & adapted & source & adapted \\
+\midrule
+ASVspoof2019 & 1.572 & 1.609 & 86.6 & 89.9 \\
+LibriSpeech-TTS & 1.460 & 1.504 & 86.4 & 86.6 \\
+In-the-Wild & 1.335 & 1.357 & 80.4 & 81.6 \\
+Arabic & 1.545 & 1.606 & 87.9 & 89.1 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\newpage
+\section*{Per-language MLAAD fake-recall}
+Fake-clip recall averaged over 32 languages seen in training vs.\ 6 languages
+held out of every source pool entirely. The 0.6-point gap is negligible --
+unseen languages are detected almost as well as seen ones.
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}lc@{}}
+\toprule
+Language group & Mean fake-clip recall \\
+\midrule
+Seen in source training (32 langs) & 93.9\% \\
+Held out entirely (6 langs) & 93.3\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\end{document}

@@ -1,0 +1,13 @@
+seed,target,method,eer,auc,acc,minutes,smoke
+0,asvspoof2019,asdg,5.394,0.9885,81.88,7.1,False
+0,dataset2,asdg,33.98,0.7339,68.81,7.1,False
+0,in_the_wild,asdg,13.9,0.9312,84.05,7.2,False
+0,arabic,asdg,21.562,0.8751,70.74,7.2,False
+1,asvspoof2019,asdg,4.229,0.9893,91.18,7.2,False
+1,dataset2,asdg,35.282,0.7241,67.98,7.1,False
+1,in_the_wild,asdg,19.783,0.879,81.7,7.2,False
+1,arabic,asdg,22.262,0.8557,65.57,7.2,False
+2,asvspoof2019,asdg,3.727,0.9917,94.87,7.2,False
+2,dataset2,asdg,34.112,0.706,65.75,7.1,False
+2,in_the_wild,asdg,28.05,0.7722,76.45,7.2,False
+2,arabic,asdg,22.748,0.8453,76.19,7.2,False

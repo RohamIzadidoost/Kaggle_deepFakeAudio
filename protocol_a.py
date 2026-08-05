@@ -43,8 +43,10 @@ import torchaudio
 from sklearn.metrics import roc_auc_score
 
 from eval_protocol import DF_KEYS_DEFAULT, load_df_keys, score_official_df
+from rawboost_gpu import RawBoostGPU
 
 SMOKE = False   # <-- run this first; only then set False for the real run
+RECIPE = "rawboost"   # "baseline" (gain+noise, 8ep) or "rawboost" (Phase 1b)
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 USE_BF16 = torch.cuda.is_available() and torch.cuda.is_bf16_supported()
@@ -68,14 +70,27 @@ DF_PARTS = "data/dataset_1/ASVspoof2021_DF_eval_part0*/**/*.flac"
 if SMOKE:
     SOURCE_EPOCHS, TTA_EPOCHS = 1, 1
     MAX_TRAIN, MAX_EVAL, ADAPT_N = 400, 800, 200
+elif RECIPE == "rawboost":
+    # Phase 1b: source loss bottomed at 0.0001 under the baseline recipe (gain
+    # +/-30% + 0.005*randn) -- textbook memorization of the 25,380-clip 2019-LA
+    # train set rather than learned synthesis cues. More epochs alone would make
+    # this worse; RawBoost is the actual fix (channel/device perturbation strong
+    # enough that memorizing exact per-clip waveforms stops being a viable
+    # shortcut). 16 epochs: double the baseline's, since a stronger augmentation
+    # needs more passes to converge but should NOT re-reach loss~0 if it's
+    # working -- watch the loss curve, not just the final EER.
+    SOURCE_EPOCHS, TTA_EPOCHS = 16, 4
+    MAX_TRAIN, MAX_EVAL, ADAPT_N = None, None, 20000
 else:
     SOURCE_EPOCHS, TTA_EPOCHS = 8, 4
     MAX_TRAIN, MAX_EVAL, ADAPT_N = None, None, 20000
 
-SUFFIX = "_smoke" if SMOKE else ""
-RESULTS_CSV = f"results_protocol_a{SUFFIX}.csv"
+RECIPE_TAG = "" if RECIPE == "baseline" else f"_{RECIPE}"
+SUFFIX = "_smoke" if SMOKE else RECIPE_TAG
+RESULTS_CSV = "results_protocol_a.csv" if not SMOKE else "results_protocol_a_smoke.csv"
 LOG_FILE = f"run_log_protocol_a{SUFFIX}.txt"
 CKPT = f"ckpt_protocol_a{SUFFIX}.pt"
+METHOD_SUFFIX = "" if (SMOKE or RECIPE == "baseline") else f"_{RECIPE}"
 
 
 def log(msg):
@@ -200,10 +215,23 @@ def _crop(buf_gpu, vlen_gpu, train):
 
 
 def augment(x):
-    """Placeholder gain+noise perturbation, matching the paper's current recipe.
-    Phase 1 of the plan replaces this with a batched-GPU RawBoost."""
+    """Weak gain+noise perturbation -- the paper's original recipe. Kept as the
+    TTA-consistency perturbation even under RECIPE='rawboost' so that changing
+    the SOURCE training augmentation and changing the CONSISTENCY perturbation
+    are isolated, testable-separately variables (Phase 2.3 of the plan is the
+    latter change; do not conflate the two in one run)."""
     return x * torch.empty(x.size(0), 1, device=DEVICE).uniform_(0.7, 1.3) \
         + 0.005 * torch.randn_like(x)
+
+
+# Source-training augmentation only. bank_size=4096 trades exact-reference
+# equivalence (verified in rawboost_gpu.py's self-test) for ~13x throughput --
+# necessary here since fit_source runs ~794 batches/epoch x 16 epochs.
+_source_rawboost = RawBoostGPU(sr=SR, algo=4, bank_size=4096) if RECIPE == "rawboost" else None
+
+
+def source_augment(x):
+    return _source_rawboost(x) if _source_rawboost is not None else augment(x)
 
 
 # ---------------------------------------------------------------- model
@@ -260,6 +288,37 @@ def eer_of(y, s):
     return e * 100
 
 
+def estimate_prevalence(scores, min_prior=0.02, max_prior=0.98):
+    """Label-free estimate of P(real) from a score distribution alone.
+
+    Why this exists: naive TTA on the real DF eval pool collapsed AUC .870 ->
+    .686. Cause, confirmed against ground truth: `adapt()`'s Q=0.3 pseudo-labels
+    the bottom 30% of the pool as pseudo-real regardless of the pool's actual
+    class balance. DF eval is 97.5% spoof / 2.5% bonafide, so that bottom-30%
+    bucket is mechanically dominated by low-scoring spoof clips mislabeled real
+    -- self-training then teaches the model that a lot of spoof IS real.
+
+    Not `mean(scores)`: that assumes the classifier is calibrated, which is
+    exactly the property this paper's own thesis says does NOT transfer
+    cross-corpus (ranking transfers, calibration doesn't). This instead fits a
+    2-component GMM to the score histogram and reads off the low-scoring
+    component's mixture weight -- it exploits rank/separation, not the absolute
+    score value, so it survives the same calibration drift the paper's method
+    already relies on surviving.
+
+    Validated against real withheld labels on the actual DF adapt pool: true
+    bonafide prevalence 2.47%, estimated 2.63% (both directions of a synthetic
+    sweep also recovered the true prior to within a few points down to 10%;
+    accuracy degrades at the very extreme, hence the `min_prior` floor).
+    """
+    from sklearn.mixture import GaussianMixture
+    gm = GaussianMixture(n_components=2, random_state=0, n_init=3).fit(
+        scores.reshape(-1, 1))
+    means, weights = gm.means_.flatten(), gm.weights_
+    pi_real = float(weights[np.argmin(means)])
+    return float(np.clip(pi_real, min_prior, max_prior))
+
+
 # ---------------------------------------------------------------- train / score
 def fit_source(model, df, epochs):
     """Train on the 2019-LA train pool. Cosine schedule + weight decay (the
@@ -278,7 +337,7 @@ def fit_source(model, df, epochs):
             b = perm[i:i + BATCH]
             x, y = pool.batch(b, train=True)
             opt.zero_grad(set_to_none=True)
-            loss = F.cross_entropy(model(augment(x))[0].float(), y)
+            loss = F.cross_entropy(model(source_augment(x))[0].float(), y)
             loss.backward()
             opt.step()
             tot += loss.item() * len(b)
@@ -318,16 +377,43 @@ def stream_score(model, df, chunk=4096, tag=""):
     return out
 
 
-def adapt(model, df, epochs=TTA_EPOCHS):
+def adapt(model, df, epochs=TTA_EPOCHS, prior_aware=False):
     """Confident-tail pseudo-label self-training + channel consistency, on an
     unlabeled subsample. Same objective as extended_pipeline.py:412; the pool is
-    small enough (ADAPT_N) to cache on GPU."""
+    small enough (ADAPT_N) to cache on GPU.
+
+    `prior_aware`: split the total confident-label budget (2*Q of the pool) by
+    estimated class prevalence instead of splitting it evenly between the two
+    tails. At prevalence=0.5 this is IDENTICAL to the original symmetric
+    behaviour (lo_frac = hi_frac = Q), so the balanced leave-one-corpus-out grid
+    in the main paper is unaffected -- this only changes behaviour on skewed
+    pools like the real DF eval set (97.5% spoof), where naive Q=0.3 collapsed
+    AUC .870 -> .686 by pseudo-labeling mostly-spoof clips as "confident real".
+    Prevalence is estimated ONCE from the frozen pre-adaptation model and held
+    fixed for all epochs -- re-estimating from a self-training model each epoch
+    would let a drifting estimate reinforce its own mistakes.
+    """
     set_tta_params(model)
     opt = torch.optim.Adam(trainable(model), lr=TTA_LR)
 
     pool = CpuPool(df.path.tolist())
     n = pool.n
-    log(f"  adapt pool {n} clips = {pool.gb():.2f} GB (pinned CPU)")
+    log(f"  adapt pool {n} clips = {pool.gb():.2f} GB (pinned CPU)  "
+        f"prior_aware={prior_aware}")
+
+    lo_frac, hi_frac = Q, Q
+    if prior_aware:
+        model.eval()
+        with torch.no_grad():
+            s0 = []
+            for i in range(0, n, BATCH):
+                x, _ = pool.batch(torch.arange(i, min(i + BATCH, n)), train=False)
+                s0.append(torch.softmax(model(x)[0].float(), 1)[:, 1])
+            s0 = torch.cat(s0).cpu().numpy()
+        pi_real = estimate_prevalence(s0)
+        lo_frac, hi_frac = 2 * Q * pi_real, 2 * Q * (1 - pi_real)
+        log(f"  estimated P(real) = {pi_real:.4f}  ->  "
+            f"pseudo-real budget {lo_frac:.4f}  pseudo-fake budget {hi_frac:.4f}")
 
     for ep in range(epochs):
         # re-score the pool and re-assign confident-tail pseudo-labels each epoch
@@ -338,7 +424,7 @@ def adapt(model, df, epochs=TTA_EPOCHS):
                 x, _ = pool.batch(torch.arange(i, min(i + BATCH, n)), train=False)
                 s.append(torch.softmax(model(x)[0].float(), 1)[:, 1])
             s = torch.cat(s).cpu().numpy()
-        lo, hi = np.quantile(s, Q), np.quantile(s, 1 - Q)
+        lo, hi = np.quantile(s, lo_frac), np.quantile(s, 1 - hi_frac)
         pl = torch.full((n,), -1, dtype=torch.long, device=DEVICE)
         pl[torch.from_numpy(s <= lo).to(DEVICE)] = 0
         pl[torch.from_numpy(s >= hi).to(DEVICE)] = 1
@@ -431,16 +517,46 @@ def main():
                     if p.requires_grad}, CKPT)
         log(f"saved {CKPT}")
 
-    log("scoring DF eval with the source model")
-    report("source", ev, stream_score(model, ev, tag="source "))
+    # resume: skip a method entirely if its official_eval row is already recorded
+    # -- a 22-min re-score of the full 400k pool is not something to redo by
+    # accident when only adding one new method to an existing results file.
+    done = set()
+    if os.path.exists(RESULTS_CSV):
+        prev = pd.read_csv(RESULTS_CSV)
+        done = set(prev[prev.setting == "official_eval"].method)
+    log(f"already recorded: {done or '(none)'}")
+
+    m_source = "source" + METHOD_SUFFIX
+    m_ours = "ours" + METHOD_SUFFIX
+    m_ours_prior = "ours_prior" + METHOD_SUFFIX
+
+    if m_source not in done:
+        log(f"scoring DF eval with the {m_source} model")
+        report(m_source, ev, stream_score(model, ev, tag=f"{m_source} "))
+    else:
+        log(f"{m_source} already recorded, skipping re-score")
 
     adapt_df = ev.sample(min(ADAPT_N, len(ev)), random_state=0)
-    log(f"adapting on {len(adapt_df)} unlabeled DF eval clips (no labels used)")
     import copy
-    adapted = adapt(copy.deepcopy(model), adapt_df)
 
-    log("scoring DF eval with the adapted model")
-    report("ours", ev, stream_score(adapted, ev, tag="ours "), set(adapt_df.utt))
+    if m_ours not in done:
+        log(f"[naive] adapting on {len(adapt_df)} unlabeled DF eval clips "
+            f"(symmetric Q, no labels used)")
+        adapted = adapt(copy.deepcopy(model), adapt_df, prior_aware=False)
+        log(f"scoring DF eval with the naive-adapted ({m_ours}) model")
+        report(m_ours, ev, stream_score(adapted, ev, tag=f"{m_ours} "), set(adapt_df.utt))
+    else:
+        log(f"{m_ours} already recorded, skipping")
+
+    if m_ours_prior not in done:
+        log(f"[prior-aware] adapting on {len(adapt_df)} unlabeled DF eval clips "
+            f"(prevalence-weighted budget, no labels used)")
+        adapted_p = adapt(copy.deepcopy(model), adapt_df, prior_aware=True)
+        log(f"scoring DF eval with the prior-aware-adapted ({m_ours_prior}) model")
+        report(m_ours_prior, ev, stream_score(adapted_p, ev, tag=f"{m_ours_prior} "),
+               set(adapt_df.utt))
+    else:
+        log(f"{m_ours_prior} already recorded, skipping")
 
     log(f"DONE in {(time.time() - t0) / 60:.1f} min | "
         f"peak GPU {torch.cuda.max_memory_allocated() / 1e9:.1f} GB")

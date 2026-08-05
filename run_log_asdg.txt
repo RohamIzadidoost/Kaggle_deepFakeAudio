@@ -1,0 +1,135 @@
+[16:24:26] manifest:
+corpus        label
+arabic        fake      16991
+              real       2570
+asvspoof2019  fake      22800
+              real       2580
+dataset2      fake       2173
+              real       2274
+in_the_wild   fake      11816
+              real      19963
+mlaad         fake     154000
+[16:24:26] domain ids: {'arabic': 0, 'asvspoof2019': 1, 'dataset2': 2, 'in_the_wild': 3, 'mlaad': 4}
+[16:24:26] === ASDG baseline | SMOKE=False | targets=['asvspoof2019', 'dataset2', 'in_the_wild', 'arabic'] | seeds=[0, 1, 2] ===
+[16:24:26] already recorded (seed, target): (none)
+[16:24:26]   seed0/asvspoof2019: source 10000 clips ({'in_the_wild': 4250, 'arabic': 2608, 'dataset2': 1632, 'mlaad': 1510}), target 5580 clips
+[16:25:24]   asdg seed0/asvspoof2019 epoch 1/8 ce 0.5044  asdg 0.8322
+[16:26:14]   asdg seed0/asvspoof2019 epoch 2/8 ce 0.1558  asdg 0.5101
+[16:27:03]   asdg seed0/asvspoof2019 epoch 3/8 ce 0.1001  asdg 0.4445
+[16:27:52]   asdg seed0/asvspoof2019 epoch 4/8 ce 0.0916  asdg 0.4165
+[16:28:42]   asdg seed0/asvspoof2019 epoch 5/8 ce 0.0593  asdg 0.3888
+[16:29:31]   asdg seed0/asvspoof2019 epoch 6/8 ce 0.0499  asdg 0.3661
+[16:30:21]   asdg seed0/asvspoof2019 epoch 7/8 ce 0.0547  asdg 0.3725
+[16:31:10]   asdg seed0/asvspoof2019 epoch 8/8 ce 0.0478  asdg 0.3765
+[16:31:33]   ASDG asvspoof2019 seed0: EER 5.39  AUC 0.989  acc 81.9  (7.1 min)
+[16:31:33]   seed0/dataset2: source 10000 clips ({'in_the_wild': 3947, 'asvspoof2019': 2392, 'arabic': 2379, 'mlaad': 1282}), target 4447 clips
+[16:32:31]   asdg seed0/dataset2 epoch 1/8 ce 0.4619  asdg 0.7645
+[16:33:21]   asdg seed0/dataset2 epoch 2/8 ce 0.1247  asdg 0.4753
+[16:34:10]   asdg seed0/dataset2 epoch 3/8 ce 0.0750  asdg 0.4103
+[16:35:00]   asdg seed0/dataset2 epoch 4/8 ce 0.0691  asdg 0.3994
+[16:35:50]   asdg seed0/dataset2 epoch 5/8 ce 0.0478  asdg 0.3670
+[16:36:39]   asdg seed0/dataset2 epoch 6/8 ce 0.0411  asdg 0.3604
+[16:37:29]   asdg seed0/dataset2 epoch 7/8 ce 0.0333  asdg 0.3429
+[16:38:19]   asdg seed0/dataset2 epoch 8/8 ce 0.0293  asdg 0.3383
+[16:38:37]   ASDG dataset2 seed0: EER 33.98  AUC 0.734  acc 68.8  (7.1 min)
+[16:38:37]   seed0/in_the_wild: source 10000 clips ({'asvspoof2019': 3254, 'arabic': 3178, 'dataset2': 2058, 'mlaad': 1510}), target 6000 clips
+[16:39:35]   asdg seed0/in_the_wild epoch 1/8 ce 0.4765  asdg 0.7705
+[16:40:25]   asdg seed0/in_the_wild epoch 2/8 ce 0.1275  asdg 0.4880
+[16:41:15]   asdg seed0/in_the_wild epoch 3/8 ce 0.0937  asdg 0.4276
+[16:42:05]   asdg seed0/in_the_wild epoch 4/8 ce 0.0712  asdg 0.3903
+[16:42:55]   asdg seed0/in_the_wild epoch 5/8 ce 0.0529  asdg 0.3675
+[16:43:45]   asdg seed0/in_the_wild epoch 6/8 ce 0.0398  asdg 0.3616
+[16:44:35]   asdg seed0/in_the_wild epoch 7/8 ce 0.0463  asdg 0.3511
+[16:45:25]   asdg seed0/in_the_wild epoch 8/8 ce 0.0430  asdg 0.3557
+[16:45:49]   ASDG in_the_wild seed0: EER 13.90  AUC 0.931  acc 84.0  (7.2 min)
+[16:45:49]   seed0/arabic: source 10000 clips ({'in_the_wild': 4244, 'asvspoof2019': 2617, 'dataset2': 1629, 'mlaad': 1510}), target 5570 clips
+[16:46:47]   asdg seed0/arabic epoch 1/8 ce 0.4182  asdg 0.7360
+[16:47:37]   asdg seed0/arabic epoch 2/8 ce 0.1258  asdg 0.4515
+[16:48:27]   asdg seed0/arabic epoch 3/8 ce 0.0775  asdg 0.4070
+[16:49:17]   asdg seed0/arabic epoch 4/8 ce 0.0584  asdg 0.3803
+[16:50:08]   asdg seed0/arabic epoch 5/8 ce 0.0526  asdg 0.3779
+[16:50:58]   asdg seed0/arabic epoch 6/8 ce 0.0417  asdg 0.3620
+[16:51:48]   asdg seed0/arabic epoch 7/8 ce 0.0282  asdg 0.3494
+[16:52:38]   asdg seed0/arabic epoch 8/8 ce 0.0307  asdg 0.3467
+[16:53:01]   ASDG arabic seed0: EER 21.56  AUC 0.875  acc 70.7  (7.2 min)
+[16:53:01]   seed1/asvspoof2019: source 10000 clips ({'in_the_wild': 4221, 'arabic': 2705, 'dataset2': 1580, 'mlaad': 1494}), target 5580 clips
+[16:53:58]   asdg seed1/asvspoof2019 epoch 1/8 ce 0.4118  asdg 0.7671
+[16:54:48]   asdg seed1/asvspoof2019 epoch 2/8 ce 0.1605  asdg 0.4963
+[16:55:39]   asdg seed1/asvspoof2019 epoch 3/8 ce 0.1098  asdg 0.4311
+[16:56:29]   asdg seed1/asvspoof2019 epoch 4/8 ce 0.0726  asdg 0.3846
+[16:57:19]   asdg seed1/asvspoof2019 epoch 5/8 ce 0.0831  asdg 0.4094
+[16:58:09]   asdg seed1/asvspoof2019 epoch 6/8 ce 0.0573  asdg 0.3758
+[16:58:59]   asdg seed1/asvspoof2019 epoch 7/8 ce 0.0500  asdg 0.3778
+[16:59:49]   asdg seed1/asvspoof2019 epoch 8/8 ce 0.0365  asdg 0.3540
+[17:00:12]   ASDG asvspoof2019 seed1: EER 4.23  AUC 0.989  acc 91.2  (7.2 min)
+[17:00:12]   seed1/dataset2: source 10000 clips ({'in_the_wild': 3893, 'arabic': 2455, 'asvspoof2019': 2434, 'mlaad': 1218}), target 4447 clips
+[17:01:11]   asdg seed1/dataset2 epoch 1/8 ce 0.4189  asdg 0.7398
+[17:02:01]   asdg seed1/dataset2 epoch 2/8 ce 0.1296  asdg 0.4746
+[17:02:51]   asdg seed1/dataset2 epoch 3/8 ce 0.0838  asdg 0.4141
+[17:03:41]   asdg seed1/dataset2 epoch 4/8 ce 0.0556  asdg 0.3776
+[17:04:31]   asdg seed1/dataset2 epoch 5/8 ce 0.0621  asdg 0.3768
+[17:05:22]   asdg seed1/dataset2 epoch 6/8 ce 0.0494  asdg 0.3802
+[17:06:12]   asdg seed1/dataset2 epoch 7/8 ce 0.0402  asdg 0.3678
+[17:07:02]   asdg seed1/dataset2 epoch 8/8 ce 0.0372  asdg 0.3473
+[17:07:20]   ASDG dataset2 seed1: EER 35.28  AUC 0.724  acc 68.0  (7.1 min)
+[17:07:20]   seed1/in_the_wild: source 10000 clips ({'arabic': 3229, 'asvspoof2019': 3211, 'dataset2': 2066, 'mlaad': 1494}), target 6000 clips
+[17:08:18]   asdg seed1/in_the_wild epoch 1/8 ce 0.3732  asdg 0.7168
+[17:09:08]   asdg seed1/in_the_wild epoch 2/8 ce 0.1210  asdg 0.4552
+[17:09:58]   asdg seed1/in_the_wild epoch 3/8 ce 0.0925  asdg 0.4060
+[17:10:49]   asdg seed1/in_the_wild epoch 4/8 ce 0.0622  asdg 0.3738
+[17:11:39]   asdg seed1/in_the_wild epoch 5/8 ce 0.0475  asdg 0.3663
+[17:12:29]   asdg seed1/in_the_wild epoch 6/8 ce 0.0472  asdg 0.3523
+[17:13:19]   asdg seed1/in_the_wild epoch 7/8 ce 0.0455  asdg 0.3573
+[17:14:09]   asdg seed1/in_the_wild epoch 8/8 ce 0.0356  asdg 0.3496
+[17:14:33]   ASDG in_the_wild seed1: EER 19.78  AUC 0.879  acc 81.7  (7.2 min)
+[17:14:33]   seed1/arabic: source 10000 clips ({'in_the_wild': 4217, 'asvspoof2019': 2709, 'dataset2': 1580, 'mlaad': 1494}), target 5570 clips
+[17:15:31]   asdg seed1/arabic epoch 1/8 ce 0.3338  asdg 0.6812
+[17:16:21]   asdg seed1/arabic epoch 2/8 ce 0.1095  asdg 0.4372
+[17:17:11]   asdg seed1/arabic epoch 3/8 ce 0.0692  asdg 0.3902
+[17:18:01]   asdg seed1/arabic epoch 4/8 ce 0.0610  asdg 0.3678
+[17:18:52]   asdg seed1/arabic epoch 5/8 ce 0.0392  asdg 0.3611
+[17:19:42]   asdg seed1/arabic epoch 6/8 ce 0.0336  asdg 0.3509
+[17:20:32]   asdg seed1/arabic epoch 7/8 ce 0.0537  asdg 0.3849
+[17:21:22]   asdg seed1/arabic epoch 8/8 ce 0.0396  asdg 0.3529
+[17:21:45]   ASDG arabic seed1: EER 22.26  AUC 0.856  acc 65.6  (7.2 min)
+[17:21:45]   seed2/asvspoof2019: source 10000 clips ({'in_the_wild': 4238, 'arabic': 2696, 'mlaad': 1557, 'dataset2': 1509}), target 5580 clips
+[17:22:43]   asdg seed2/asvspoof2019 epoch 1/8 ce 0.3632  asdg 0.7231
+[17:23:33]   asdg seed2/asvspoof2019 epoch 2/8 ce 0.1507  asdg 0.4893
+[17:24:23]   asdg seed2/asvspoof2019 epoch 3/8 ce 0.1051  asdg 0.4262
+[17:25:14]   asdg seed2/asvspoof2019 epoch 4/8 ce 0.0825  asdg 0.3900
+[17:26:04]   asdg seed2/asvspoof2019 epoch 5/8 ce 0.0814  asdg 0.4147
+[17:26:54]   asdg seed2/asvspoof2019 epoch 6/8 ce 0.0563  asdg 0.3745
+[17:27:44]   asdg seed2/asvspoof2019 epoch 7/8 ce 0.0397  asdg 0.3547
+[17:28:34]   asdg seed2/asvspoof2019 epoch 8/8 ce 0.0422  asdg 0.3548
+[17:28:57]   ASDG asvspoof2019 seed2: EER 3.73  AUC 0.992  acc 94.9  (7.2 min)
+[17:28:57]   seed2/dataset2: source 10000 clips ({'in_the_wild': 3977, 'arabic': 2443, 'asvspoof2019': 2342, 'mlaad': 1238}), target 4447 clips
+[17:29:56]   asdg seed2/dataset2 epoch 1/8 ce 0.3021  asdg 0.7062
+[17:30:46]   asdg seed2/dataset2 epoch 2/8 ce 0.0997  asdg 0.4415
+[17:31:36]   asdg seed2/dataset2 epoch 3/8 ce 0.0750  asdg 0.3984
+[17:32:26]   asdg seed2/dataset2 epoch 4/8 ce 0.0610  asdg 0.3810
+[17:33:17]   asdg seed2/dataset2 epoch 5/8 ce 0.0466  asdg 0.3575
+[17:34:07]   asdg seed2/dataset2 epoch 6/8 ce 0.0359  asdg 0.3499
+[17:34:57]   asdg seed2/dataset2 epoch 7/8 ce 0.0409  asdg 0.3423
+[17:35:47]   asdg seed2/dataset2 epoch 8/8 ce 0.0293  asdg 0.3293
+[17:36:05]   ASDG dataset2 seed2: EER 34.11  AUC 0.706  acc 65.8  (7.1 min)
+[17:36:05]   seed2/in_the_wild: source 10000 clips ({'arabic': 3246, 'asvspoof2019': 3124, 'dataset2': 2073, 'mlaad': 1557}), target 6000 clips
+[17:37:04]   asdg seed2/in_the_wild epoch 1/8 ce 0.3897  asdg 0.7258
+[17:37:54]   asdg seed2/in_the_wild epoch 2/8 ce 0.1165  asdg 0.4487
+[17:38:44]   asdg seed2/in_the_wild epoch 3/8 ce 0.0846  asdg 0.4175
+[17:39:34]   asdg seed2/in_the_wild epoch 4/8 ce 0.0666  asdg 0.4082
+[17:40:25]   asdg seed2/in_the_wild epoch 5/8 ce 0.0444  asdg 0.3618
+[17:41:15]   asdg seed2/in_the_wild epoch 6/8 ce 0.0474  asdg 0.3614
+[17:42:05]   asdg seed2/in_the_wild epoch 7/8 ce 0.0478  asdg 0.3642
+[17:42:55]   asdg seed2/in_the_wild epoch 8/8 ce 0.0334  asdg 0.3402
+[17:43:19]   ASDG in_the_wild seed2: EER 28.05  AUC 0.772  acc 76.4  (7.2 min)
+[17:43:19]   seed2/arabic: source 10000 clips ({'in_the_wild': 4242, 'asvspoof2019': 2695, 'mlaad': 1557, 'dataset2': 1506}), target 5570 clips
+[17:44:17]   asdg seed2/arabic epoch 1/8 ce 0.2887  asdg 0.6694
+[17:45:07]   asdg seed2/arabic epoch 2/8 ce 0.1013  asdg 0.4183
+[17:45:57]   asdg seed2/arabic epoch 3/8 ce 0.0825  asdg 0.3977
+[17:46:47]   asdg seed2/arabic epoch 4/8 ce 0.0445  asdg 0.3573
+[17:47:37]   asdg seed2/arabic epoch 5/8 ce 0.0501  asdg 0.3649
+[17:48:27]   asdg seed2/arabic epoch 6/8 ce 0.0380  asdg 0.3467
+[17:49:18]   asdg seed2/arabic epoch 7/8 ce 0.0287  asdg 0.3439
+[17:50:08]   asdg seed2/arabic epoch 8/8 ce 0.0339  asdg 0.3423
+[17:50:30]   ASDG arabic seed2: EER 22.75  AUC 0.845  acc 76.2  (7.2 min)
+[17:50:30] DONE in 86.1 min | peak GPU 6.0 GB
