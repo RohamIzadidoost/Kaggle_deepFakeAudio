@@ -54,3 +54,8 @@ download_log.txt
 
 # --- local scratch workspace unzipped from the cloud run bundle (large ckpts) ---
 cloud_bundle/
+
+# --- adaptive-TTA smoke-run artifacts (throwaway dry-run outputs) ---
+results_adaptive_smoke.csv
+adaptive_trace_smoke.csv
+run_log_adaptive_smoke.txt

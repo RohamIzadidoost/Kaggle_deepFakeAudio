@@ -81,7 +81,7 @@ threshold doesn't** (source AUC stayed 0.966 on unseen In-the-Wild while accurac
 fell to ~55%). So the model's most-confident guesses on new data are trustworthy.
 
 **Method (final, validated):** on the unlabeled target corpus, iteratively (a) score all
-clips, (b) take the confident top/bottom ~15% as pseudo-fake/real, (c) self-train the
+clips, (b) take the confident top/bottom 30% as pseudo-fake/real (`q=0.3`), (c) self-train the
 top LayerNorm params on those pseudo-labels, (d) enforce prediction consistency under a
 channel perturbation. No labels used in adaptation (labels only for final EER).
 
@@ -209,3 +209,86 @@ from `results_bundle.zip` (not committed — `ckpt_ext/` is large). New
 citations added to `main.tex` for DANN, AdaBN, Ben-David 𝒜-distance theory, and
 the In-the-Wild dataset paper — **unverified against the original sources,
 flagged for a citation check before submission**.
+
+---
+
+## 11. Adaptive `q` and `E` (2026-08-07 — pre-GPU validation phase)
+
+**Motivation.** Every TTA number so far uses one hardcoded config — `q=0.3`,
+`λ=0.3`, `E=4` — with no recorded provenance (`tta.py:114-119` uses the literal
+`0.3` for all three auxiliary weights). `main.tex` Limitation 1 already concedes
+it is not uniformly optimal, and Limitation 6 shows a fixed symmetric `q` drives
+Protocol A from 26.33% to 42.45% EER. Goal: make the knobs adapt from unlabeled
+target audio alone.
+
+**Three proposed mechanisms were tested and killed before any GPU time.** This
+is the main content of this phase — do not resurrect them without new evidence.
+
+| mechanism | verdict |
+|---|---|
+| λ gated by pseudo-label churn under augmentation | **Confounded.** Moves λ by 0.017 across the entire AUC range .60–.99, but by 0.165 across augmentation magnitude alone. It reads `augment()`'s own gain/noise constants, not the corpus. |
+| `select_q_max` (pick q from churn) | **Permanently saturated.** Returns the grid minimum q=0.05 on real audio for every corpus — 13/128 clips labelled vs 78 at the published q=0.3. Same confound. |
+| E stopping on epoch-to-epoch label churn | **Degenerate.** Measured *exactly* 0.0000 every epoch of every arm: labels come from quantile cuts, so they only move if the ranking reorders, and self-training sharpens the boundary without reordering. Fired at `E_MIN` every time and measured **worse than the fixed-E control (10.16 vs 9.38 EER)**. |
+
+**A second finding, worth a paragraph in the paper.** The `tail_gap` statistic
+from `lambda_selector.py` correlates with Δ₂ at **r=+0.74, p=0.006** (n=12).
+`main.tex:939-956` reports this as a failure because a reliability proxy needs
+r<0 — but the magnitude is real and *the sign is the result*: high tail
+separation means saturated scores, where MSE-against-stop-gradient freezes an
+already-overconfident boundary. That is a **calibration** property, exactly
+where `main.tex:952-956` predicted a working signal would have to live. For
+contrast, **source AUC — which requires labels — predicts Δ₂ worse** (r=−0.397,
+p=0.20).
+
+It still does not cash out, which is why **λ stays fixed at 0.3**: the whole gap
+between always-λ=0.3 and a *per-point oracle* is **0.24 EER pooled**, and
+leave-one-target-out threshold selection lands inside that gap (better on
+In-the-Wild, worse on ASVspoof2019) and flips sign with the threshold grid
+resolution. Twelve (target, seed) points cannot settle a 0.24 EER question.
+
+**What the method actually does now.** λ fixed at 0.3; q and E adapt:
+
+* **q** — curriculum ramp from `Q_START=0.1` to the published ceiling `Q_CAP=0.3`,
+  with the budget split asymmetrically by a BIC-guarded prevalence estimate
+  (`2q·π`, `2q·(1−π)`, the `protocol_a.py:414` formula). The BIC guard is new:
+  shrink back to π=0.5 when a 2-component score fit does not decisively beat a
+  1-component one — the estimator's recorded failure returned 0.458 against a
+  true 0.025 on the RawBoost model. At π=0.5 the split is *identically* the
+  published symmetric behaviour, so on balanced pools only the ramp acts.
+* **E** — run to 8 (the sweep's better value) with stopping on **`score_shift`**
+  (mean per-clip |Δscore| between epochs), which decays cleanly on real data
+  (0.051 → 0.037 → 0.022 → 0.009) where label churn was flat at zero. The rule
+  is deliberately a **safety valve, not an efficiency measure** — every swept
+  point says more epochs help, so it is biased toward spending the full budget,
+  and divergence must be *sustained* (two consecutive rises above 1.5× the
+  running minimum) after a single-epoch blip cut a healthy run short.
+* **Collapse guard** — revert to the pre-adaptation model if the score
+  distribution degenerates. Insurance against the Tent failure mode that
+  `main.tex:460-479` describes as undetectable in advance.
+
+**Priorities were inverted relative to effect size**, which is why λ was dropped
+rather than fought for: q on skewed pools is worth ~16 EER (Protocol A), E=4→8
+is worth 1.2–1.6 (sweep), λ selection ≤0.5 and fragile.
+
+**Files.** `adaptive_tta.py` (pure numpy, no CUDA — that is what made the
+pre-GPU validation possible), `test_adaptive_tta.py` (36 CPU checks, all
+passing, including the confound as a *recorded negative result* so it is not
+rediscovered), `adaptive_pipeline.py` (sections 1–5 copied programmatically from
+`extended_pipeline.py` so target pools are provably identical; new adaptive loop
++ grid), `verify_reduction.py`. `protocol_a.py` gains an `adaptive=True` arm.
+
+**`verify_reduction.py` is the load-bearing gate**: with both switches off,
+`adapt_adaptive` is **bitwise identical** to the published `adapt()`. If that
+ever fails, every adaptive-vs-fixed comparison is confounded by the refactor
+rather than the schedules. Run it before trusting any new result.
+
+**Not yet run.** The real grid (4 targets × seeds 0–2, reusing the 12 `ckpt_ext`
+checkpoints, no source training) and the Protocol A arm both await the 35 GB
+GPU. Smoke-run EERs are on 128 clips (~0.8% per clip) and carry **no signal** —
+the smoke validates mechanism, not results.
+
+**Trap for whoever runs this next.** `extended_pipeline.py`'s data cell starts a
+**45 GB MLAAD download** on any machine where `data/mlaad` is missing (hit once,
+killed at 1.4 GB). `adaptive_pipeline.py` asserts corpora are present instead,
+and omits MLAAD entirely — it only ever fed source training, which that file
+does not do, and dropping it leaves the target pools bit-identical.

@@ -377,7 +377,7 @@ def stream_score(model, df, chunk=4096, tag=""):
     return out
 
 
-def adapt(model, df, epochs=TTA_EPOCHS, prior_aware=False):
+def adapt(model, df, epochs=TTA_EPOCHS, prior_aware=False, adaptive=False):
     """Confident-tail pseudo-label self-training + channel consistency, on an
     unlabeled subsample. Same objective as extended_pipeline.py:412; the pool is
     small enough (ADAPT_N) to cache on GPU.
@@ -392,9 +392,22 @@ def adapt(model, df, epochs=TTA_EPOCHS, prior_aware=False):
     Prevalence is estimated ONCE from the frozen pre-adaptation model and held
     fixed for all epochs -- re-estimating from a self-training model each epoch
     would let a drifting estimate reinforce its own mistakes.
+
+    `adaptive`: everything `prior_aware` does, plus (a) a BIC guard that shrinks
+    the prevalence estimate back to 0.5 when a 2-component score fit is not
+    decisively better than a 1-component one -- the estimator's recorded failure
+    mode, which returned 0.458 against a true 0.025 on the RawBoost model; (b) a
+    curriculum ramp on q, so early epochs label only a strict high-purity tail
+    and the budget widens as the model settles; (c) label-free early stopping on
+    pseudo-label churn instead of a fixed epoch count; (d) a collapse guard that
+    reverts to the pre-adaptation model if the score distribution degenerates.
+    Implemented in adaptive_tta.py and unit-tested in test_adaptive_tta.py.
     """
+    import adaptive_tta as AT
+
     set_tta_params(model)
     opt = torch.optim.Adam(trainable(model), lr=TTA_LR)
+    pre = {n: p.detach().clone() for n, p in model.named_parameters() if p.requires_grad}
 
     pool = CpuPool(df.path.tolist())
     n = pool.n
@@ -402,7 +415,8 @@ def adapt(model, df, epochs=TTA_EPOCHS, prior_aware=False):
         f"prior_aware={prior_aware}")
 
     lo_frac, hi_frac = Q, Q
-    if prior_aware:
+    pi_real = 0.5
+    if prior_aware or adaptive:
         model.eval()
         with torch.no_grad():
             s0 = []
@@ -410,12 +424,20 @@ def adapt(model, df, epochs=TTA_EPOCHS, prior_aware=False):
                 x, _ = pool.batch(torch.arange(i, min(i + BATCH, n)), train=False)
                 s0.append(torch.softmax(model(x)[0].float(), 1)[:, 1])
             s0 = torch.cat(s0).cpu().numpy()
-        pi_real = estimate_prevalence(s0)
+        if adaptive:
+            pi_real, bic_delta, shrunk = AT.estimate_prevalence_guarded(s0)
+            log(f"  estimated P(real) = {pi_real:.4f} "
+                f"(bic_delta {bic_delta:.1f}, shrunk_to_symmetric={shrunk})")
+        else:
+            pi_real = estimate_prevalence(s0)
         lo_frac, hi_frac = 2 * Q * pi_real, 2 * Q * (1 - pi_real)
-        log(f"  estimated P(real) = {pi_real:.4f}  ->  "
-            f"pseudo-real budget {lo_frac:.4f}  pseudo-fake budget {hi_frac:.4f}")
+        log(f"  pseudo-real budget {lo_frac:.4f}  pseudo-fake budget {hi_frac:.4f}")
 
-    for ep in range(epochs):
+    n_epochs = AT.E_MAX if adaptive else epochs
+    s_prev, shift_hist = None, []
+    pre_restored = False
+
+    for ep in range(n_epochs):
         # re-score the pool and re-assign confident-tail pseudo-labels each epoch
         model.eval()
         with torch.no_grad():
@@ -424,6 +446,22 @@ def adapt(model, df, epochs=TTA_EPOCHS, prior_aware=False):
                 x, _ = pool.batch(torch.arange(i, min(i + BATCH, n)), train=False)
                 s.append(torch.softmax(model(x)[0].float(), 1)[:, 1])
             s = torch.cat(s).cpu().numpy()
+
+        if adaptive:
+            bad, why = AT.collapsed(s)
+            if bad:
+                log(f"  COLLAPSE at epoch {ep} ({why}) -- reverting to pre-adaptation model")
+                with torch.no_grad():
+                    for nm, p_ in model.named_parameters():
+                        if nm in pre:
+                            p_.copy_(pre[nm])
+                pre_restored = True
+                break
+            # curriculum ramp: strict high-purity tail first, widening to the
+            # published ceiling as the model settles on this pool
+            q_t = AT.q_schedule(ep, AT.E_MAX, q_max=Q)
+            lo_frac, hi_frac = AT.tail_budget(q_t, pi_real)
+
         lo, hi = np.quantile(s, lo_frac), np.quantile(s, 1 - hi_frac)
         pl = torch.full((n,), -1, dtype=torch.long, device=DEVICE)
         pl[torch.from_numpy(s <= lo).to(DEVICE)] = 0
@@ -448,7 +486,19 @@ def adapt(model, df, epochs=TTA_EPOCHS, prior_aware=False):
             if loss.requires_grad:
                 loss.backward()
                 opt.step()
-        log(f"  adapt epoch {ep + 1}/{epochs}  confident {int((pl >= 0).sum())}/{n}")
+
+        shift = AT.score_shift(s_prev, s) if s_prev is not None else float("nan")
+        if s_prev is not None:
+            shift_hist.append(shift)
+        s_prev = s
+        log(f"  adapt epoch {ep + 1}/{n_epochs}  confident {int((pl >= 0).sum())}/{n}"
+            + (f"  q={lo_frac / (2 * pi_real) if pi_real else 0:.3f} shift={shift:.5f}" if adaptive else ""))
+
+        if adaptive:
+            stop, why = AT.should_stop(shift_hist, ep, max_epochs=n_epochs)
+            if stop:
+                log(f"  stopping after epoch {ep + 1}: {why}")
+                break
 
     del pool
     torch.cuda.empty_cache()
@@ -529,6 +579,7 @@ def main():
     m_source = "source" + METHOD_SUFFIX
     m_ours = "ours" + METHOD_SUFFIX
     m_ours_prior = "ours_prior" + METHOD_SUFFIX
+    m_ours_adaptive = "ours_adaptive" + METHOD_SUFFIX
 
     if m_source not in done:
         log(f"scoring DF eval with the {m_source} model")
@@ -557,6 +608,16 @@ def main():
                set(adapt_df.utt))
     else:
         log(f"{m_ours_prior} already recorded, skipping")
+
+    if m_ours_adaptive not in done:
+        log(f"[adaptive] adapting on {len(adapt_df)} unlabeled DF eval clips "
+            f"(BIC-guarded prevalence + q ramp + score-movement stopping, no labels used)")
+        adapted_a = adapt(copy.deepcopy(model), adapt_df, adaptive=True)
+        log(f"scoring DF eval with the adaptive ({m_ours_adaptive}) model")
+        report(m_ours_adaptive, ev, stream_score(adapted_a, ev, tag=f"{m_ours_adaptive} "),
+               set(adapt_df.utt))
+    else:
+        log(f"{m_ours_adaptive} already recorded, skipping")
 
     log(f"DONE in {(time.time() - t0) / 60:.1f} min | "
         f"peak GPU {torch.cuda.max_memory_allocated() / 1e9:.1f} GB")

@@ -69,7 +69,28 @@ real-anchor losses — validated as harmful, kept for the ablation), `sampler.py
 `repair_tta.py`, `cross_dataset.py`. Shell wrappers: `run_ablation.sh`,
 `run_gonogo.sh`, `run_tta_confirm.sh`, `run_tta_validation.sh`.
 
-There is no formal test suite or linter configured in this repo.
+### Adaptive q/E (Phase 4, pre-GPU validated, not yet run at scale)
+
+```bash
+python test_adaptive_tta.py          # 36 CPU checks, no GPU needed
+python verify_reduction.py           # MUST pass before trusting any adaptive result
+python adaptive_pipeline.py          # smoke (tiny subsets, *_smoke.csv outputs)
+ADAPTIVE_SMOKE=0 python adaptive_pipeline.py   # real: 4 targets x seeds 0-2
+```
+
+`adaptive_tta.py` holds the schedules as **pure numpy** (no CUDA, no globals) so
+they can be validated on synthetic scores without a GPU — that is how three
+proposed mechanisms were killed before spending GPU time (see `PROJECT_LOG.md`
+§11; the confounded ones are kept as *recorded negative results* in the test
+file, don't resurrect them). `adaptive_pipeline.py` copies sections 1–5 of
+`extended_pipeline.py` verbatim so target pools are identical, reuses the 12
+`ckpt_ext/` source checkpoints, and never trains or downloads.
+`verify_reduction.py` asserts the adaptive loop with its switches off is
+*bitwise identical* to the published `adapt()` — if it fails, every
+adaptive-vs-fixed comparison is confounded by the refactor.
+
+There is no formal test suite or linter configured in this repo, apart from
+`test_adaptive_tta.py` / `verify_reduction.py` above, which are plain scripts.
 
 ## Architecture
 
@@ -112,8 +133,9 @@ kept in the codebase for the ablation table, not as something to build on.
 The method that actually works is **test-time adaptation** (`tta.py`,
 orchestrated via `trainer.py` and the overnight notebook): on unlabeled
 target-corpus audio, iteratively (a) score all clips with the source model,
-(b) take the most-confident ~15% top/bottom scores as pseudo-fake/real
-labels, (c) self-train only the top LayerNorm parameters on those
+(b) take the most-confident top/bottom 30% of scores as pseudo-fake/real
+labels (`q=0.3`, so 60% of the pool is labelled and the middle 40% ignored),
+(c) self-train only the top LayerNorm parameters on those
 pseudo-labels, (d) enforce prediction consistency under a channel
 perturbation. This relies on the finding that a detector's **AUC/ranking
 transfers cross-corpus even when its decision threshold doesn't** — see
