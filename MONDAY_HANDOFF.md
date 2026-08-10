@@ -44,16 +44,31 @@ symmetric `q` drives EER from 26.33% to 42.45% on a 97.5%-spoof pool.
 | `ckpt_protocol_a_rawboost.pt` | 193 MB | Protocol A retrains 16 epochs (+35 min) |
 | `results_protocol_a.csv` | 1 KB | Protocol A runs 4 arms instead of 1 (+4 h) |
 
-Put them in the repo root after cloning.
+**Upload them flat into whatever directory the file browser shows** (`/work` on a
+JupyterLab mount, `/content` on Colab, `$HOME` otherwise) — §3 clones the repo
+into a `deepfake/` subdirectory of that same place and moves the uploads into
+position. You do not need to create `ckpt_ext/` by hand.
 
 ---
 
 ## 3. Setup (~40 min, mostly download)
 
-Clone:
+Clone **next to the uploads**, not into `$HOME` — on a JupyterLab box the file
+browser is usually mounted at `/work`, and cloning elsewhere strands the 2.3 GB
+you just uploaded:
 
 ```bash
-git clone https://github.com/RohamIzadidoost/Kaggle_deepFakeAudio.git ~/deepfake && cd ~/deepfake && mkdir -p data logs
+UP=$( [ -d /work ] && echo /work || { [ -d /content ] && echo /content || echo ~; } ); echo "uploads dir: $UP"
+```
+
+```bash
+git clone https://github.com/RohamIzadidoost/Kaggle_deepFakeAudio.git $UP/deepfake && cd $UP/deepfake && mkdir -p data logs
+```
+
+Adopt the flat uploads into the layout the scripts expect:
+
+```bash
+mkdir -p ckpt_ext && mv $UP/source_*_seed*.pt ckpt_ext/ 2>/dev/null; for f in kaggle.json ckpt_protocol_a_rawboost.pt results_protocol_a.csv; do [ -f "$UP/$f" ] && mv "$UP/$f" .; done; ls ckpt_ext | wc -l
 ```
 
 Dependencies — librosa/numba are removed deliberately, they pull a numpy that

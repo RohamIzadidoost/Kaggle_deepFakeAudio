@@ -60,7 +60,15 @@ print("python", sys.version.split()[0])
 
 # %%
 REPO = "https://github.com/RohamIzadidoost/Kaggle_deepFakeAudio.git"
-WORK = "/content/deepfake" if os.path.isdir("/content") else os.path.expanduser("~/deepfake")
+
+# Where the uploads actually land differs per host: /work on a JupyterLab
+# mount, /content on Colab, $HOME elsewhere. Pick the first that exists so the
+# repo is cloned next to the uploaded checkpoints rather than somewhere else on
+# the box -- getting this wrong strands the 2.3 GB you just uploaded.
+UPLOADS = next((d for d in ("/work", "/content", os.path.expanduser("~"))
+                if os.path.isdir(d)), os.path.expanduser("~"))
+WORK = os.path.join(UPLOADS, "deepfake")
+print("uploads dir:", UPLOADS, "-> work dir:", WORK)
 
 if not os.path.isdir(WORK):
     subprocess.run(["git", "clone", "--depth", "1", REPO, WORK], check=True)
@@ -98,29 +106,42 @@ print("done -- RESTART THE KERNEL now, then run section 4 onward")
 # %%
 # Re-derived rather than inherited: the kernel restart in section 3 wipes every
 # variable, and this is the first cell you run afterwards.
-import glob, os, subprocess, sys, textwrap, time
+import glob, os, shutil, subprocess, sys, textwrap, time
 
-WORK = "/content/deepfake" if os.path.isdir("/content") else os.path.expanduser("~/deepfake")
+UPLOADS = next((d for d in ("/work", "/content", os.path.expanduser("~"))
+                if os.path.isdir(d)), os.path.expanduser("~"))
+WORK = os.path.join(UPLOADS, "deepfake")
 os.chdir(WORK)
 os.makedirs("logs", exist_ok=True)
 print("cwd:", os.getcwd())
 
+# Browser uploads land flat in the upload directory, not inside a folder, so
+# adopt them rather than demanding you arrange them by hand first.
+os.makedirs("ckpt_ext", exist_ok=True)
+for p in glob.glob(f"{UPLOADS}/source_*_seed*.pt"):
+    shutil.move(p, f"ckpt_ext/{os.path.basename(p)}")
+    print("adopted", os.path.basename(p))
+for f in ("kaggle.json", "ckpt_protocol_a_rawboost.pt", "results_protocol_a.csv"):
+    if os.path.exists(f"{UPLOADS}/{f}") and not os.path.exists(f):
+        shutil.move(f"{UPLOADS}/{f}", f)
+        print("adopted", f)
+
 ck = sorted(glob.glob("ckpt_ext/source_*_seed*.pt"))
-print(f"ckpt_ext: {len(ck)} checkpoints")
+print(f"\nckpt_ext: {len(ck)} checkpoints")
 for c in ck:
     print("   ", c, f"{os.path.getsize(c)/1e6:.0f} MB")
 
 assert len(ck) == 12, (
     f"expected 12 checkpoints (4 targets x seeds 0-2), found {len(ck)}. "
-    "Upload ckpt_ext/ before continuing -- otherwise every fold is skipped.")
+    f"Upload them to {UPLOADS} (flat is fine) -- otherwise every fold is skipped.")
 
 # Kaggle credentials
 kdir = os.path.expanduser("~/.kaggle")
 if os.path.exists("kaggle.json"):
     os.makedirs(kdir, exist_ok=True)
-    subprocess.run(["cp", "kaggle.json", f"{kdir}/kaggle.json"], check=True)
+    shutil.copy("kaggle.json", f"{kdir}/kaggle.json")
     os.chmod(f"{kdir}/kaggle.json", 0o600)
-assert os.path.exists(f"{kdir}/kaggle.json"), "upload kaggle.json to the repo root"
+assert os.path.exists(f"{kdir}/kaggle.json"), f"upload kaggle.json to {UPLOADS}"
 
 PROTO_A = os.path.exists("ckpt_protocol_a_rawboost.pt")
 print(f"\nProtocol A checkpoint present: {PROTO_A}")
