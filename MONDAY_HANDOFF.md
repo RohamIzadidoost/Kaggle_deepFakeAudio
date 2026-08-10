@@ -57,8 +57,13 @@ Clone **next to the uploads**, not into `$HOME` — on a JupyterLab box the file
 browser is usually mounted at `/work`, and cloning elsewhere strands the 2.3 GB
 you just uploaded:
 
+Find the upload directory by looking for the uploads, not by guessing a path. A
+JupyterLab file browser showing `/work/` is showing a path **relative to the
+notebook server root** — the real directory was `~/work`, and probing `/work`
+found nothing:
+
 ```bash
-UP=$( [ -d /work ] && echo /work || { [ -d /content ] && echo /content || echo ~; } ); echo "uploads dir: $UP"
+for d in /work /content ~/work ~ .; do if ls $d/ckpt_ext/source_*_seed*.pt $d/source_*_seed*.pt $d/kaggle.json >/dev/null 2>&1; then UP=$(cd $d && pwd); break; fi; done; echo "uploads dir: $UP"
 ```
 
 ```bash
@@ -68,7 +73,14 @@ git clone https://github.com/RohamIzadidoost/Kaggle_deepFakeAudio.git $UP/deepfa
 Adopt the flat uploads into the layout the scripts expect:
 
 ```bash
-mkdir -p ckpt_ext && mv $UP/source_*_seed*.pt ckpt_ext/ 2>/dev/null; for f in kaggle.json ckpt_protocol_a_rawboost.pt results_protocol_a.csv; do [ -f "$UP/$f" ] && mv "$UP/$f" .; done; ls ckpt_ext | wc -l
+mkdir -p ckpt_ext && mv $UP/ckpt_ext/source_*_seed*.pt $UP/source_*_seed*.pt ckpt_ext/ 2>/dev/null; for f in kaggle.json ckpt_protocol_a_rawboost.pt results_protocol_a.csv; do [ -f "$UP/$f" ] && mv "$UP/$f" .; done; ls ckpt_ext/*.pt | wc -l
+```
+
+That last number must be **12**. Confirm the box has room before going further —
+you need ~110 GB, and the persistent mount usually has it where `$HOME` may not:
+
+```bash
+df -h .
 ```
 
 Dependencies — librosa/numba are removed deliberately, they pull a numpy that

@@ -61,12 +61,24 @@ print("python", sys.version.split()[0])
 # %%
 REPO = "https://github.com/RohamIzadidoost/Kaggle_deepFakeAudio.git"
 
-# Where the uploads actually land differs per host: /work on a JupyterLab
-# mount, /content on Colab, $HOME elsewhere. Pick the first that exists so the
-# repo is cloned next to the uploaded checkpoints rather than somewhere else on
-# the box -- getting this wrong strands the 2.3 GB you just uploaded.
-UPLOADS = next((d for d in ("/work", "/content", os.path.expanduser("~"))
-                if os.path.isdir(d)), os.path.expanduser("~"))
+# Find the upload directory by looking for the uploads themselves, rather than
+# by guessing a path. Guessing failed on a real JupyterLab box: its file browser
+# shows "/work/" but that breadcrumb is relative to the notebook server root, so
+# the actual path was ~/work while a "/work" probe said no such directory. The
+# repo is then cloned inside whichever directory really holds the uploads --
+# usually the large persistent mount, which is also where the ~110 GB of corpora
+# need to land.
+CANDIDATES = ["/work", "/content", os.path.expanduser("~/work"),
+              os.path.expanduser("~"), os.getcwd()]
+UPLOADS = next((d for d in CANDIDATES if os.path.isdir(d) and (
+    glob.glob(f"{d}/ckpt_ext/source_*_seed*.pt")
+    or glob.glob(f"{d}/source_*_seed*.pt")
+    or os.path.exists(f"{d}/kaggle.json"))), None)
+assert UPLOADS, (
+    "could not find your uploads. Looked for ckpt_ext/, source_*_seed*.pt or "
+    f"kaggle.json in {CANDIDATES}. Set UPLOADS by hand to the directory the "
+    "file browser is showing -- note its breadcrumb may be relative to the "
+    "notebook server root, so check with `import os; os.getcwd()` first.")
 WORK = os.path.join(UPLOADS, "deepfake")
 print("uploads dir:", UPLOADS, "-> work dir:", WORK)
 
@@ -108,19 +120,27 @@ print("done -- RESTART THE KERNEL now, then run section 4 onward")
 # variable, and this is the first cell you run afterwards.
 import glob, os, shutil, subprocess, sys, textwrap, time
 
-UPLOADS = next((d for d in ("/work", "/content", os.path.expanduser("~"))
-                if os.path.isdir(d)), os.path.expanduser("~"))
+CANDIDATES = ["/work", "/content", os.path.expanduser("~/work"),
+              os.path.expanduser("~"), os.getcwd()]
+UPLOADS = next((d for d in CANDIDATES if os.path.isdir(d) and (
+    glob.glob(f"{d}/ckpt_ext/source_*_seed*.pt")
+    or glob.glob(f"{d}/source_*_seed*.pt")
+    or os.path.exists(f"{d}/kaggle.json"))), None)
+assert UPLOADS, f"could not find your uploads in {CANDIDATES} -- set UPLOADS by hand"
 WORK = os.path.join(UPLOADS, "deepfake")
 os.chdir(WORK)
 os.makedirs("logs", exist_ok=True)
-print("cwd:", os.getcwd())
+print("uploads:", UPLOADS, "| cwd:", os.getcwd())
 
-# Browser uploads land flat in the upload directory, not inside a folder, so
-# adopt them rather than demanding you arrange them by hand first.
+# Adopt the uploads wherever they are: flat in the upload dir (a browser cannot
+# upload a directory) or already inside a ckpt_ext/ folder you made by hand.
 os.makedirs("ckpt_ext", exist_ok=True)
-for p in glob.glob(f"{UPLOADS}/source_*_seed*.pt"):
-    shutil.move(p, f"ckpt_ext/{os.path.basename(p)}")
-    print("adopted", os.path.basename(p))
+for p in (glob.glob(f"{UPLOADS}/ckpt_ext/source_*_seed*.pt")
+          + glob.glob(f"{UPLOADS}/source_*_seed*.pt")):
+    dst = f"ckpt_ext/{os.path.basename(p)}"
+    if not os.path.exists(dst):
+        shutil.move(p, dst)
+        print("adopted", os.path.basename(p))
 for f in ("kaggle.json", "ckpt_protocol_a_rawboost.pt", "results_protocol_a.csv"):
     if os.path.exists(f"{UPLOADS}/{f}") and not os.path.exists(f):
         shutil.move(f"{UPLOADS}/{f}", f)
