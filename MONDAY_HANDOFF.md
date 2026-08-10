@@ -105,16 +105,18 @@ ls ckpt_ext/source_*_seed*.pt | wc -l
 Target corpora only (~19 GB). **MLAAD is not in this list on purpose**: it is a
 source-diversity corpus, and nothing here trains:
 
-```bash
-kaggle datasets download -d azkurniwan/asvspoof-2019-la -p data/asvspoof2019_LA --unzip
-```
+Via the Python API throughout, never the `kaggle` CLI — see the note under the
+DF download below for why the binary is not reliably on PATH here:
 
 ```bash
-kaggle datasets download -d bhaveshkumars/release-in-the-wild -p data/in_the_wild --unzip
-```
-
-```bash
-kaggle datasets download -d adarshsingh0903/audio-deepfake-detection-dataset -p data/dataset_2 --unzip
+python -c "
+import kaggle
+for slug, path in [('azkurniwan/asvspoof-2019-la', 'data/asvspoof2019_LA'),
+                   ('bhaveshkumars/release-in-the-wild', 'data/in_the_wild'),
+                   ('adarshsingh0903/audio-deepfake-detection-dataset', 'data/dataset_2')]:
+    print('downloading', slug)
+    kaggle.api.dataset_download_files(slug, path=path, unzip=True, quiet=False)
+print('target corpora done')"
 ```
 
 Arabic ArAD comes from HuggingFace, not Kaggle:
@@ -134,10 +136,19 @@ print('arabic done')"
 ```
 
 Start the 61 GB Protocol A download **now** so it runs during the grid and costs
-no serial time:
+no serial time. Use the Python API, not the `kaggle` CLI: `pip --user` installs
+that binary into `~/.local/bin`, which is not on PATH on a stock JupyterLab
+image, so `nohup kaggle ...` dies instantly and `nohup` swallows the error —
+you discover it hours later when Protocol A has no data.
 
 ```bash
-nohup kaggle datasets download -d mohammedabdeldayem/avsspoof-2021 -p data/dataset_1 --unzip > logs/df_download.log 2>&1 &
+nohup python -c "import kaggle; kaggle.api.dataset_download_files('mohammedabdeldayem/avsspoof-2021', path='data/dataset_1', unzip=True, quiet=False)" > logs/df_download.log 2>&1 &
+```
+
+Confirm it is actually moving rather than assuming silence means progress:
+
+```bash
+sleep 60; tail -5 logs/df_download.log; du -sh data/dataset_1
 ```
 
 ---

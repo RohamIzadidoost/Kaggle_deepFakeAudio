@@ -229,11 +229,23 @@ if RUN_PROTOCOL_A:
     if glob.glob("data/dataset_1/ASVspoof2021_DF_eval_part0*/**/*.flac", recursive=True):
         print("DF eval already present")
     else:
-        subprocess.Popen(
-            "nohup kaggle datasets download -d mohammedabdeldayem/avsspoof-2021 "
-            "-p data/dataset_1 --unzip > logs/df_download.log 2>&1 &",
-            shell=True)
-        print("DF eval download started in background -> logs/df_download.log")
+        # Via the Python API, not the `kaggle` CLI: pip --user puts that binary
+        # in ~/.local/bin, which is not on PATH on a stock JupyterLab image, so
+        # `nohup kaggle ...` dies instantly with "No such file or directory" and
+        # nohup swallows it -- you find out hours later when Protocol A has no
+        # data. Section 5 already proves this import path works on this box.
+        subprocess.Popen([sys.executable, "-c",
+                          "import kaggle; kaggle.api.dataset_download_files("
+                          "'mohammedabdeldayem/avsspoof-2021',"
+                          " path='data/dataset_1', unzip=True, quiet=False)"],
+                         stdout=open("logs/df_download.log", "w"),
+                         stderr=subprocess.STDOUT)
+        time.sleep(20)
+        tail = open("logs/df_download.log").read()[-500:]
+        print("DF eval download started -> logs/df_download.log")
+        print(tail if tail.strip() else "(no output yet)")
+        assert "No such file" not in tail and "Traceback" not in tail, \
+            "DF download failed to start -- see logs/df_download.log"
 
 # %% [markdown]
 # ## 8. Gate: the reduction check
