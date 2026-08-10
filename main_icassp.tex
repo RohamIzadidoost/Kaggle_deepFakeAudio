@@ -306,10 +306,13 @@ rather than hiding it. We enumerate the remaining limitations explicitly:
 low-AUC starting point is not a regime we can currently rescue
 (Fig.~\ref{fig:aucgain}).
 \item \textbf{Fixed hyperparameters.} $q,\lambda,E$ are chosen without target
-labels and are not per-target optimal; a label-free heuristic we built to fix
-this failed in the wrong direction ($r{=}{+}0.74$ where $r{<}0$ was needed), a
-negative result consistent with, not contradicting, the ranking-calibration
-account.
+labels and are not per-target optimal. A label-free tail-separation statistic
+predicts $\Delta_2$ strongly but with the sign inverted from a reliability
+reading ($r{=}{+}0.74$, $p{=}0.006$): saturation, not unreliability, is what
+makes the consistency term freeze an overconfident boundary---a calibration
+effect, consistent with the ranking-calibration account. Acting on it does not
+pay at our scale (fixed $\lambda$ is within $0.24$ EER of a per-point oracle),
+so $\lambda$ stays constant.
 \item \textbf{Scale.} Four targets and five seeds establish sign consistency,
 not a rigorous statistical test---though growing from three to five seeds
 strengthened rather than weakened every central claim, including surfacing
