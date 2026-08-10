@@ -92,6 +92,15 @@ path from a notebook cell with `import sys; print(sys.executable)`:
 PY=$(command -v python3 || command -v python || ls /opt/conda/bin/python 2>/dev/null | head -1); echo "interpreter: $PY"; $PY -c "import sys; print(sys.version)"
 ```
 
+If that resolves nothing, or resolves an interpreter without the packages, and a
+job launched from the notebook is already running, read the interpreter off its
+command line — it was started with `sys.executable`, so it is by definition the
+one that has everything installed:
+
+```bash
+PY=$(ps -eo args | grep "[a]daptive_pipeline" | head -1 | tr ' ' '\n' | grep -m1 python); echo "interpreter: $PY"
+```
+
 Dependencies — librosa/numba are removed deliberately, they pull a numpy that
 breaks the pandas ABI here:
 
