@@ -735,18 +735,18 @@ Setting & In-the-Wild & Arabic \\
 \midrule
 Source-only & 18.73 / .900 & 28.56 / .781 \\
 \midrule
-$q=0.1$ & 14.87 / .933 & 25.14 / .825 \\
-$q=0.2$ & 14.70 / .933 & \textbf{23.05} / \textbf{.849} \\
-\rowcolor{green!12}$q=0.3$ (default) & \textbf{14.25} / \textbf{.934} & 24.74 / .836 \\
-$q=0.4$ & 14.47 / .939 & 24.51 / .830 \\
+$q{=}0.1$ & 14.87 / .933 & 25.14 / .825 \\
+$q{=}0.2$ & 14.70 / .933 & \textbf{23.05} / \textbf{.849} \\
+\rowcolor{green!12}$q{=}0.3$ (default) & \textbf{14.25} / \textbf{.934} & 24.74 / .836 \\
+$q{=}0.4$ & 14.47 / .939 & 24.51 / .830 \\
 \midrule
-$E=2$ & 15.38 / .923 & 26.99 / .809 \\
-\rowcolor{green!12}$E=4$ (default) & 14.25 / .934 & 24.74 / .836 \\
-$E=8$ & \textbf{13.03} / \textbf{.945} & \textbf{23.12} / \textbf{.852} \\
+$E{=}2$ & 15.38 / .923 & 26.99 / .809 \\
+\rowcolor{green!12}$E{=}4$ (default) & 14.25 / .934 & 24.74 / .836 \\
+$E{=}8$ & \textbf{13.03} / \textbf{.945} & \textbf{23.12} / \textbf{.852} \\
 \midrule
-$\lambda=0$ (no consistency) & 15.75 / .919 & 25.46 / .822 \\
-\rowcolor{green!12}$\lambda=0.3$ (default) & 14.25 / .934 & \textbf{24.74} / \textbf{.836} \\
-$\lambda=1.0$ & \textbf{13.98} / \textbf{.937} & 25.28 / .832 \\
+$\lambda{=}0$ (no consistency) & 15.75 / .919 & 25.46 / .822 \\
+\rowcolor{green!12}$\lambda{=}0.3$ (default) & 14.25 / .934 & \textbf{24.74} / \textbf{.836} \\
+$\lambda{=}1.0$ & \textbf{13.98} / \textbf{.937} & 25.28 / .832 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -942,18 +942,43 @@ confident-tail separation ($\mathrm{mean}(s\mid s\!\geq\!Q_{0.7}) -
 \mathrm{mean}(s\mid s\!\leq\!Q_{0.3})$, computable without any target labels)
 as a proxy for whether the source model's ranking on that target is reliable.
 Validated post-hoc against the true $\Delta_2$ across all $12$ (target, seed)
-points, it \emph{fails}, and fails in the wrong direction
-($r{=}{+}0.74$ between the proxy and $\Delta_2$, where a useful heuristic needs
-$r{<}0$): LibriSpeech-TTS, the one target where consistency hurts, has the
-\emph{highest} tail separation of any target ($0.92$--$0.99$), not the lowest.
-We read this as consistent with, rather than contradicting, Sec.~III-C: our
-detector's raw scores concentrate near the extremes on \emph{every} target
-regardless of whether that confidence is correct, so a proxy built only from
-score confidence cannot distinguish confident-and-right from
-confident-and-miscalibrated, which is precisely the failure mode
-LibriSpeech-TTS represents. A working label-free signal would need to measure
-something closer to calibration correctness than to confidence, which remains
-open.
+points, it correlates \emph{strongly but with the opposite sign to the one a
+reliability reading predicts} ($r{=}{+}0.74$, $p{=}0.006$; a proxy meant to
+raise $\lambda$ where the ranking is trustworthy needs $r{<}0$):
+LibriSpeech-TTS, the one target where consistency hurts, has the \emph{highest}
+tail separation of any target ($0.92$--$0.99$), not the lowest.
+
+We initially reported this as a failed heuristic. On closer analysis the sign
+is the result. Large tail separation indicates a \emph{saturated} score
+distribution, and $\mathcal{L}_{\mathrm{cons}}$ is a squared error against a
+stop-gradient target: where predictions are already pinned near $0$ or $1$, it
+penalises any movement away from what the model currently believes, freezing an
+overconfident boundary rather than smoothing it. That is a statement about
+calibration, not about confidence---the quantity Sec.~III-C argues is the real
+precondition. Two further observations support reading it this way rather than
+as a coincidence of $12$ points. First, source AUC on the target, which
+\emph{requires labels} and is the natural oracle for this question, predicts
+$\Delta_2$ \emph{worse} than the label-free statistic does ($r{=}{-}0.397$,
+$p{=}0.20$): the obstacle is not that our proxy is uninformative but that
+$\Delta_2$ is intrinsically noisy at this scale. Second, we tested the obvious
+alternative---measuring \emph{instability} instead of confidence, via the rate
+at which confident-tail pseudo-labels flip under the channel augmentation---and
+it is confounded: sweeping true AUC over $0.60$--$0.99$ at fixed augmentation
+moves the resulting $\lambda$ by $0.017$, while sweeping the augmentation
+magnitude at fixed AUC moves it by $0.165$. Such a gate reads the augmentation
+constants we chose, not the corpus.
+
+We nonetheless keep $\lambda$ fixed, because acting on the signal does not pay
+at a scale we can measure. The entire gap between our fixed $\lambda{=}0.3$ and
+a \emph{per-point oracle} that chooses $\lambda\!\in\!\{0,0.3\}$ with knowledge
+of the answer is $0.24$ EER pooled over the $12$ points. A leave-one-target-out
+threshold on the tail statistic lands inside that gap---better on In-the-Wild,
+worse on ASVspoof2019---and its apparent advantage is not stable to the
+resolution of the threshold grid it is selected on. Twelve (target, seed)
+points cannot settle a $0.24$ EER question, and we decline to present a
+selector whose benefit disappears under a finer search as though it were one.
+We therefore report the sign, the mechanism it implies, and the negative
+instability result, and leave $\lambda$ at a constant.
 
 \item \textbf{The method needs a source model with an already-reliable
 ranking.} The mechanism in Sec.~III-C requires confident-tail pseudo-labels to
