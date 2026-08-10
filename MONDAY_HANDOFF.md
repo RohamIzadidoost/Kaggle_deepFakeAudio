@@ -44,20 +44,19 @@ symmetric `q` drives EER from 26.33% to 42.45% on a 97.5%-spoof pool.
 | `ckpt_protocol_a_rawboost.pt` | 193 MB | Protocol A retrains 16 epochs (+35 min) |
 | `results_protocol_a.csv` | 1 KB | Protocol A runs 4 arms instead of 1 (+4 h) |
 
-**Upload them flat into whatever directory the file browser shows** (`/work` on a
-JupyterLab mount, `/content` on Colab, `$HOME` otherwise) — §3 clones the repo
-into a `deepfake/` subdirectory of that same place and moves the uploads into
-position. You do not need to create `ckpt_ext/` by hand.
+**Upload them flat into whatever directory the file browser shows** — §3 finds
+that directory by searching for these files, clones the repo into a `deepfake/`
+subdirectory of it, and moves them into position. You do not need to create
+`ckpt_ext/` by hand (a browser cannot upload a folder anyway).
 
 ---
 
 ## 3. Setup (~40 min, mostly download)
 
-Clone **next to the uploads**, not into `$HOME` — on a JupyterLab box the file
-browser is usually mounted at `/work`, and cloning elsewhere strands the 2.3 GB
-you just uploaded:
+Clone **next to the uploads**, not into `$HOME` — cloning elsewhere strands the
+2.3 GB you just uploaded, and `$HOME` is often the small volume.
 
-Find the upload directory by looking for the uploads, not by guessing a path. A
+Find that directory by looking for the uploads, not by guessing a path. A
 JupyterLab file browser showing `/work/` is showing a path **relative to the
 notebook server root** — the real directory was `~/work`, and probing `/work`
 found nothing:
@@ -83,11 +82,21 @@ you need ~110 GB, and the persistent mount usually has it where `$HOME` may not:
 df -h .
 ```
 
+**Resolve the interpreter first.** On a JupyterLab image the terminal's PATH is
+not the kernel's: both `python` and the `kaggle` CLI can be missing there while
+working perfectly in a notebook cell (observed live — `nohup python ...` exited
+127). Everything below uses `$PY`, and if none of these resolve, get the true
+path from a notebook cell with `import sys; print(sys.executable)`:
+
+```bash
+PY=$(command -v python3 || command -v python || ls /opt/conda/bin/python 2>/dev/null | head -1); echo "interpreter: $PY"; $PY -c "import sys; print(sys.version)"
+```
+
 Dependencies — librosa/numba are removed deliberately, they pull a numpy that
 breaks the pandas ABI here:
 
 ```bash
-pip uninstall -y -q librosa numba && pip install -q "numpy==1.26.4" pandas scikit-learn scipy torch torchaudio soundfile datasets tqdm kaggle && pip install -q "numpy==1.26.4"
+$PY -m pip uninstall -y -q librosa numba && $PY -m pip install -q "numpy==1.26.4" pandas scikit-learn scipy torch torchaudio soundfile datasets tqdm kaggle && $PY -m pip install -q "numpy==1.26.4"
 ```
 
 Kaggle credentials:
@@ -109,7 +118,7 @@ Via the Python API throughout, never the `kaggle` CLI — see the note under the
 DF download below for why the binary is not reliably on PATH here:
 
 ```bash
-python -c "
+$PY -c "
 import kaggle
 for slug, path in [('azkurniwan/asvspoof-2019-la', 'data/asvspoof2019_LA'),
                    ('bhaveshkumars/release-in-the-wild', 'data/in_the_wild'),
@@ -122,7 +131,7 @@ print('target corpora done')"
 Arabic ArAD comes from HuggingFace, not Kaggle:
 
 ```bash
-python -c "
+$PY -c "
 from datasets import load_dataset, Audio
 import os
 ds = load_dataset('DeepFake-Audio-Rangers/Arabic_Audio_Deepfake').cast_column('audio', Audio(decode=False))
@@ -142,7 +151,7 @@ image, so `nohup kaggle ...` dies instantly and `nohup` swallows the error —
 you discover it hours later when Protocol A has no data.
 
 ```bash
-nohup python -c "import kaggle; kaggle.api.dataset_download_files('mohammedabdeldayem/avsspoof-2021', path='data/dataset_1', unzip=True, quiet=False)" > logs/df_download.log 2>&1 &
+nohup $PY -c "import kaggle; kaggle.api.dataset_download_files('mohammedabdeldayem/avsspoof-2021', path='data/dataset_1', unzip=True, quiet=False)" > logs/df_download.log 2>&1 &
 ```
 
 Confirm it is actually moving rather than assuming silence means progress:
@@ -159,7 +168,7 @@ Asserts `adapt_adaptive` with its schedules off is **bitwise identical** to the
 published `adapt()`.
 
 ```bash
-python verify_reduction.py
+$PY verify_reduction.py
 ```
 
 Expect `max |difference| : 0.000e+00` and `PASS`.
@@ -173,7 +182,7 @@ produces is uninterpretable. Debug this instead of starting the grid.
 ## 5. Smoke run (~2 min)
 
 ```bash
-ADAPTIVE_SMOKE=1 python adaptive_pipeline.py
+ADAPTIVE_SMOKE=1 $PY adaptive_pipeline.py
 ```
 
 Writes `*_smoke` files only. **Ignore the EERs** — they are on ~128 clips, where
@@ -193,7 +202,7 @@ wrong with the schedule — do not start the grid.
 and a restart resumes per `(seed, target, method, setting)`:
 
 ```bash
-nohup env ADAPTIVE_SMOKE=0 python adaptive_pipeline.py > logs/grid.log 2>&1 &
+nohup env ADAPTIVE_SMOKE=0 $PY adaptive_pipeline.py > logs/grid.log 2>&1 &
 ```
 
 Watch it — expect ~24 min per fold, 12 folds:
@@ -216,7 +225,7 @@ lands on a *different pool* and cannot be compared to the `source_rawboost` /
 `protocol_a.py` to `part0[0-2]`, or plan to re-run every arm.
 
 ```bash
-nohup python protocol_a.py > logs/protocol_a.log 2>&1 &
+nohup $PY protocol_a.py > logs/protocol_a.log 2>&1 &
 ```
 
 It should skip `source_rawboost`, `ours_rawboost`, `ours_prior_rawboost` as
@@ -228,7 +237,7 @@ source model, `ckpt_protocol_a_rawboost.pt` didn't upload.
 ## 7. Report this
 
 ```bash
-python -c "
+$PY -c "
 import pandas as pd, os
 d = pd.read_csv('results_adaptive.csv')
 t = d[d.setting=='transductive'].pivot_table(index=['target','seed'], columns='method', values='eer')
