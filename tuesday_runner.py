@@ -179,6 +179,33 @@ def acquire_lock():
     return True
 
 
+def publish_dann():
+    """Merge analysis_res/results_dann.csv into the root copy that stats reads.
+
+    A merge, emphatically not a copy. analysis_pipeline writes only the seeds it
+    was asked for, so analysis_res/ holds seeds 3-4 while the root copy holds
+    0-2 from the original run. Copying would have deleted seeds 0-2 and left the
+    paper's DANN baseline standing on two seeds instead of five.
+    """
+    src, dst = "analysis_res/results_dann.csv", "results_dann.csv"
+    if not os.path.exists(src):
+        return
+    import pandas as pd
+    new = pd.read_csv(src)
+    old = pd.read_csv(dst) if os.path.exists(dst) else new.iloc[0:0]
+    if len(old) and list(old.columns) != list(new.columns):
+        log(f"!! {src} and {dst} have different columns -- NOT merging, "
+            f"reconcile by hand")
+        return
+    key = [c for c in ("seed", "target", "method") if c in new.columns]
+    merged = (pd.concat([old, new], ignore_index=True)
+                .drop_duplicates(subset=key, keep="last")
+                .sort_values(key))
+    merged.to_csv(dst, index=False)
+    log(f"published DANN: {len(old)} + {len(new)} -> {len(merged)} rows "
+        f"(seeds {sorted(merged.seed.unique())})")
+
+
 def main():
     if not acquire_lock():
         return
@@ -252,14 +279,7 @@ def main():
             log("budget exhausted")
             break
 
-    # stats_tests.py reads results_dann.csv from the repo root, but the DANN job
-    # writes to analysis_res/. Sync before computing statistics, or the numbers
-    # silently describe an older seed count than the one just produced.
-    src = "analysis_res/results_dann.csv"
-    if os.path.exists(src) and row_count(src) > row_count("results_dann.csv"):
-        import shutil as _sh
-        _sh.copy(src, "results_dann.csv")
-        log(f"published {src} -> results_dann.csv ({row_count(src)} rows)")
+    publish_dann()
 
     # Always, even if nothing else ran: seconds of CPU, makes results usable.
     log("--- refreshing statistics on whatever landed ---")
