@@ -48,6 +48,14 @@ from tqdm.auto import tqdm
 
 PILOT = True   # <-- run this first (1 fold). Only then set False for the full matrix.
 
+# Setting EXT_SEEDS means "run the real grid for these seeds", so it must also
+# leave PILOT mode -- otherwise the override below sits in a dead branch and the
+# run silently does the pilot fold instead. That exact mistake cost a GPU
+# session: six seed jobs exited 0 in ~72 s each, having only re-checked the
+# already-recorded pilot fold in results_pilot.csv, and were recorded as done.
+if os.environ.get("EXT_SEEDS"):
+    PILOT = False
+
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 USE_BF16 = torch.cuda.is_available() and torch.cuda.is_bf16_supported()
 torch.backends.cuda.matmul.allow_tf32 = True

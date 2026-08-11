@@ -68,19 +68,30 @@ def left_h():
     return (DEADLINE - time.time()) / 3600
 
 
-# name, est_hours, env overrides, command
+# name, est_hours, env overrides, command, csv the job must add rows to
 JOBS = [
-    ("mlaad_download", 1.5, {}, None),          # special-cased below
-    ("ext_seed4", 1.3, {"EXT_SEEDS": "4"}, [PY, "extended_pipeline.py"]),
-    ("ext_seed5", 4.8, {"EXT_SEEDS": "5"}, [PY, "extended_pipeline.py"]),
-    ("asdg_seed34", 1.2, {"ASDG_SEEDS": "0,1,2,3,4"}, [PY, "asdg_pipeline.py"]),
+    ("mlaad_download", 1.5, {}, None, None),
+    ("ext_seed4", 1.3, {"EXT_SEEDS": "4"}, [PY, "extended_pipeline.py"], "results_ext.csv"),
+    ("ext_seed5", 4.8, {"EXT_SEEDS": "5"}, [PY, "extended_pipeline.py"], "results_ext.csv"),
+    ("asdg_seed34", 1.2, {"ASDG_SEEDS": "0,1,2,3,4"}, [PY, "asdg_pipeline.py"], "results_asdg.csv"),
+    # analysis_pipeline's record() writes under analysis_res/, not the repo root.
+    # Checking the root copy would have reported a working DANN job as a failure
+    # (and stats_tests.py, which reads the root copy, would have silently used
+    # stale 3-seed numbers). publish_dann() below syncs it after the job.
     ("dann_seed34", 4.5, {"DANN_SEEDS": "3,4", "ANALYSIS_PARTS": "dann"},
-     [PY, "analysis_pipeline.py"]),
-    ("ext_seed6", 4.8, {"EXT_SEEDS": "6"}, [PY, "extended_pipeline.py"]),
-    ("ext_seed7", 4.8, {"EXT_SEEDS": "7"}, [PY, "extended_pipeline.py"]),
-    ("ext_seed8", 4.8, {"EXT_SEEDS": "8"}, [PY, "extended_pipeline.py"]),
-    ("ext_seed9", 4.8, {"EXT_SEEDS": "9"}, [PY, "extended_pipeline.py"]),
+     [PY, "analysis_pipeline.py"], "analysis_res/results_dann.csv"),
+    ("ext_seed6", 4.8, {"EXT_SEEDS": "6"}, [PY, "extended_pipeline.py"], "results_ext.csv"),
+    ("ext_seed7", 4.8, {"EXT_SEEDS": "7"}, [PY, "extended_pipeline.py"], "results_ext.csv"),
+    ("ext_seed8", 4.8, {"EXT_SEEDS": "8"}, [PY, "extended_pipeline.py"], "results_ext.csv"),
+    ("ext_seed9", 4.8, {"EXT_SEEDS": "9"}, [PY, "extended_pipeline.py"], "results_ext.csv"),
 ]
+
+
+def row_count(path):
+    if not path or not os.path.exists(path):
+        return 0
+    with open(path) as f:
+        return max(sum(1 for _ in f) - 1, 0)     # minus header
 
 
 def load_state():
@@ -175,7 +186,7 @@ def main():
     log(f"deadline {time.strftime('%H:%M:%S', time.localtime(DEADLINE))}")
     st = load_state()
 
-    for name, est, env, cmd in JOBS:
+    for name, est, env, cmd, out_csv in JOBS:
         if name in st["done"]:
             log(f"{name}: already done in a previous run, skipping")
             continue
@@ -201,6 +212,7 @@ def main():
 
         log(f"--- {name} (est {est:.1f} h, {left_h():.1f} h left) ---")
         t0 = time.time()
+        before = row_count(out_csv)
         try:
             if cmd is None:
                 ok = run_mlaad()
@@ -210,6 +222,21 @@ def main():
                 r = subprocess.run(cmd, env={**os.environ, **env},
                                    timeout=timeout)
                 ok = r.returncode == 0
+
+                # Exit code 0 is not evidence of work. A misrouted config made
+                # six seed jobs re-check an already-recorded fold and exit 0 in
+                # ~72 s each; all six were marked done and the session produced
+                # nothing. A job that adds no rows to its results file did not
+                # do its job, whatever it returned.
+                after = row_count(out_csv)
+                if ok and out_csv and after <= before:
+                    ok = False
+                    log(f"    !! {out_csv} still has {after} rows (was {before}) "
+                        f"after a clean exit in {(time.time()-t0)/60:.1f} min -- "
+                        f"treating as FAILED, not done. Check the pipeline's own "
+                        f"log: it probably skipped everything.")
+                elif out_csv:
+                    log(f"    {out_csv}: {before} -> {after} rows (+{after - before})")
             dt = (time.time() - t0) / 3600
             log(f"--- {name}: {'ok' if ok else 'FAILED'} in {dt:.2f} h ---")
             if ok:
@@ -224,6 +251,15 @@ def main():
         if left_h() <= 0:
             log("budget exhausted")
             break
+
+    # stats_tests.py reads results_dann.csv from the repo root, but the DANN job
+    # writes to analysis_res/. Sync before computing statistics, or the numbers
+    # silently describe an older seed count than the one just produced.
+    src = "analysis_res/results_dann.csv"
+    if os.path.exists(src) and row_count(src) > row_count("results_dann.csv"):
+        import shutil as _sh
+        _sh.copy(src, "results_dann.csv")
+        log(f"published {src} -> results_dann.csv ({row_count(src)} rows)")
 
     # Always, even if nothing else ran: seconds of CPU, makes results usable.
     log("--- refreshing statistics on whatever landed ---")
