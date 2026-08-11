@@ -207,12 +207,24 @@ print("\n--- launched; you can close everything now ---")
 # %%
 print(subprocess.run("tail -30 run_log_tuesday.txt", shell=True,
                      capture_output=True, text=True).stdout)
-print("\n=== seed coverage ===")
-for f in ("results_ext.csv", "results_dann.csv", "results_asdg.csv"):
-    if os.path.exists(f):
-        d = pd.read_csv(f)
-        print(f"{f:20s} per-target seeds:",
-              d.groupby("target").seed.nunique().to_dict())
+
+# Coverage for the row the paper actually reports. A plain nunique() over every
+# row counts other methods, other families and the MLAAD held-out-language
+# diagnostic too -- it showed "arabic: 5" while `ours` had only seeds 0-3, i.e.
+# it overstated exactly the number this run exists to increase.
+print("\n=== seed coverage (the reported configuration only) ===")
+spec = [("results_ext.csv", dict(family="xlsr", setting="transductive", method="ours")),
+        ("results_dann.csv", {}), ("results_asdg.csv", {})]
+for f, filt in spec:
+    if not os.path.exists(f):
+        print(f"{f:20s} MISSING"); continue
+    d = pd.read_csv(f)
+    for k, v in filt.items():
+        if k in d.columns:
+            d = d[d[k] == v]
+    age = (time.time() - os.path.getmtime(f)) / 60
+    print(f"{f:20s} (updated {age:5.1f} min ago) " +
+          str(d.groupby("target").seed.apply(lambda s: sorted(s.unique())).to_dict()))
 
 # %% [markdown]
 # ## 8. When it is finished
