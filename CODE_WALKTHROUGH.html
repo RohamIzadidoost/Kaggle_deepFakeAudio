@@ -1,0 +1,871 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Code Walkthrough — Audio Deepfake Detection Codebase</title>
+<style>
+  :root{
+    --bg:#0b0d12; --panel:#12151c; --panel2:#171b24; --text:#dde3ee; --muted:#8b93a7;
+    --border:#262b38; --accent:#5b9dff; --code:#0e1117;
+    --yes:#1f8a4c; --yes-bg:#12301f; --no:#d64545; --no-bg:#301414; --ind:#c98a1f; --ind-bg:#2f2412; --sup:#6a7280; --sup-bg:#1c1f27;
+  }
+  @media (prefers-color-scheme: light){
+    :root{ --bg:#f5f6f8; --panel:#ffffff; --panel2:#f0f1f4; --text:#1a1d24; --muted:#5b6270;
+      --border:#dde1e8; --accent:#2461cf; --code:#f4f5f7;
+      --yes:#1f8a4c; --yes-bg:#e3f5ea; --no:#c53030; --no-bg:#fbe6e6; --ind:#a3690f; --ind-bg:#fbf0dc; --sup:#5b6270; --sup-bg:#eceef2; }
+  }
+  :root[data-theme="dark"]{ --bg:#0b0d12; --panel:#12151c; --panel2:#171b24; --text:#dde3ee; --muted:#8b93a7; --border:#262b38; --accent:#5b9dff; --code:#0e1117; --yes:#1f8a4c; --yes-bg:#12301f; --no:#d64545; --no-bg:#301414; --ind:#c98a1f; --ind-bg:#2f2412; --sup:#6a7280; --sup-bg:#1c1f27; }
+  :root[data-theme="light"]{ --bg:#f5f6f8; --panel:#ffffff; --panel2:#f0f1f4; --text:#1a1d24; --muted:#5b6270; --border:#dde1e8; --accent:#2461cf; --code:#f4f5f7; --yes:#1f8a4c; --yes-bg:#e3f5ea; --no:#c53030; --no-bg:#fbe6e6; --ind:#a3690f; --ind-bg:#fbf0dc; --sup:#5b6270; --sup-bg:#eceef2; }
+
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;line-height:1.55;margin:0;}
+  .wrap{max-width:1180px;margin:0 auto;padding:32px 20px 120px;}
+  h1{font-size:1.9rem;margin-bottom:4px}
+  .subtitle{color:var(--muted);margin-top:0;margin-bottom:28px;font-size:.95rem}
+  h2{font-size:1.4rem;border-bottom:1px solid var(--border);padding-bottom:8px;margin-top:52px;}
+  h2 .tag{font-size:.65rem;vertical-align:middle;margin-left:10px;}
+  h3.file-title{font-size:1.05rem;margin:0;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;}
+  h4{font-size:.95rem;margin:18px 0 6px;color:var(--accent)}
+  p{margin:.5em 0}
+  code, .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:.88em;}
+  code{background:var(--code); padding:1px 5px; border-radius:4px; border:1px solid var(--border);}
+  pre{background:var(--code); border:1px solid var(--border); border-radius:8px; padding:12px 14px; overflow-x:auto; font-size:.83rem;}
+  a{color:var(--accent); text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  .badge{display:inline-block; font-size:.68rem; font-weight:700; letter-spacing:.03em; padding:3px 9px; border-radius:100px; text-transform:uppercase; white-space:nowrap;}
+  .badge-yes{color:var(--yes); background:var(--yes-bg); border:1px solid var(--yes);}
+  .badge-no{color:var(--no); background:var(--no-bg); border:1px solid var(--no);}
+  .badge-ind{color:var(--ind); background:var(--ind-bg); border:1px solid var(--ind);}
+  .badge-sup{color:var(--sup); background:var(--sup-bg); border:1px solid var(--sup);}
+
+  .callout{border-left:4px solid var(--accent); background:var(--panel2); padding:10px 16px; border-radius:0 8px 8px 0; margin:14px 0; font-size:.92rem;}
+  .callout.warn{border-color:var(--no); }
+  .callout.warn strong{color:var(--no)}
+
+  table{width:100%; border-collapse:collapse; margin:14px 0; font-size:.88rem;}
+  th,td{text-align:left; padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:top;}
+  th{color:var(--muted); font-weight:600; font-size:.78rem; text-transform:uppercase; letter-spacing:.03em;}
+  tr:hover td{background:var(--panel2);}
+
+  details.file{background:var(--panel); border:1px solid var(--border); border-radius:10px; margin:14px 0; padding:0; overflow:hidden;}
+  details.file > summary{list-style:none; cursor:pointer; padding:14px 18px; display:flex; align-items:center; justify-content:space-between; gap:12px; background:var(--panel2);}
+  details.file > summary::-webkit-details-marker{display:none}
+  details.file > summary::before{content:"▸"; margin-right:10px; color:var(--muted); transition:transform .15s;}
+  details.file[open] > summary::before{transform:rotate(90deg);}
+  .summary-left{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+  .file-purpose{color:var(--muted); font-size:.85rem; font-weight:400; font-family:-apple-system,sans-serif;}
+  .file-body{padding:18px 22px 22px;}
+  .trace-box{margin-top:14px; padding:10px 14px; border-radius:8px; font-size:.87rem;}
+  .trace-box.yes{background:var(--yes-bg); border:1px solid var(--yes);}
+  .trace-box.no{background:var(--no-bg); border:1px solid var(--no);}
+  .trace-box.ind{background:var(--ind-bg); border:1px solid var(--ind);}
+  .trace-box.sup{background:var(--sup-bg); border:1px solid var(--sup);}
+  .trace-box .label{font-weight:700; text-transform:uppercase; font-size:.72rem; letter-spacing:.03em; display:block; margin-bottom:3px;}
+
+  ul.fnlist{padding-left:0; list-style:none;}
+  ul.fnlist > li{margin-bottom:14px; padding-left:16px; border-left:2px solid var(--border);}
+  ul.fnlist code.sig{background:none; border:none; padding:0; color:var(--accent); font-weight:600; font-size:.92em;}
+
+  .toc{background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:18px 22px; margin:20px 0 36px;}
+  .toc h2{margin-top:0; border:none; padding-bottom:4px; font-size:1.1rem;}
+  .toc-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:4px 24px;}
+  .toc-grid a{display:flex; justify-content:space-between; gap:8px; padding:3px 0; font-size:.87rem; border-bottom:1px dotted transparent;}
+  .toc-grid a:hover{border-bottom-color:var(--accent); text-decoration:none;}
+  .toc-badge{font-size:.6rem; padding:1px 6px;}
+
+  .legend{display:flex; gap:14px; flex-wrap:wrap; margin:10px 0 24px; font-size:.82rem; color:var(--muted);}
+  .legend span{display:inline-flex; align-items:center; gap:6px;}
+
+  .top-summary{overflow-x:auto;}
+  .quote{font-style:italic; color:var(--muted); border-left:3px solid var(--border); padding-left:12px; margin:8px 0;}
+
+  footer{margin-top:80px; padding-top:20px; border-top:1px solid var(--border); color:var(--muted); font-size:.8rem;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Code Walkthrough — Audio Deepfake Detection Codebase</h1>
+<p class="subtitle">Function-by-function tour of every script, cross-referenced against <code>main.tex</code> / <code>main_icassp.tex</code> / <code>PROJECT_LOG.md</code>, prepared for a code-review session with a PhD student. Generated 2026-08-09, updated 2026-08-10 after a repo pull (adaptive-q/E line, commits <code>2ba4a16</code>…<code>c1efb55</code>).</p>
+
+<div class="callout">
+<strong>What changed in this update.</strong> The pull added a fourth phase — <strong>adaptive q/E</strong> (<code>adaptive_tta.py</code>, <code>adaptive_pipeline.py</code>, <code>test_adaptive_tta.py</code>, <code>verify_reduction.py</code>, <code>cloud_monday.py</code>/<code>.ipynb</code>, <code>MONDAY_HANDOFF.md</code>) — plus a patched <code>protocol_a.py</code> (new <code>adaptive=True</code> arm) and rewritten <code>main.tex</code>/<code>main_icassp.tex</code> passages on the label-free λ heuristic. See the new <a href="#phase4">Phase 4</a> section below. Two corrections to the original doc: <code>tta.py</code>'s docstring quantile is <code>q=0.3</code>, not "~15%" (CLAUDE.md now says this explicitly — the earlier ~15% framing elsewhere in the project's narrative summaries was imprecise); and <code>lambda_selector.py</code>'s r=+0.74 result is no longer described as simply "failed" — the paper now reads the sign as a calibration finding (see the updated trace box on that file).
+</div>
+
+<div class="legend">
+  <span><span class="badge badge-yes">In paper</span> a method/table/figure in main.tex or main_icassp.tex traces directly to this file</span>
+  <span><span class="badge badge-ind">Indirect</span> the result is narrated in prose, but this specific file isn't named</span>
+  <span><span class="badge badge-sup">Support</span> infra/tooling the paper's numbers depend on, but not itself a cited artifact</span>
+  <span><span class="badge badge-no">No trace</span> nothing in either paper draft points here — dead-end, superseded, or unpublished</span>
+</div>
+
+<div class="callout">
+<strong>How to read this document.</strong> Four sections, one per pipeline phase (matching <code>CLAUDE.md</code>'s structure): Phase&nbsp;1 (baseline reproduction + AttentiveSpecCNN), Phase&nbsp;2/3 core modules (DA-RAD — failed — and TTA — the working method), the <code>models/</code> package, and the miscellaneous/exploratory scripts + shell wrappers. Each file gets a purpose line, every function/class it defines, and a trace verdict against the paper. Files with <span class="badge badge-no">No trace</span> are flagged explicitly, per your request, so nothing gets glossed over in review.
+</div>
+
+<div class="toc">
+<h2>Jump to a file</h2>
+<div class="toc-grid" id="tocgrid"><!-- filled by badges below, listed manually for clarity --></div>
+</div>
+
+<script>
+// populate TOC after render by scanning details.file elements
+document.addEventListener('DOMContentLoaded', function(){
+  var grid = document.getElementById('tocgrid');
+  document.querySelectorAll('details.file').forEach(function(d){
+    var id = d.id;
+    var name = d.getAttribute('data-name');
+    var badgeClass = d.getAttribute('data-badge');
+    var badgeText = d.getAttribute('data-badge-text');
+    var a = document.createElement('a');
+    a.href = '#'+id;
+    a.innerHTML = '<span class="mono">'+name+'</span><span class="badge toc-badge '+badgeClass+'">'+badgeText+'</span>';
+    grid.appendChild(a);
+  });
+});
+</script>
+
+<!-- ======================================================= -->
+<h2 id="phase1">Phase 1 — Baseline Reproduction &amp; AttentiveSpecCNN <span class="badge badge-yes tag">core, all traced</span></h2>
+<p>Pipeline order: <code>build_manifest.py</code> → <code>build_balanced_subset.py</code> → <code>split_manifest.py</code> → {<code>paper_baseline.py</code>, <code>train.py</code>} → <code>explain.py</code> / <code>cross_dataset.py</code>. This is the reproduction of Gujjar et al. 2024 plus the proposed detector; every script here has a direct trace into <code>report_tables.tex</code> / <code>main.tex</code>.</p>
+
+<details class="file" id="f-build_manifest" data-name="build_manifest.py" data-badge="badge-yes" data-badge-text="In paper">
+<summary><div class="summary-left"><h3 class="file-title">build_manifest.py</h3><span class="file-purpose">merges 6 raw corpora into one labeled, speaker-tagged manifest CSV</span></div><span class="badge badge-yes">In paper</span></summary>
+<div class="file-body">
+<p><strong>Purpose.</strong> Walks six heterogeneous audio-deepfake corpora on disk and merges them into one labeled CSV manifest (<code>filepath, label, dataset_source, generator, speaker, extra</code>), with a <code>speaker</code> column deliberately engineered for later speaker-disjoint splitting.</p>
+<p>Top-level: patches <code>csv.field_size_limit(sys.maxsize)</code> (with an <code>OverflowError</code> fallback to <code>2**31-1</code>) because some MLAAD <code>meta.csv</code> transcript fields exceed Python's default 131072-byte field limit.</p>
+<ul class="fnlist">
+<li><code class="sig">load_asvspoof_labels(ds1_root) -> list[dict]</code> — loads ASVspoof2021 DF-eval. Disambiguates among multiple near-identical <code>trial_metadata.txt</code> files found via <code>rglob</code> (glob order is filesystem-dependent) by filtering for paths containing <code>/DF/</code> or <code>DF-keys</code>. Parses protocol lines (<code>speaker</code>, <code>filename</code>, <code>label</code> at column 5), walks every <code>flac/</code> dir under any <code>DF_eval</code> path, emits rows with <code>speaker="asv:&lt;speaker&gt;"</code>.</li>
+<li><code class="sig">load_seedtts_style(ds2_root) -> list[dict]</code> — loads dataset_2. <code>real_samples/</code> → real; every other subdir (VALL-E, NaturalSpeech3, etc.) → fake, generator = folder name. Real speakers derived from LibriSpeech filename convention (<code>ds2:&lt;speaker&gt;</code>); fake files get one-per-file speaker groups (<code>ds2g:&lt;stem&gt;</code>) — deliberately prevents leakage grouping since fake filenames have no shared speaker scheme.</li>
+<li><code class="sig">load_mlaad(ds3_root) -> list[dict]</code> (with nested helper <code>mlaad_speaker(original_file, fallback)</code>) — loads MLAAD v5 (fake-only). <code>mlaad_speaker</code> parses the reader out of <code>original_file</code>'s path (<code>.../wavs/&lt;file&gt;</code> → <code>parts[-4]</code>, or via a <code>by_book</code> anchor) so the same TTS-source reader stays grouped across generators. Main body doesn't trust <code>meta.csv</code>'s language segment in <code>path</code> (~1000 rows point at a wrong lang dir); instead joins the filename onto the filesystem-verified <code>model_dir</code>.</li>
+<li><code class="sig">load_asvspoof2019_la(root) -> list[dict]</code> — loads ASVspoof2019 LA train/dev/eval CM protocols. Speaker = <code>asv19:&lt;spk&gt;</code>; generator = attack ID or <code>"bonafide"</code>.</li>
+<li><code class="sig">load_in_the_wild(root) -> list[dict]</code> — loads In-the-Wild OOD corpus; label inferred from path keywords; per-file speaker groups (only ever used as a held-out cross-corpus target, so no leakage concern).</li>
+<li><code class="sig">load_arabic_arad(root) -> list[dict]</code> — loads the Arabic ArAD corpus (from <code>download_arabic.py</code>'s output); per-file speaker groups.</li>
+<li><code class="sig">main()</code> — argparse (<code>--root</code>, <code>--out</code>), calls all six loaders, concatenates, writes the fixed-fieldname CSV, prints real/fake totals.</li>
+</ul>
+<div class="trace-box yes"><span class="label">Paper trace</span>Feeds <code>report_tables.tex</code> Table I (dataset composition, 19,251/595,513 rows) and every downstream Phase‑1 number.</div>
+</div>
+</details>
+
+<details class="file" id="f-build_balanced_subset" data-name="build_balanced_subset.py" data-badge="badge-yes" data-badge-text="In paper">
+<summary><div class="summary-left"><h3 class="file-title">build_balanced_subset.py</h3><span class="file-purpose">water-filling downsample of the ~97%-fake manifest to a balanced, generator-diverse subset</span></div><span class="badge badge-yes">In paper</span></summary>
+<div class="file-body">
+<p><strong>Purpose.</strong> Downsamples the fake-dominated merged manifest into a class-balanced, source/generator-diverse subset, avoiding the trivial "always predict fake" shortcut and a fake class dominated by one dataset/generator.</p>
+<ul class="fnlist">
+<li><code class="sig">water_fill(capacities: dict, budget: int) -> dict</code> — the core allocation algorithm, reused twice more elsewhere in the codebase. Distributes <code>budget</code> as evenly as possible across keys, capped per key: loop while remaining budget and active keys exist, take an even <code>share = max(1, remaining // len(active))</code> per active key (capped by that key's remaining room), drop exhausted keys from <code>active</code>. Classic max-min-fairness water-filling.</li>
+<li><code class="sig">sample_fake(fake, n_target, seed) -> DataFrame</code> — two-level water-filling: first across <code>dataset_source</code>, then within each source across <code>generator</code>. Directly imported and reused by <code>cross_dataset.py</code>'s <code>build_fold</code>.</li>
+<li><code class="sig">main()</code> — argparse (<code>--manifest</code>, <code>--out</code>, <code>--ratio</code>=1.0, <code>--max_real</code>, <code>--seed</code>=42). Splits real/fake, computes <code>n_fake = round(ratio*len(real))</code>, calls <code>sample_fake</code>, shuffles, writes, prints composition stats.</li>
+</ul>
+<div class="trace-box yes"><span class="label">Paper trace</span>Referenced by name in README and <code>CLAUDE.md</code> ("class-balanced subset via water-filling"); underlies Table I's balanced counts. The same water-filling primitive resurfaces at train-sampling time in <code>overnight_pipeline.py</code>'s <code>sample_source</code> — same idea, independently reused, not code-shared.</div>
+</div>
+</details>
+
+<details class="file" id="f-split_manifest" data-name="split_manifest.py" data-badge="badge-yes" data-badge-text="In paper">
+<summary><div class="summary-left"><h3 class="file-title">split_manifest.py</h3><span class="file-purpose">speaker-disjoint train/val/test split — the leakage fix over the reference paper</span></div><span class="badge badge-yes">In paper</span></summary>
+<div class="file-body">
+<p><strong>Purpose.</strong> Produces speaker-disjoint splits via <code>StratifiedGroupKFold</code>, fixing the bug where a speaker's utterances could straddle train and test.</p>
+<ul class="fnlist">
+<li><code class="sig">_grouped_holdout(df, frac, seed) -> (rest_df, holdout_df)</code> — computes <code>n_splits = max(2, round(1/frac))</code>, builds <code>StratifiedGroupKFold</code>, but only consumes the <em>first</em> fold (<code>next(sgkf.split(...))</code>) as the holdout — a repurposing trick rather than using all K folds.</li>
+<li><code class="sig">main()</code> — argparse (<code>--manifest</code>, <code>--out_dir</code>, <code>--val_frac</code>=0.1, <code>--test_frac</code>=0.1, <code>--seed</code>=42). Two-stage carve: split off test via <code>_grouped_holdout(df, test_frac)</code>, then split val from the remainder via a renormalized fraction <code>val_frac/(1-test_frac)</code>. Runs an explicit assertion that all pairwise speaker-set intersections between splits are empty ("speaker leak between splits!").</li>
+</ul>
+<div class="trace-box yes"><span class="label">Paper trace</span>The "speaker-disjoint StratifiedGroupKFold" fix is the headline methodological correction over the reproduced paper — stated throughout <code>main.tex</code>/README as the reason the reproduced baseline EER differs from the original's inflated accuracy.</div>
+</div>
+</details>
+
+<details class="file" id="f-paper_baseline" data-name="paper_baseline.py" data-badge="badge-yes" data-badge-text="In paper">
+<summary><div class="summary-left"><h3 class="file-title">paper_baseline.py</h3><span class="file-purpose">reproduces the original paper's MFCC→GNB→NMF→{GNB,LR,RF,KNN} chain on the leakage-free splits</span></div><span class="badge badge-yes">In paper</span></summary>
+<div class="file-body">
+<p><strong>Purpose.</strong> Honest classical baseline the deep model must beat. Constants: <code>SAMPLE_RATE=16000</code>, <code>N_MFCC=40</code>, <code>CACHE_DIR="features_cache"</code>; a module-level <code>torchaudio.transforms.MFCC</code> instantiated once.</p>
+<ul class="fnlist">
+<li><code class="sig">_file_features(filepath) -> ndarray</code> — loads via <code>deepfake_dataset.load_audio</code>, downmixes/resamples, computes MFCCs, reduces to a <code>2*N_MFCC</code>-dim <code>[mean, std]</code> vector; returns a zero vector on any decode failure.</li>
+<li><code class="sig">extract_split(csv_path) -> (X, y)</code> — MD5-hashes the file list for a cache key, loads a cached <code>.npz</code> if present, else extracts via <code>Parallel(n_jobs=-1, prefer="threads")</code> and caches.</li>
+<li><code class="sig">class TransferFeatures</code> — the paper's GNB-probability + NMF-parts-decomposition transfer step. <code>fit</code>: <code>MinMaxScaler</code> + <code>NMF(n_components=16, init="nndsvda")</code> + <code>GaussianNB</code>. <code>transform</code>: concatenates GNB class-probabilities with NMF parts-coefficients (clipping post-scale negatives before NMF, since test data can fall outside the train min/max).</li>
+<li><code class="sig">_classifiers() -> dict</code> — fresh <code>{GaussianNB, LogisticRegression, RandomForestClassifier(n_estimators=50,max_depth=10), KNeighborsClassifier(n_neighbors=5)}</code> matching the paper's Table 2 hyperparameters.</li>
+<li><code class="sig">_evaluate(clf, Xtr, ytr, Xte, yte) -> dict</code> — fits, finds the "fake" column robustly via <code>clf.classes_</code>, computes EER/bal-acc/F1/AUC.</li>
+<li><code class="sig">main()</code> — extracts train/test features for two feature sets (raw MFCC, and Transfer(GNB+NMF)) × 4 classifiers, prints a comparison table, reports the best-EER row, saves <code>baseline_results.csv</code>.</li>
+</ul>
+<div class="trace-box yes"><span class="label">Paper trace</span><code>report_tables.tex</code> Table II (<code>tab:indomain</code>) — the GNB/NMF/RF/kNN/LogReg rows.</div>
+</div>
+</details>
+
+<details class="file" id="f-deepfake_dataset" data-name="deepfake_dataset.py" data-badge="badge-yes" data-badge-text="In paper">
+<summary><div class="summary-left"><h3 class="file-title">deepfake_dataset.py</h3><span class="file-purpose">manifest → log-mel spectrogram Dataset, plus the shared audio decoder that fixes the "silence→real" bug</span></div><span class="badge badge-yes">In paper</span></summary>
+<div class="file-body">
+<p>Top-level constant: <code>LABEL_TO_IDX = {"real":0, "fake":1}</code> — the canonical label ordering used everywhere in Phase 1 and reused (imported) into Phase 2/3's <code>darad_dataset.py</code>.</p>
+<ul class="fnlist">
+<li><code class="sig">load_audio(filepath) -> (Tensor[ch,samples], sr)</code> — shared decoder. Tries <code>soundfile.read</code> first; on <em>any</em> exception falls back to <code>librosa.load(..., mono=False)</code> (ffmpeg-backed).
+<div class="callout warn" style="margin-top:8px"><strong>Critical, non-obvious detail.</strong> <code>libsndfile</code> silently fails to decode a large fraction of ASVspoof2021 FLAC files ("flac decoder lost sync") even though they're valid. Without the fallback, roughly half of the real-class ASVspoof audio silently loaded as zeros, teaching the model a "silence → real" shortcut. This function is the fix, and it is reused by <code>paper_baseline.py</code>, <code>darad_dataset.py</code>, and (structurally, reimplemented rather than imported) every Phase‑3 <code>decode()</code> function.</div></li>
+<li><code class="sig">class DeepfakeAudioDataset(Dataset)</code> — <code>__init__(csv_path, sample_rate=16000, duration_sec=4.0, n_mels=80, n_fft=400, hop_length=160, random_crop=True)</code>: computes <code>target_len = sr*duration</code> (64000 samples), builds reusable <code>MelSpectrogram</code>+<code>AmplitudeToDB</code> transforms. <code>_load_and_fix_length</code>: downmixes, resamples, zero-pads if short or random-/center-crops if long (random for train-time augmentation). <code>__getitem__</code>: wraps loading in try/except, substituting a zero waveform (with a printed warning) on failure rather than crashing the DataLoader worker; applies mel+dB transforms.</li>
+<li><code class="sig">compute_class_weights(df) -> Tensor</code> — inverse-frequency weights <code>[w_real, w_fake]</code>, <code>total/(2*count)</code> per class, guarded against div-by-zero. Feeds <code>train.py</code>'s <code>CrossEntropyLoss(weight=...)</code>.</li>
+</ul>
+<div class="trace-box yes"><span class="label">Paper trace</span>README's "Note on data decoding" section narrates this fix explicitly.</div>
+</div>
+</details>
+
+<details class="file" id="f-model" data-name="model.py" data-badge="badge-yes" data-badge-text="In paper">
+<summary><div class="summary-left"><h3 class="file-title">model.py</h3><span class="file-purpose">AttentiveSpecCNN — the proposed detector, CNN + learnable temporal-attention pooling</span></div><span class="badge badge-yes">In paper</span></summary>
+<div class="file-body">
+<ul class="fnlist">
+<li><code class="sig">class ConvBlock(nn.Module)</code> — <code>Conv2d(3×3, pad 1) → BatchNorm2d → ReLU</code>, optional <code>MaxPool2d</code>.</li>
+<li><code class="sig">class TemporalAttentionPool(nn.Module)</code> — <code>(B,C,T) → (context (B,C), attn (B,T))</code>. A single <code>Linear(channels,1)</code> scores each time frame; softmax over time normalizes weights to sum to 1; context = batched-matmul weighted sum of per-frame channel vectors. This <strong>is</strong> the paper's stated novelty replacing the reference paper's static MFCC→GNB→NMF chain, and the returned <code>attn</code> doubles as the explainability signal visualized in <code>explain.py</code>.</li>
+<li><code class="sig">class AttentiveSpecCNN(nn.Module)</code> — <code>input_norm</code> (BatchNorm2d on raw dB values) → 4 <code>ConvBlock</code>s (1→16→32→64→128 channels, each halving freq &amp; time) → mean-pool over frequency → <code>TemporalAttentionPool(128)</code> → <code>head</code> (Linear→ReLU→Dropout(0.3)→Linear(64,2)). <code>forward(x, return_attn=False)</code> stashes the conv feature map on <code>self._last_fmap</code> (kept for external use, though <code>explain.py</code> actually re-hooks it rather than reading this attribute). Output column order <code>[real=0, fake=1]</code> matches <code>LABEL_TO_IDX</code>.</li>
+</ul>
+<p><code>__main__</code> block: shape smoke-test on a random <code>(4,1,80,401)</code> input.</p>
+<div class="trace-box yes"><span class="label">Paper trace</span><code>report_tables.tex</code>'s <code>tab:config</code> describes this exact architecture (CNN + temporal attention pooling).</div>
+</div>
+</details>
+
+<details class="file" id="f-metrics" data-name="metrics.py" data-badge="badge-yes" data-badge-text="In paper (implicit)">
+<summary><div class="summary-left"><h3 class="file-title">metrics.py</h3><span class="file-purpose">EER computation and the full evaluation report — the field-standard metric everything is judged on</span></div><span class="badge badge-yes">In paper</span></summary>
+<div class="file-body">
+<p>Convention throughout: label <code>1=fake</code> (positive class), <code>scores</code> = model's <code>P(fake)</code>.</p>
+<ul class="fnlist">
+<li><code class="sig">compute_eer(labels, scores) -> (eer, threshold)</code> — computes <code>roc_curve</code>, <code>fnr = 1-tpr</code>, finds the index minimizing <code>|fnr-fpr|</code> via <code>np.nanargmin</code> (the EER operating point), returns the average of <code>fpr</code> and <code>fnr</code> at that index.</li>
+<li><code class="sig">evaluation_report(labels, scores, threshold=0.5, verbose=True) -> dict</code> — bundles accuracy, balanced accuracy, F1(fake), AUC, EER, and (if verbose) a full <code>classification_report</code>.</li>
+</ul>
+<div class="trace-box yes"><span class="label">Paper trace</span>Not named directly in the tex, but is the metric-computation backbone behind every EER number reported anywhere in either draft — explicitly called out in <code>CLAUDE.md</code> as "the field-standard number everything is judged on, not raw accuracy," which is itself the paper's core methodological critique of the reference paper's 84–93% accuracy-with-0-recall failure mode.</div>
+</div>
+</details>
+
+<details class="file" id="f-train" data-name="train.py" data-badge="badge-yes" data-badge-text="In paper">
+<summary><div class="summary-left"><h3 class="file-title">train.py</h3><span class="file-purpose">full training loop for AttentiveSpecCNN, EER-driven checkpointing</span></div><span class="badge badge-yes">In paper</span></summary>
+<div class="file-body">
+<ul class="fnlist">
+<li><code class="sig">make_loader(csv, batch_size, workers, train) -> (DataLoader, Dataset)</code> — random-crop only when <code>train=True</code>; <code>drop_last=train</code> to keep BatchNorm batch sizes stable. Reused (imported) directly by <code>cross_dataset.py</code>.</li>
+<li><code class="sig">collect_scores(model, loader, device) -> (labels, scores)</code> — <code>@torch.no_grad()</code>; also reused by <code>cross_dataset.py</code>.</li>
+<li><code class="sig">main()</code> — argparse (<code>--epochs</code>=15, <code>--batch_size</code>=64, <code>--lr</code>=1e-3, <code>--workers</code>=8, <code>--seed</code>=42, <code>--out</code>). Builds train/val/test loaders, computes class weights, <code>Adam</code> + <code>ReduceLROnPlateau(mode="min", patience=2)</code> keyed on val EER. Saves the checkpoint whenever val EER improves (best-by-EER, not best-by-loss). After training, reloads the best checkpoint, evaluates on test, merges the result row into <code>baseline_results.csv</code> (replacing any prior <code>AttentiveSpecCNN</code> row so reruns don't duplicate), writes <code>results.csv</code>.</li>
+</ul>
+<div class="trace-box yes"><span class="label">Paper trace</span><code>report_tables.tex</code> Table II — the 4.81% EER AttentiveSpecCNN row.</div>
+</div>
+</details>
+
+<details class="file" id="f-explain" data-name="explain.py" data-badge="badge-yes" data-badge-text="In paper">
+<summary><div class="summary-left"><h3 class="file-title">explain.py</h3><span class="file-purpose">Grad-CAM + attention-weight explainability figures</span></div><span class="badge badge-yes">In paper</span></summary>
+<div class="file-body">
+<ul class="fnlist">
+<li><code class="sig">grad_cam_and_attention(model, mel, device) -> (pred_idx, p_fake, attn, cam)</code> — registers a forward hook on <code>model.features</code> capturing the last conv feature map and calling <code>retain_grad()</code> on it (needed since it's not a leaf tensor); backprops from the <em>predicted</em> class's logit; computes Grad-CAM as <code>relu((grads.mean(dim=(2,3)) * fmap).sum(1))</code> (standard global-average-pooled-gradient weighting), normalizes and bilinearly upsamples to the spectrogram's shape.</li>
+<li><code class="sig">plot_explanation(mel, attn, cam, pred_idx, p_fake, true_label, out_path)</code> — 3-row figure: raw log-mel spectrogram, spectrogram+CAM overlay, interpolated attention curve. Attention (short, post-pooling length) is <code>np.interp</code>'d up to full time resolution for alignment.</li>
+<li><code class="sig">main()</code> — argparse (<code>--checkpoint</code>, <code>--csv</code>, <code>--file</code>, <code>--n</code>=6, <code>--out_dir</code>, <code>--seed</code>=0). Either explains one file or a balanced real/fake sample of <code>n</code> test clips; saves one PNG per clip.</li>
+</ul>
+<div class="trace-box yes"><span class="label">Paper trace</span><code>report_tables.tex</code>'s <code>fig:explain</code> (renders <code>explanations/real_DF_E_2774626.flac.png</code>).</div>
+</div>
+</details>
+
+<details class="file" id="f-cross_dataset" data-name="cross_dataset.py" data-badge="badge-yes" data-badge-text="In paper">
+<summary><div class="summary-left"><h3 class="file-title">cross_dataset.py</h3><span class="file-purpose">leave-one-source-out generalization study — the AUC collapse that motivated the whole cross-corpus research direction</span></div><span class="badge badge-yes">In paper</span></summary>
+<div class="file-body">
+<p>Constant: <code>SOURCES = {"ASVspoof": "dataset_1_asvspoof2021_DF", "dataset_2": "dataset_2_seedtts_style", "MLAAD": "dataset_3_mlaad_v5"}</code>.</p>
+<ul class="fnlist">
+<li><code class="sig">build_fold(df, holdout, seed, out_dir, test_cap=4000) -> (train_csv, test_csv, train_bal, test_df)</code> — training pool = all sources except the held-out one, balanced via <code>build_balanced_subset.sample_fake</code> (directly imported/reused, not reimplemented). Test pool = held-out source, capped at <code>test_cap</code>, split evenly by class if both classes present, else (MLAAD, fake-only) capped without class balancing.</li>
+<li><code class="sig">fit(train_csv, epochs, lr, workers, device) -> model</code> — minimal from-scratch loop per fold (no val/checkpointing, unweighted loss since the pool is already balanced), reusing <code>train.make_loader</code>.</li>
+<li><code class="sig">main()</code> — for each of the 3 sources: builds the fold, trains, scores via <code>train.collect_scores</code>. If the test fold has both classes: EER/bal-acc/AUC via <code>metrics.compute_eer</code>. Else (MLAAD): reports <code>fake_recall = mean(scores>=0.5)*100</code> instead (can't compute EER with no real examples) — tagged <code>metric="fake-recall(unseen gen)"</code>. Saves <code>cross_dataset_results.csv</code>.</li>
+</ul>
+<div class="trace-box yes"><span class="label">Paper trace</span><code>report_tables.tex</code> Table III (<code>tab:cross</code>) / <code>fig:cross</code> — AUC collapsing to 0.42–0.56 out-of-source. This result is the empirical seed of the entire Phase 2/3 cross-corpus research program.</div>
+</div>
+</details>
+
+<!-- ======================================================= -->
+<h2 id="phase23">Phase 2/3 Core — DA-RAD (failed) &amp; TTA (working) <span class="badge badge-ind tag">mixed traceability</span></h2>
+<p>Phase 2 is the abandoned train-time domain-generalization attempt (DA-RAD: gradient-reversal + Real-Anchored contrastive loss on a fine-tuned XLS-R encoder). Phase 3 is the pivot that worked: test-time adaptation via confident-tail self-training + channel-consistency. <strong>Both are narrated in the paper's prose</strong>, but several of the individual scripts that produced the DA-RAD ablation are themselves un-cited by name — see the per-file verdicts and the summary table at the bottom of this section.</p>
+
+<details class="file" id="f-darad_dataset" data-name="darad_dataset.py" data-badge="badge-ind" data-badge-text="Indirect">
+<summary><div class="summary-left"><h3 class="file-title">darad_dataset.py</h3><span class="file-purpose">raw-waveform Dataset for the SSL-based DA-RAD/TTA models</span></div><span class="badge badge-ind">Indirect</span></summary>
+<div class="file-body">
+<p><strong>Purpose.</strong> SSL front-ends need raw audio, not log-mel spectrograms, so this is a separate <code>Dataset</code> from <code>deepfake_dataset.py</code>.</p>
+<ul class="fnlist">
+<li><code class="sig">class RawAudioDataset(Dataset)</code> — <code>__init__(csv_path, sample_rate=16000, duration_sec=3.0, random_crop=True, rawboost=False, rawboost_algo=4, domain_map=None)</code>: builds a corpus-string→int <code>domain_map</code> if not supplied (caller passes the train set's map into val/test so ids stay consistent; unseen corpora map to <code>-1</code>). <code>_fix_len(wav)</code>: pad/random-crop/center-crop to <code>target_len</code>. <code>__getitem__</code>: loads via <code>deepfake_dataset.load_audio</code>, falls back to a zero waveform on failure, applies RawBoost if configured, returns <code>(waveform, label_idx, domain_idx)</code>.</li>
+</ul>
+<div class="trace-box ind"><span class="label">Paper trace</span>DA-RAD is described narratively in <code>main.tex</code>'s "What did not work" section; this specific dataset class isn't named. Not used by the later cloud pipelines (<code>overnight_pipeline.py</code>, <code>protocol_a.py</code>, <code>repair_tta.py</code>), which have their own inline GPU-cache dataset logic instead.</div>
+</div>
+</details>
+
+<details class="file" id="f-augment" data-name="augment.py" data-badge="badge-ind" data-badge-text="Indirect">
+<summary><div class="summary-left"><h3 class="file-title">augment.py</h3><span class="file-purpose">reference CPU/numpy RawBoost implementation (Tak et al., ICASSP 2022)</span></div><span class="badge badge-ind">Indirect</span></summary>
+<div class="file-body">
+<p><strong>Purpose.</strong> Perturbs convolutive coloration, impulsive device noise, and stationary colored noise so "clean vs. telephone/codec" stops being a shortcut proxy for real/fake.</p>
+<ul class="fnlist">
+<li><code class="sig">_gen_notch_coeffs(nBands, minF, maxF, minBW, maxBW, minCoeff, maxCoeff, minG, maxG, fs)</code> — builds an FIR filter as the product of <code>nBands</code> random bandstop notch filters via <code>scipy.signal.firwin</code>, applies a random gain normalized against the filter's peak response.</li>
+<li><code class="sig">_filter_fir(x, b)</code> — applies via <code>lfilter</code> with a specific right-pad-then-trim delay-compensation scheme — the exact scheme <code>rawboost_gpu.py</code> later has to reproduce algebraically for batched GPU convolution.</li>
+<li><code class="sig">LnL_convolutive_noise(x, fs, N_f, nBands, ...)</code> — linear + non-linear multi-band convolutive noise: for <code>i</code> in <code>range(N_f)</code>, filters <code>x**(i+1)</code> and sums (algo=1).</li>
+<li><code class="sig">ISD_additive_noise(x, P, g_sd)</code> — impulsive signal-dependent additive noise on a random index subset (algo=2).</li>
+<li><code class="sig">SSI_additive_noise(x, fs, SNRmin, SNRmax, ...)</code> — stationary colored noise at a random target SNR (algo=3).</li>
+<li><code class="sig">class RawBoost</code> — <code>_apply(x, algo)</code> dispatches 1=LnL, 2=ISD, 3=SSI, <strong>4=all three in series (default)</strong>, 5=LnL+ISD, 0=random pick. <code>__call__(wav)</code> accepts torch or numpy, guarantees output length matches input.</li>
+</ul>
+<div class="trace-box ind"><span class="label">Paper trace</span><code>main.tex</code> l.1058–1062: "our batched-GPU RawBoost reimplementation… verified against the reference implementation to within 5×10⁻⁷ relative error" — <code>augment.py</code> <em>is</em> that reference implementation, described but not named.</div>
+</div>
+</details>
+
+<details class="file" id="f-losses" data-name="losses.py" data-badge="badge-ind" data-badge-text="Indirect">
+<summary><div class="summary-left"><h3 class="file-title">losses.py</h3><span class="file-purpose">DA-RAD's domain-adversarial &amp; Real-Anchored losses — all validated harmful</span></div><span class="badge badge-ind">Indirect</span></summary>
+<div class="file-body">
+<div class="callout warn"><strong>PROJECT_LOG §4 verdict:</strong> every loss in this file was validated as harmful. GRL was "catastrophically unstable"; Real-Anchor "collapsed the model to chance" (50% EER).</div>
+<ul class="fnlist">
+<li><code class="sig">_GradReverse(torch.autograd.Function)</code> / <code class="sig">grad_reverse(x, lambd=1.0)</code> — standard DANN gradient-reversal: identity forward, negated+scaled gradient backward.</li>
+<li><code class="sig">class DomainAdversarialLoss(nn.Module)</code> — 2-layer MLP domain classifier behind <code>grad_reverse</code>; cross-entropy against domain labels, but the reversed gradient pushes the <em>encoder</em> toward domain-indistinguishable embeddings. <code>lambd</code> meant to ramp 0→1 (via <code>trainer.py</code>'s <code>grl_lambda</code>).</li>
+<li><code class="sig">class RealAnchoredContrastiveLoss(nn.Module)</code> — the paper's stated (abandoned) novelty. L2-normalizes embeddings, splits real/fake by label. <strong>Real-real attraction</strong>: cosine-similarity pairs among real embeddings, cross-domain-only by default (deliberately excludes same-domain pairs — prevents a trivial "align only within one corpus" degenerate solution). <strong>Real-fake separation</strong>: hinge <code>relu(margin - ||e_real - e_fake||)</code> over all cross pairs via <code>torch.cdist</code>. Fakes are <em>never</em> pulled toward each other — deliberate asymmetry vs. <code>ASDGLoss</code>, justified as "fake artifacts are generator-specific; forcing them together is the wrong inductive bias."</li>
+<li><code class="sig">class ASDGLoss(nn.Module)</code> — prior-work-style baseline (Xie et al. IEEE TIFS 2024) built specifically as the "what if we also cluster fakes" ablation counterpart. Shares the real-real term byte-for-byte with the anchor loss; adds a fake-fake separation hinge on cosine similarity.</li>
+</ul>
+<p>Self-test constructs a "clustered fakes" geometry where <code>RealAnchoredContrastiveLoss</code> stays near-zero (fake clustering invisible to it by design) while <code>ASDGLoss</code> is measurably higher — a hard assertion the two losses diverge as intended.</p>
+<div class="trace-box ind"><span class="label">Paper trace</span>Narrated qualitatively in <code>main.tex</code>'s "What did not work" / PROJECT_LOG §4. Note: the paper's actual <strong>DANN baseline</strong> table (<code>tab:dann</code>) is a separate, later, to-convergence implementation in <code>analysis_pipeline.py</code>/<code>asdg_pipeline.py</code> — this file's GRL is the earlier, abandoned DA-RAD pilot only, not what backs <code>tab:dann</code>.</div>
+</div>
+</details>
+
+<details class="file" id="f-sampler" data-name="sampler.py" data-badge="badge-no" data-badge-text="No trace">
+<summary><div class="summary-left"><h3 class="file-title">sampler.py</h3><span class="file-purpose">domain-balanced batch sampler required by the DA-RAD losses</span></div><span class="badge badge-no">No trace</span></summary>
+<div class="file-body">
+<ul class="fnlist">
+<li><code class="sig">class DomainBalancedBatchSampler(Sampler)</code> — <code>__init__(domains, labels, batch_size=32, domains_per_batch=2, num_batches=None, seed=0)</code>. Guarantees every batch spans multiple domains and both classes — a prerequisite for GRL/Real-Anchor to have cross-domain/cross-class structure to act on. <code>__iter__</code> picks <code>domains_per_batch</code> domains, draws roughly even real/fake counts per domain, and gracefully tops up single-class domains (e.g. MLAAD, fake-only) from that domain's full pool when a class is short.</li>
+</ul>
+<div class="trace-box no"><span class="label">No trace in paper</span>Only consumed by <code>trainer.py</code> (the DA-RAD trainer). Since DA-RAD is narrated only in prose with no script-level detail, this sampler has zero footprint in either draft.</div>
+</div>
+</details>
+
+<details class="file" id="f-eval_protocol" data-name="eval_protocol.py" data-badge="badge-ind" data-badge-text="Partial / superseded">
+<summary><div class="summary-left"><h3 class="file-title">eval_protocol.py</h3><span class="file-purpose">Protocol A (official DF-eval scoring) + Protocol B (cross-corpus summary stats)</span></div><span class="badge badge-ind">Partial</span></summary>
+<div class="file-body">
+<p>Constant: <code>DF_KEYS_DEFAULT = "data/dataset_1/DF-keys-full/keys/DF/CM/trial_metadata.txt"</code>.</p>
+<ul class="fnlist">
+<li><code class="sig">load_df_keys(meta_path) -> dict</code> — parses the official ASVspoof2021-DF CM key file into <code>{utt_id: (label, phase)}</code>.</li>
+<li><code class="sig">score_official_df(scores, meta_path, phase="eval") -> dict</code> — filters to the requested phase (<code>'eval'</code> = literature-comparable; <code>'progress'</code>/<code>'hidden'</code> were leaderboard-era partitions, not pooled by default), joins against model scores, computes EER via <code>metrics.compute_eer</code>.</li>
+<li><code class="sig">cross_corpus_summary(matrix) -> dict</code> — diagonal mean (in-domain EER) vs. off-diagonal mean/max (cross-corpus), <code>generalization_gap</code>.</li>
+</ul>
+<div class="trace-box ind"><span class="label">Paper trace</span>The "Protocol A" concept appears in both drafts' Limitations section (official ASVspoof2021-DF regime), but this specific early file is superseded by the far larger, later <code>protocol_a.py</code>, which reimplements <code>load_df_keys</code>/<code>score_official_df</code> usage rather than depending structurally on this module beyond a direct import.</div>
+</div>
+</details>
+
+<details class="file" id="f-trainer" data-name="trainer.py" data-badge="badge-no" data-badge-text="No trace">
+<summary><div class="summary-left"><h3 class="file-title">trainer.py</h3><span class="file-purpose">config-driven DA-RAD trainer — the script that produced the negative ablation result</span></div><span class="badge badge-no">No trace</span></summary>
+<div class="file-body">
+<p>Constant: <code>LABEL_FAKE = 1</code>.</p>
+<ul class="fnlist">
+<li><code class="sig">grl_lambda(step, total, max_lambda)</code> — DANN ramp schedule <code>max_lambda * (2/(1+e^{-10p}) - 1)</code>, <code>p=step/total</code> — 0 at start, approaching <code>max_lambda</code>, because full-strength reversal from step 0 destabilizes training.</li>
+<li><code class="sig">build_encoder(name, n_trainable_layers=0, out_dim=256)</code> — factory: <code>"stub"</code> → cheap conv1d encoder for shape-testing, <code>"xlsr"</code> → <code>SSLFrontend</code>.</li>
+<li><code class="sig">evaluate(model, loader, device)</code> — <code>@torch.no_grad()</code> val-loader scoring.</li>
+<li><code class="sig">main()</code> — implements the full objective <code>L = CE + λ_grl(t)·L_domain_adv + λ_anchor·L_anchor</code>. Key flags: <code>--encoder</code>, <code>--n_trainable_layers</code>, <code>--lambda_grl</code>=0.5, <code>--lambda_anchor</code>=0.3. Uses bf16 autocast without a GradScaler (fp16 scaling overflows once the encoder is fine-tuned, per its own comment). Builds <code>DomainBalancedBatchSampler</code> for training. Saves only trainable params (skips serializing the ~1.2GB frozen XLS-R backbone).</li>
+</ul>
+<div class="trace-box no"><span class="label">No trace in paper</span>Invoked directly by <code>run_ablation.sh</code>/<code>run_gonogo.sh</code> — the shell drivers behind the DA-RAD ablation table narrated in <code>main.tex</code>/PROJECT_LOG §4 ("every one of these hurts results"). The <em>result</em> is in the paper; this specific trainer script is not named or shown.</div>
+</div>
+</details>
+
+<details class="file" id="f-tta" data-name="tta.py" data-badge="badge-yes" data-badge-text="In paper — core method">
+<summary><div class="summary-left"><h3 class="file-title">tta.py</h3><span class="file-purpose">the validated method as a standalone CLI + Tent baseline</span></div><span class="badge badge-yes">In paper</span></summary>
+<div class="file-body">
+<p>Constants: <code>DEV="cuda"</code>, <code>CKPT="protocols/ft_xlsr.pt"</code>, <code>TARGET="protocols/protoB_itw_test.csv"</code>.</p>
+<ul class="fnlist">
+<li><code class="sig">build_source()</code> — instantiates <code>DARADModel(SSLFrontend(..., n_trainable_layers=4))</code>, loads the fine-tuned checkpoint with <code>strict=False</code> (checkpoint only has the trainable subset).</li>
+<li><code class="sig">select_tta_params(model)</code> — freezes everything, then unfreezes only <code>LayerNorm</code> modules inside the top-4 transformer layers plus the full projection/classifier/pool heads. <strong>This is the "top-LayerNorm-only fine-tuning" detail</strong> — a deliberately tiny trainable set, cheap to adapt and less prone to catastrophic forgetting than full fine-tuning.</li>
+<li><code class="sig">score_all(model, loader)</code> — <code>@torch.no_grad()</code>, returns labels, <code>P(fake)</code>, and L2-normalized embeddings.</li>
+<li><code class="sig">_augment(wav)</code> — the channel perturbation used for consistency: gain ∈ U(0.7,1.3) + 0.005·randn noise.</li>
+<li><code class="sig">adapt(model, loader, mode, use_st, use_anchor, use_cons, epochs=4, lr=1e-4, q=0.3, margin=1.0)</code> — <strong>the core TTA loop.</strong> Each epoch, re-scores the whole pool fresh (pseudo-labels compound on the model's own drifting confidence). For <code>mode="realmanifold"</code>: computes symmetric quantile thresholds <code>lo,hi = quantile(scores,q), quantile(scores,1-q)</code> — this file's default is <code>q=0.3</code> (bottom/top 30% each, 60% of the pool labeled), which is a wider net than the "~15%" figure PROJECT_LOG's narrative summary sometimes quotes elsewhere — the exact quantile is a tunable knob swept later in <code>overnight_pipeline.py</code>. Loss terms, independently toggleable: <code>use_st</code> (CE on confident pseudo-labels), <code>use_anchor</code> (single-prototype simplified Real-Anchor variant — <strong>off in the final shipped recipe</strong>, kept for the ablation), <code>use_cons</code> (MSE between clean and augmented predictions, stop-gradient on the clean side — the fourth ingredient, "channel consistency"). <span class="mono" style="color:var(--muted)">[updated]</span> <code>q=0.3</code> (bottom/top 30% each) is confirmed as the actual published default by the current <code>CLAUDE.md</code> — the "~15%" figure that appeared in some earlier narrative summaries was imprecise, not a second real config.</li>
+<li><code class="sig">main()</code> — CLI (<code>--mode {source,tent,realmanifold}</code>, toggles, <code>--adapt_csv</code>, <code>--eval_csv</code> defaulting to <code>adapt_csv</code> — transductive by default; an explicit different <code>--eval_csv</code> gives the inductive check). Appends a result row to <code>tta_results.txt</code>.</li>
+</ul>
+<div class="trace-box yes"><span class="label">Paper trace</span>This is Algorithm 1 / Eq. 5–8 in <code>main.tex</code> §III-D — "Real-manifold TTA," self-training + consistency, LayerNorm-only params. Docstring language matches the paper's method description almost verbatim.</div>
+</div>
+</details>
+
+<details class="file" id="f-repair_tta" data-name="repair_tta.py" data-badge="badge-no" data-badge-text="No trace — unpublished pilot">
+<summary><div class="summary-left"><h3 class="file-title">repair_tta.py</h3><span class="file-purpose">RePAIR-TTA — a proposed successor method, reliability-gated pairwise ranking instead of confident-tail pseudo-labels</span></div><span class="badge badge-no">No trace</span></summary>
+<div class="file-body">
+<div class="callout warn"><strong>Not in either paper draft.</strong> Explicitly framed in its own docstring as a go/no-go pilot: "only worth pursuing if it matches [st_cons] on balanced pools and clearly wins under class-prior skew." Corresponds to the untracked <code>REPAIR_TTA_IDEA.md</code> proposal document — unpublished exploratory work, outcome not yet resolved as working/failed anywhere in the repo's narrative docs.</div>
+<p>Constants: <code>K_VIEWS=4, DELTA=0.5, MARGIN=1.0, ETA_Q=0.5</code> (RePAIR-specific); <code>Q=0.3, LAMBDA_CONS=0.3, TTA_EPOCHS=3</code> (shared with the baseline being compared against); <code>TARGET="in_the_wild"</code>.</p>
+<ul class="fnlist">
+<li><code class="sig">build_manifest()</code>, <code class="sig">decode(path)</code>, <code class="sig">cap_per_class(df,n,seed)</code>, <code class="sig">build_cache(df)</code> — same 4-corpus manifest / GPU-resident fp16 cache pattern duplicated (not imported) across the cloud pipelines.</li>
+<li><code class="sig">class XLSRDetector(nn.Module)</code> — same architecture as the other pipelines' inline detector (frozen XLS-R + top-4 fine-tune + attention pool + proj + cls).</li>
+<li><code class="sig">get_batch(idx)</code> — <strong>always center-crops</strong> here (no train-time randomness) — this file only ever evaluates/scores, never trains from scratch.</li>
+<li><code class="sig">st_cons(model, idx, epochs, q)</code> — "current method" reimplemented as the baseline to beat: structurally identical to <code>tta.py</code>'s <code>realmanifold</code> mode with the anchor term off.</li>
+<li><code class="sig">score_views(model, idx, K=4)</code> — scores each clip under <code>K</code> views (1 clean + 3 augmented), returns the mean and variance of the fake-vs-real logit margin across views. <strong>Core novelty</strong>: instead of one confidence score, get both a rank signal (mean margin) and a reliability signal (variance under perturbation).</li>
+<li><code class="sig">reliability(zbar, v)</code> — converts mean margin to a percentile rank <code>r</code> via double-argsort (calibration-free, consistent with the paper's "ranking transfers, calibration doesn't" thesis) and a reliability weight <code>w = |2r-1| * exp(-v/median(v))</code>.</li>
+<li><code class="sig">repair(model, idx, epochs, use_cons, delta, eta_q, margin)</code> — the RePAIR loop: builds pairwise rank-difference and reliability-product matrices per batch, masks to pairs where one sample clearly outranks another <em>and</em> both are individually reliable, applies a smooth pairwise ranking hinge (<code>softplus(margin - Δlogit_margin)</code>) only on gated pairs — replaces hard pseudo-labels with a pairwise preference signal entirely.</li>
+<li><code class="sig">diagnostics(model, idx)</code> — calibration/purity introspection: accuracy-by-reliability-decile, and what fraction of gated pairs are correctly cross-class-ordered vs. same-class noise.</li>
+<li><code class="sig">make_pool(prev, n_total, seed)</code> — builds a target pool at a specified fake <em>prevalence</em>, operationalizing the class-prior-skew stress test.</li>
+</ul>
+<p><code>__main__</code>: Experiment A (balanced pool) compares source / <code>st_cons</code> / <code>repair</code> / <code>repair_nocons</code>; Experiment B sweeps prevalence ∈ {0.1,0.3,0.7,0.9}. Saves <code>repair_results.csv</code>.</p>
+<div class="trace-box no"><span class="label">No trace in paper</span>Neither draft mentions RePAIR-TTA, reliability-gated pairwise adaptation, or pair-purity curves anywhere. Future/unpublished work — flag this explicitly in review.</div>
+</div>
+</details>
+
+<details class="file" id="f-overnight_pipeline" data-name="overnight_pipeline.py" data-badge="badge-yes" data-badge-text="In paper (early pilot)">
+<summary><div class="summary-left"><h3 class="file-title">overnight_pipeline.py</h3><span class="file-purpose">the main unattended overnight driver — leave-one-corpus-out grid, GPU-resident cache, crash-safe incremental logging</span></div><span class="badge badge-yes">In paper</span></summary>
+<div class="file-body">
+<p>Jupytext percent-format script (paired with <code>overnight_pipeline.ipynb</code>). <code>SMOKE</code> toggle: <code>True</code> → 1 seed, 1 target (In-the-Wild), 1 epoch, tiny caps (~3 min dry run, writes to <code>results_smoke.csv</code>/<code>ckpt_smoke/</code> so a throwaway model can never be resumed by the real run); <code>False</code> → 3 seeds × 2 targets (In-the-Wild, Arabic), 12/4 epochs, full caps.</p>
+<p><strong>Section 1 — setup:</strong> pip-installs pinned deps (<code>numpy==1.26.4</code> pinned twice to fight resolver bumps), uninstalls <code>librosa</code>/<code>numba</code> to avoid an ABI conflict, prints the required-kernel-restart instruction.</p>
+<p><strong>Section 1b — data acquisition:</strong> <code class="sig">fetch_arabic(out)</code> downloads the HF Arabic ArAD corpus, materializes to disk.</p>
+<p><strong>Section 2 — manifest:</strong> <code class="sig">build_manifest()</code> — 4-corpus construction, keeping <strong>all 8</strong> distinct dataset_2 TTS generators (the comment notes this diversity is what gives the source pool its breadth).</p>
+<p><strong>Section 3 — GPU-resident cache:</strong> <code class="sig">cap_per_class</code>, <code class="sig">decode(path)</code>, <code class="sig">build_cache(df)</code> (16-thread decode into a fp16 GPU tensor once, up front — eliminates the DataLoader entirely), <code class="sig">get_batch(idx, train)</code> (random or center crop via <code>torch.gather</code>), <code class="sig">augment(x)</code> (gain+noise channel perturbation).</p>
+<p><strong>Section 4 — sampling:</strong> <code class="sig">sample_source(df, n_per_class, seed)</code> — water-filling across <code>(corpus, generator)</code> groups for the fake side (same idea as <code>build_balanced_subset.py</code>, independently reimplemented). <code class="sig">sample_target(df, n_per_class, seed)</code> — simple balanced sample.</p>
+<p><strong>Section 5 — model:</strong> <code class="sig">class XLSRDetector(nn.Module)</code> — frozen XLS-R-300M except top-4 layers, attention-pool head, proj, cls. A runtime probe forward-passes under autocast and falls back to <code>ENCODER_AMP=False</code> if it errors — an empirical hardware-driver fallback rather than a hardcoded flag.</p>
+<p><strong>Section 6 — train/score/adapt:</strong> <code class="sig">fit(model, idx, epochs, tag)</code> — supervised source training under this pipeline's own <code>augment()</code> (not RawBoost — a distinct regularizer role). <code class="sig">set_tta_params(model)</code> — same LayerNorm+head pattern as <code>tta.py</code>. <code class="sig">adapt(model, idx, use_st=True, use_cons=True, epochs=4)</code> — <strong>the canonical, leanest TTA loop</strong>: two ingredients only (self-train + consistency), the anchor term isn't even present as a toggle here. <code class="sig">tent(model, idx, epochs)</code> — vanilla entropy minimization, the negative-control baseline that "collapsed to ~49% EER."</p>
+<p><strong>Section 7 — experiment grid:</strong> <code>METHODS = {"source": None, "tent": tent, "st_only": adapt(use_cons=False), "ours": adapt(use_cons=True)}</code>. Per seed×target: loads or trains a cached source checkpoint, runs all 4 methods transductively (adapt+eval on the same unlabeled pool), plus an inductive check (adapt on half the target, eval on the disjoint half). <code class="sig">record(**row)</code> appends incrementally to <code>results.csv</code> — crash-safe by design.</p>
+<p><strong>Section 8 — sweep</strong> (only if not SMOKE): reuses cached checkpoints, sweeps <code>q ∈ {0.1,0.2,0.3,0.4}</code>, <code>epochs ∈ {2,4,8}</code>, <code>lam ∈ {0.0,0.3,1.0}</code> one-at-a-time against a base config, writing <code>sweep.csv</code>.</p>
+<p><strong>Section 9 — summary:</strong> aggregates mean±std EER/AUC across seeds, emits a LaTeX table snippet, plots <code>fig_score_dist.png</code> (real/fake score histograms, source vs. after-TTA).</p>
+<div class="trace-box yes"><span class="label">Paper trace</span>RUN_GUIDE.md documents this exact notebook. Its 2-target pilot numbers are the "earlier two-target pilot" referenced in <code>main.tex</code>'s intro as superseded by the later 4-target <code>extended_pipeline.py</code> run — but it is the origin of the validated method and its early confirmed numbers (In-the-Wild 9.42%→6.41%, inductive 9.88%→7.48%) reported in PROJECT_LOG §5/§6.</div>
+</div>
+</details>
+
+<!-- models/ -->
+<h3 style="margin-top:44px; color:var(--muted); font-weight:600; text-transform:uppercase; font-size:.85rem; letter-spacing:.04em;">models/ package</h3>
+
+<details class="file" id="f-models-init" data-name="models/__init__.py" data-badge="badge-sup" data-badge-text="Support">
+<summary><div class="summary-left"><h3 class="file-title">models/__init__.py</h3><span class="file-purpose">empty — makes models/ a package</span></div><span class="badge badge-sup">Support</span></summary>
+<div class="file-body"><p>No content.</p></div>
+</details>
+
+<details class="file" id="f-dg_model" data-name="models/dg_model.py" data-badge="badge-ind" data-badge-text="Indirect">
+<summary><div class="summary-left"><h3 class="file-title">models/dg_model.py</h3><span class="file-purpose">DARADModel — the shared DA-RAD architecture consumed by trainer.py and tta.py</span></div><span class="badge badge-ind">Indirect</span></summary>
+<div class="file-body">
+<ul class="fnlist">
+<li><code class="sig">class AttentivePool(nn.Module)</code> — a <code>Linear(dim,1)</code> scoring layer, softmax attention over time, batched-matmul weighted context. Parallels <code>model.py</code>'s <code>TemporalAttentionPool</code> — the same attention-pooling idea reimplemented for the Phase 2/3 architecture family.</li>
+<li><code class="sig">class DARADModel(nn.Module)</code> — wraps any encoder exposing <code>.out_dim</code>/<code>forward(wav)->(B,T,C)</code>; <code>AttentivePool</code> → projection (Linear→ReLU→Dropout) to <code>embed_dim</code> → classifier. Returns <code>(logits, emb[, attn])</code> — <code>emb</code> is what <code>losses.py</code>'s DG losses consume.</li>
+</ul>
+<p><strong>Note:</strong> a different (earlier/generic) architecture from the <code>XLSRDetector</code> class duplicated across <code>overnight_pipeline.py</code>/<code>protocol_a.py</code>/<code>repair_tta.py</code>/<code>tta.py</code> — structurally similar but not code-shared. Self-test backprops through the full combined DA-RAD loss (<code>CE + 0.5·dom_loss + 0.3·anchor_loss</code>) to verify gradients flow end-to-end.</p>
+<div class="trace-box ind"><span class="label">Paper trace</span>Only via the narrated DA-RAD architecture description — not named directly.</div>
+</div>
+</details>
+
+<details class="file" id="f-lcnn" data-name="models/lcnn.py" data-badge="badge-no" data-badge-text="No trace">
+<summary><div class="summary-left"><h3 class="file-title">models/lcnn.py</h3><span class="file-purpose">standard LCNN (Light CNN + Max-Feature-Map) anti-spoofing baseline</span></div><span class="badge badge-no">No trace</span></summary>
+<div class="file-body">
+<ul class="fnlist">
+<li><code class="sig">class MFM(nn.Module)</code> — Max-Feature-Map: splits channels in half, takes elementwise max (channel-competitive nonlinearity, the LCNN building block).</li>
+<li><code class="sig">_conv_mfm(c_in, c_out, k, s, p)</code> — <code>Conv2d(c_in, 2*c_out, ...) → MFM()</code>.</li>
+<li><code class="sig">class LCNN(nn.Module)</code> — 9-block conv-mfm/maxpool/batchnorm stack (32→32→48→48→64→64→32→32→32 channels) → global avg pool → <code>fc</code> with a 1-D MFM.</li>
+<li><code class="sig">class MFM_1d(nn.Module)</code> — 1-D analog of MFM for the FC layer.</li>
+</ul>
+<div class="trace-box no"><span class="label">No trace in paper</span>Not imported by <code>trainer.py</code>, <code>tta.py</code>, <code>overnight_pipeline.py</code>, <code>protocol_a.py</code>, or <code>repair_tta.py</code> — no consumer found anywhere in the files examined. Neither <code>main.tex</code> nor <code>main_icassp.tex</code> names LCNN; the non-SSL backbone actually reported in the paper's backbone comparison table is <code>RawNet2Lite</code> (from <code>improve_rawnet2lite.py</code>/<code>extended_pipeline.py</code>), not this. A dead architecture as far as this repo's active pipeline goes.</div>
+</div>
+</details>
+
+<details class="file" id="f-ssl_frontend" data-name="models/ssl_frontend.py" data-badge="badge-yes" data-badge-text="In paper">
+<summary><div class="summary-left"><h3 class="file-title">models/ssl_frontend.py</h3><span class="file-purpose">SSLFrontend — the fine-tuned XLS-R encoder wrapper that produced the actual EER win</span></div><span class="badge badge-yes">In paper</span></summary>
+<div class="file-body">
+<ul class="fnlist">
+<li><code class="sig">class StubEncoder(nn.Module)</code> — a single <code>Conv1d(1, out_dim, kernel=400, stride=160)</code> mimicking the SSL encoder's I/O shape, for shape-testing without downloading ~1.2GB of weights.</li>
+<li><code class="sig">class SSLFrontend(nn.Module)</code> — <code>__init__(bundle_name="WAV2VEC2_XLSR_300M", n_trainable_layers=0, layer=-1)</code>, lazy-loaded (<code>self.model=None</code> until first forward). <code>_ensure(device)</code>: downloads the bundle on first call, freezes all params, unfreezes the top-K transformer layers if <code>n_trainable_layers>0</code>.
+<div class="callout" style="margin-top:8px">This is the mechanism the whole DA-RAD/TTA line depends on. Docstring: "DG losses need an adaptable representation... with K=0 the DG losses only perturb the downstream head and hurt" — directly validated by PROJECT_LOG §4's finding that the fine-tuned encoder alone (no DG losses) gave the real win, 31%→9.4% EER.</div>
+<code class="sig">forward(waveform)</code>: wraps extraction in <code>enable_grad()</code>/<code>no_grad()</code> depending on <code>n_trainable_layers</code>; explicitly disables autocast for the encoder call on CUDA (mixed-precision input against fp32 weights breaks the conv feature extractor).</li>
+</ul>
+<div class="trace-box yes"><span class="label">Paper trace</span><code>main.tex</code> §III-B: "XLS-R-300M with only its top four transformer layers trainable" — matches exactly. Note the inline <code>XLSRDetector</code> classes in the later cloud pipelines (<code>overnight_pipeline.py</code>, <code>protocol_a.py</code>, <code>repair_tta.py</code>) do <strong>not</strong> import this module — they call <code>torchaudio.pipelines</code> directly and replicate the freeze/unfreeze logic inline.</div>
+</div>
+</details>
+
+<!-- back to Phase2/3 -->
+<details class="file" id="f-rawboost_gpu" data-name="rawboost_gpu.py" data-badge="badge-yes" data-badge-text="In paper">
+<summary><div class="summary-left"><h3 class="file-title">rawboost_gpu.py</h3><span class="file-purpose">batched-GPU RawBoost, numerically verified against augment.py's reference</span></div><span class="badge badge-yes">In paper</span></summary>
+<div class="file-body">
+<p><strong>Why it exists.</strong> <code>augment.py</code>'s CPU/numpy implementation is strictly per-clip and mis-flattens a batched tensor if handed one directly; the GPU-resident-cache pipelines (<code>protocol_a.py</code>) are deliberately DataLoader-free, leaving nowhere to hook a per-clip CPU augmenter without a slow Python loop or reintroducing worker processes (previously exhausted shared memory).</p>
+<p><strong>Design rationale (from docstring):</strong> profiling showed coefficient generation is cheap (~3ms/clip) but <code>lfilter</code> over 64k samples is ~90% of cost (~60–180ms/clip). Solution: keep random-parameter generation on CPU/numpy in the exact same draw order as the reference (so exact equivalence is testable), move the FIR filtering to batched grouped <code>conv1d</code> on GPU.</p>
+<ul class="fnlist">
+<li><code class="sig">_fir_batch(x, kernels)</code> — zero-pads ragged per-clip kernels to <code>Kmax</code>, flips them (conv1d cross-correlates, flipping restores true convolution matching <code>lfilter</code>), runs grouped <code>conv1d</code> (<code>groups=B</code>, one kernel per "channel"), applies the per-clip causal-delay left-shift via <code>torch.gather</code>.</li>
+<li><code class="sig">_norm_wav_batch(x, always)</code> — batched peak-normalize.</li>
+<li><code class="sig">lnl_convolutive_batch</code>, <code class="sig">isd_additive_batch</code>, <code class="sig">ssi_additive_batch</code> — batched versions of the three <code>augment.py</code> algorithms, each documented against the reference; ISD collapses to a single elementwise multiply once the ragged per-clip index draws are done on CPU.</li>
+<li><code class="sig">rawboost_batch(x, sr, algo, bank, **overrides)</code>, <code class="sig">build_coeff_bank(n, sr, biased, **overrides)</code>, <code class="sig">class RawBoostGPU</code> — public API. <code>RawBoostGPU</code> pre-generates a coefficient bank (default 4096) up front and samples from it instead of fresh-generating every call — docstring reports 312ms/batch fresh generation (159ms of it CPU coefficient gen) vs. near-zero with a bank, ~11 hours saved across a full 20-fold grid.</li>
+</ul>
+<p>Self-test validates <code>_fir_batch</code> against <code>augment._filter_fir</code> (rel. error &lt;1e-4), end-to-end B=1 equivalence against <code>augment.RawBoost</code> under matched seeds (rel. error &lt;1e-3), and bank-mode statistical equivalence (0.5×–2× magnitude of fresh generation).</p>
+<div class="trace-box yes"><span class="label">Paper trace</span><code>main.tex</code> l.1058–1062, near-verbatim match to its own docstring. Consumed by <code>protocol_a.py</code> as <code>_source_rawboost</code>.</div>
+</div>
+</details>
+
+<details class="file" id="f-protocol_a" data-name="protocol_a.py" data-badge="badge-yes" data-badge-text="In paper">
+<summary><div class="summary-left"><h3 class="file-title">protocol_a.py</h3><span class="file-purpose">official ASVspoof2021-DF eval protocol — the one literature-comparable SOTA number</span></div><span class="badge badge-yes">In paper</span></summary>
+<div class="file-body">
+<p><strong>Purpose.</strong> Train on ASVspoof2019-LA train only, evaluate on the official ASVspoof2021-DF eval partition against real CM keys — enables genuine comparison against published baselines (Wav2DF-TSL 1.95%, AASIST-classifier 2.87%, Wav2Vec2-AASIST 8.54%, challenge top-1 ~15.6%).</p>
+<p><strong>Two structural differences forced by scale:</strong> (1) the DF eval set (~459k clips, ~59GB) can't fit in a GPU-resident cache — scoring streams (CPU decodes a chunk, GPU scores it, chunk discarded); (2) adaptation runs on an unlabeled subsample, then scores the full trial list.</p>
+<ul class="fnlist">
+<li><code class="sig">build_la19_train()</code> — parses the 2019-LA train protocol, kept at <strong>full native class imbalance</strong> (2580 bonafide / 22800 spoof) — deliberately not rebalanced, so the number stays comparable to published Protocol-A results.</li>
+<li><code class="sig">build_df_eval(phase="eval")</code> — loads official keys via <code>eval_protocol.load_df_keys</code>; notes <code>part03</code> is absent locally (458,871/611,829 trials present) but the omission is verified uniform across codec/label/phase strata.</li>
+<li><code class="sig">class CpuPool</code> — decoded audio held in <strong>pinned CPU memory</strong> (not GPU-resident, unlike the other pipelines) — the local 10GB card can't host even the 3.25GB train pool alongside model+optimizer+activations with headroom; per-batch PCIe transfer (~4MB) is cheap, decoupling pool size from VRAM.</li>
+<li><code class="sig">source_augment(x)</code> — dispatches to <code>RawBoostGPU</code> (if <code>RECIPE="rawboost"</code>) or a weak gain+noise fallback (<code>RECIPE="baseline"</code>). Comment: the baseline recipe's source loss bottomed at 0.0001 (memorizing exact waveforms of the 25,380-clip train set); RawBoost's stronger perturbation is the actual fix — <strong>this is the second, successful reuse of RawBoost</strong>, as a source-training memorization fix, distinct from its failed role as a DA-RAD DG regularizer.</li>
+<li><code class="sig">estimate_prevalence(scores, min_prior=0.02, max_prior=0.98)</code> — <strong>label-free class-prior estimation</strong>, the file's most novel addition. Naive TTA on the real (97.5%-spoof) DF pool collapsed AUC .870→.686, because the fixed symmetric <code>Q=0.3</code> quantile scheme mislabels a chunk of low-scoring spoof as pseudo-real on a heavily skewed pool, then self-training reinforces the mistake. Fits a 2-component <code>GaussianMixture</code> to the score histogram (deliberately avoids <code>mean(scores)</code>, since that assumes calibration the paper's own thesis says doesn't transfer); validated against real withheld labels (true prevalence 2.47%, estimated 2.63%).</li>
+<li><code class="sig">adapt(model, df, epochs, prior_aware=False)</code> — <code>prior_aware=True</code> estimates <code>pi_real</code> <strong>once</strong> from a frozen pre-adaptation forward pass (fixed for all epochs — explicit comment warns re-estimating from a drifting self-trained model "would let a drifting estimate reinforce its own mistakes"), splits the confident-label budget asymmetrically by prevalence.</li>
+<li><code class="sig">report(name, df, scores, adapt_utts=None)</code> — computes the official pooled DF EER (via <code>eval_protocol.score_official_df</code>) plus, if given, a disjoint-subset inductive check.</li>
+<li><code class="sig">main()</code> — <strong>resumable</strong>: skips re-scoring any method already recorded in <code>RESULTS_CSV</code> (a 22-minute rescore of 400k clips isn't redone accidentally). Runs <code>source</code>, <code>ours</code> (naive symmetric-Q), <code>ours_prior</code> (prior-aware), <span class="mono" style="color:var(--accent)">and now <code>ours_adaptive</code></span>.</li>
+</ul>
+<div class="callout" style="margin-top:8px"><strong>Updated by the pull.</strong> <code>adapt(model, df, epochs=TTA_EPOCHS, prior_aware=False, adaptive=False)</code> gained a fourth arm. With <code>adaptive=True</code> it imports <code>adaptive_tta as AT</code> and layers on: (a) <code>AT.estimate_prevalence_guarded</code> instead of the plain GMM estimator — a BIC guard that shrinks the prevalence estimate back to 0.5 when a 2-component fit doesn't decisively beat 1-component (the un-guarded estimator's recorded failure: it returned 0.458 against a true 0.025 on the RawBoost-retrained model, an 18× error); (b) a curriculum ramp on <code>q</code> via <code>AT.q_schedule</code>/<code>AT.tail_budget</code>, replacing the fixed symmetric split; (c) a collapse guard — snapshots trainable params before adapting (<code>pre = {...}</code>) and reverts to that snapshot if <code>AT.collapsed(s)</code> fires, rather than let the run silently tank like Tent did; (d) label-free early stopping via <code>AT.should_stop</code> on <code>AT.score_shift</code>, running up to <code>AT.E_MAX=8</code> epochs instead of the fixed 4. <code>main()</code> now records a fourth method row, <code>m_ours_adaptive = "ours_adaptive" + METHOD_SUFFIX</code>, gated by the same skip-if-already-recorded resume logic.</div>
+<div class="trace-box yes"><span class="label">Paper trace</span><code>main.tex</code> Limitation #6 / <code>main_icassp.tex</code>'s last bullet — the 26.33%/42.45%/32.58% EER numbers, the GMM prevalence estimator, and the RawBoost-retrained results are all quoted directly from this script's output. <strong>The new <code>ours_adaptive</code> arm is not yet run</strong> — PROJECT_LOG §11 states both the 4-target adaptive grid and the Protocol A adaptive arm await a 35GB-GPU cloud session (see <a href="#phase4">Phase 4</a>); no adaptive numbers are in either draft yet.</div>
+</div>
+</details>
+
+<h3 style="margin-top:34px">Phase 2/3 verdict summary (PROJECT_LOG.md cross-check)</h3>
+<div class="top-summary">
+<table>
+<tr><th>Method / component</th><th>File(s)</th><th>Verdict</th></tr>
+<tr><td>Frozen XLS-R, no fine-tuning</td><td><code>ssl_frontend.py</code>, <code>trainer.py</code></td><td><span class="badge badge-no">Weak</span> 30.97% EER</td></tr>
+<tr><td>Fine-tuning top-K XLS-R layers (no DG losses)</td><td><code>ssl_frontend.py</code></td><td><span class="badge badge-yes">The real win</span> 30.97%→9.42% EER</td></tr>
+<tr><td>RawBoost as DA-RAD train-time DG regularizer</td><td><code>augment.py</code>, <code>trainer.py</code></td><td><span class="badge badge-no">Worse</span> in this role (§4)</td></tr>
+<tr><td>RawBoost as source-training memorization fix</td><td><code>rawboost_gpu.py</code>, <code>protocol_a.py</code></td><td><span class="badge badge-yes">Worked</span> — different, later, successful role</td></tr>
+<tr><td>Gradient-reversal domain-adversarial loss</td><td><code>losses.py</code>, <code>trainer.py</code></td><td><span class="badge badge-no">Catastrophically unstable</span></td></tr>
+<tr><td>Real-Anchored contrastive loss</td><td><code>losses.py</code>, <code>trainer.py</code></td><td><span class="badge badge-no">Collapsed to 50% (chance)</span></td></tr>
+<tr><td>Confident-tail self-training + channel consistency</td><td><code>tta.py</code>, <code>overnight_pipeline.py</code>, <code>protocol_a.py</code></td><td><span class="badge badge-yes">Validated, working method</span> ITW 9.42%→6.41%</td></tr>
+<tr><td>Vanilla entropy minimization (Tent)</td><td><code>tta.py</code>, <code>overnight_pipeline.py</code></td><td><span class="badge badge-no">Collapses to ~49% EER</span></td></tr>
+<tr><td>RePAIR-TTA (pairwise reliability-gated ranking)</td><td><code>repair_tta.py</code></td><td><span class="badge badge-ind">Unresolved pilot</span> — not in PROJECT_LOG</td></tr>
+<tr><td>Prior-aware pseudo-label budgeting</td><td><code>protocol_a.py</code></td><td><span class="badge badge-ind">Postdates the log</span> — fixes a measured .870→.686 AUC collapse</td></tr>
+</table>
+</div>
+
+<!-- ======================================================= -->
+<h2 id="phase4">Phase 4 — Adaptive q/E <span class="badge badge-ind tag">narrated in paper limitations, code itself not yet run at scale</span></h2>
+<p>Added by the 2026-08-10 pull (<code>2ba4a16</code> "adaptive q and E for TTA; kill three confounded mechanisms" through <code>c1efb55</code>). Motivation per <code>PROJECT_LOG.md</code> §11: every TTA number so far uses one hardcoded config (<code>q=0.3</code>, <code>λ=0.3</code>, <code>E=4</code>) with no recorded provenance. This phase tries to make <code>q</code> and <code>E</code> adapt from unlabeled target audio; <strong>λ was tried and explicitly dropped</strong> after three proposed mechanisms were falsified — on a CPU, before any GPU time was spent, which is the point of this phase's design.</p>
+
+<div class="callout warn"><strong>Status: pre-GPU validated, not yet run at scale.</strong> All of Phase 4's numeric claims come from either synthetic-data unit tests (<code>test_adaptive_tta.py</code>, CPU-only) or a ~128-clip smoke run. PROJECT_LOG §11 is explicit: "the real grid (4 targets × seeds 0–2 …) and the Protocol A arm both await the 35GB GPU. Smoke-run EERs are on 128 clips (~0.8% per clip) and carry <strong>no signal</strong>." Treat every file below as validated mechanism, not validated result.</div>
+
+<h4 style="margin-top:20px">Three mechanisms killed before any GPU time (PROJECT_LOG §11)</h4>
+<table>
+<tr><th>Mechanism</th><th>Verdict</th></tr>
+<tr><td>λ gated by pseudo-label churn under channel augmentation</td><td><span class="badge badge-no">Confounded</span> moves λ by 0.017 across the entire real AUC range .60–.99, but by 0.165 across augmentation magnitude alone at fixed AUC — it reads <code>augment()</code>'s own gain/noise constants, not the corpus.</td></tr>
+<tr><td><code>select_q_max</code> (pick q from view-churn)</td><td><span class="badge badge-no">Permanently saturated</span> returns the grid minimum q=0.05 on real audio for every corpus tested — 13/128 clips labelled vs. 78 at the published q=0.3. Same confound as above.</td></tr>
+<tr><td>E stopping on epoch-to-epoch <em>label</em> churn</td><td><span class="badge badge-no">Degenerate</span> measured exactly 0.0000 every epoch of every arm — quantile-cut labels only move if the ranking reorders, and self-training sharpens the boundary without reordering. Fired at <code>E_MIN</code> every time; measured worse than the fixed-E control (10.16 vs. 9.38 EER).</td></tr>
+</table>
+<p style="color:var(--muted); font-size:.88rem">What shipped instead: λ stays fixed at 0.3 (see the updated <a href="#f-lambda_selector">lambda_selector.py</a> trace box above for the reinterpreted r=+0.74 finding that motivated trying, and dropping, λ-adaptation). q gets a curriculum ramp + BIC-guarded prevalence split. E gets label-free stopping on <strong>score movement</strong> (not label churn), running up to 8 epochs instead of 4.</p>
+
+<details class="file" id="f-adaptive_tta" data-name="adaptive_tta.py" data-badge="badge-ind" data-badge-text="Mechanism, not yet run at scale">
+<summary><div class="summary-left"><h3 class="file-title">adaptive_tta.py</h3><span class="file-purpose">pure-numpy, CUDA-free schedules for q/λ/E — the module that let all three mechanisms be validated (2 killed, 1 shipped) without spending GPU time</span></div><span class="badge badge-ind">Indirect</span></summary>
+<div class="file-body">
+<p><strong>Purpose.</strong> Deliberately zero CUDA/torch/pipeline imports, no module-level state — every function takes plain numpy arrays and returns plain numbers, so the whole adaptive signal is unit-testable on synthetic score arrays on a CPU (<code>test_adaptive_tta.py</code>). That is what let three proposed mechanisms be tested and two of them killed before any GPU time was spent.</p>
+<p>Constants: <code>LAMBDA_MAX=0.3</code>, <code>Q_CAP=0.3</code>, <code>Q_START=0.1</code>, <code>Q_GRID=(0.05,...,0.45)</code>, <code>CHURN_TAU=0.5</code>, <code>E_MIN=2, E_MAX=8</code>, <code>STOP_TOL=0.002</code>, <code>DIVERGE_RATIO=1.5</code>. <code>LAMBDA_MAX</code>/<code>Q_CAP</code> are kept as schedule <em>ceilings</em> specifically so the low-churn regime reproduces the published fixed config exactly rather than drifting from it.</p>
+<ul class="fnlist">
+<li><code class="sig">pseudo_labels(s, lo_frac, hi_frac)</code> — confident-tail labelling (<code>-1</code>/<code>0</code>/<code>1</code>). Deliberately byte-for-byte the same rule as <code>extended_pipeline.py</code>'s tail cut, including assignment order (real first, fake second, so an overlap resolves to fake) — required for the adaptive path to be checkably reducible to the published one.</li>
+<li><code class="sig">tail_cuts(s, lo_frac, hi_frac)</code> — the absolute score thresholds the fractions imply.</li>
+<li><code class="sig">view_churn(s, s_aug, lo_frac, hi_frac) -> (c_view, c_null)</code> — fraction of confident clips whose tail assignment flips under augmentation, thresholded at the <em>clean</em> view's cuts (re-quantiling the augmented view would renormalize away the exact drift being measured). <code>c_null</code> is the closed-form churn an independent/uninformative ranking would produce, so normalizing by it makes "flips half as often as chance" scale-free rather than a new hand-picked constant.</li>
+<li><code class="sig">epoch_churn(pl_prev, pl_now)</code> — flip rate between two epochs' labels, restricted to clips confident in <em>both</em> epochs (so the q-ramp widening the confident set isn't miscounted as instability). Kept for the trace only — not a stopping signal (see next).</li>
+<li><code class="sig">score_shift(s_prev, s_now)</code> — mean per-clip <code>|Δscore|</code> between epochs. <strong>Replaces label churn as the stopping signal</strong> after label churn measured exactly 0.0000 on a real run (quantile-cut labels don't move unless the ranking reorders; self-training sharpens the boundary without reordering) and stopping on it fired at <code>E_MIN</code> every time, costing EER (10.16 vs. 9.38 fixed).</li>
+<li><code class="sig">lambda_from_churn(c_view, c_null, lam_max)</code> — <code>λ = lam_max · clip(1 - c_view/c_null, 0, 1)</code>. <strong>Defined but not used by the shipped method</strong> — this is the mechanism <code>test_adaptive_tta.py</code> check [2] proves is confounded by augmentation magnitude, kept in the module as a documented negative result rather than deleted, so it isn't rediscovered and re-tried later.</li>
+<li><code class="sig">estimate_prevalence_guarded(scores, min_prior=0.02, max_prior=0.98, bic_margin=0.0) -> (pi_real, bic_delta, shrunk)</code> — reimplements <code>protocol_a.py</code>'s validated 2-component-GMM prevalence estimator (same params, so the un-shrunk path returns the identical number), reimplemented here rather than imported because <code>protocol_a.py</code> runs torch/CUDA setup at module scope and this module must stay CPU-only. <strong>The guard is new</strong>: fits both a 1- and 2-component GMM, and if the 2-component fit doesn't beat the 1-component fit on BIC, falls back to <code>π=0.5</code> (the symmetric budget the published method already uses) rather than trust a possibly-wrong split. Motivated by a real failure: on the RawBoost-retrained model the un-guarded estimator returned 0.458 against a true 0.025 — an 18× error that had silently driven a whole protocol run into the ground.</li>
+<li><code class="sig">tail_budget(q, pi_real) -> (lo_frac, hi_frac)</code> — splits the total confident-label budget <code>2q</code> by prevalence; at <code>pi_real=0.5</code> reduces identically to the symmetric <code>(q,q)</code> split, so on the balanced leave-one-corpus-out grid this machinery is a no-op and only the q-ramp changes anything. Bites specifically on skewed pools like Protocol A's 97.5%-spoof DF-eval.</li>
+<li><code class="sig">select_q_max(s, s_aug, pi_real, grid, cap, tau)</code> — <strong>NOT used by the method</strong> (docstring says so explicitly), retained for the analysis table only. Inherits the same augmentation-magnitude confound as <code>lambda_from_churn</code>: on real target audio it returns the grid minimum (0.05) regardless of corpus. The method instead uses a hard <code>q_max=Q_CAP</code> and lets the curriculum ramp + prevalence split do the adapting.</li>
+<li><code class="sig">q_schedule(epoch, n_epochs, q_max, q_start=Q_START)</code> — linear curriculum ramp from a strict high-purity tail (<code>Q_START=0.1</code>) up to <code>q_max</code> (the published <code>Q_CAP=0.3</code> ceiling) — early epochs buy fewer, more-trustworthy pseudo-labels since the model is still miscalibrated on the target and a wide tail early would let confirmation bias compound. <code>n_epochs</code> is always <code>E_MAX</code> so the ramp's shape doesn't depend on when adaptive stopping happens to cut the run short.</li>
+<li><code class="sig">should_stop(shift_history, epoch, min_epochs=E_MIN, max_epochs=E_MAX, tol=STOP_TOL, diverge_ratio=DIVERGE_RATIO) -> (stop, reason)</code> — stops on <code>"converged"</code> (shift below tolerance), <code>"diverging"</code> (two <em>consecutive</em> rises above 1.5× the running minimum — deliberately requires sustained divergence after a single-epoch blip cut a healthy smoke run short at epoch 6), or <code>"max_epochs"</code>. Deliberately biased toward running the full 8-epoch budget: every swept point in the existing hyperparameter sweep says more epochs help, so this is framed as a safety valve against a run that has stalled or diverged, not an efficiency optimization trying to shave epochs off a healthy run.</li>
+<li><code class="sig">collapsed(s, min_std=1e-3, min_tail_gap=1e-3, q=0.1) -> (collapsed, reason)</code> — flags <code>non_finite_scores</code>, <code>score_std_collapse</code>, or <code>tails_merged</code>. Insurance against the Tent-style failure mode <code>main.tex</code> describes as undetectable in advance (a run looking healthy right up until its score distribution collapses to ~49.5% EER) — can't predict it, but can notice it happening and hand back the pre-adaptation model instead of a catastrophic one.</li>
+</ul>
+<div class="trace-box ind"><span class="label">Paper trace</span>The <em>motivation</em> and the killed-mechanism findings are narrated in <code>PROJECT_LOG.md</code> §11 and the rewritten Limitation 1 passages of both drafts (see the updated <a href="#f-lambda_selector">lambda_selector.py</a> box above). No adaptive-q/E <em>result number</em> is in either paper draft yet — this module is validated mechanism, awaiting the GPU run that would produce a citable number.</div>
+</div>
+</details>
+
+<details class="file" id="f-adaptive_pipeline" data-name="adaptive_pipeline.py" data-badge="badge-ind" data-badge-text="Pending GPU run">
+<summary><div class="summary-left"><h3 class="file-title">adaptive_pipeline.py</h3><span class="file-purpose">the adaptive-vs-fixed experiment grid — sections 1–5 copied verbatim from extended_pipeline.py so target pools are bit-identical</span></div><span class="badge badge-ind">Indirect</span></summary>
+<div class="file-body">
+<p><strong>Purpose.</strong> Jupytext notebook. Sections 1–5 (manifest, GPU cache, sampling, models, train/score/adapt helpers) are deliberately copied — not imported — from <code>extended_pipeline.py</code>, so the manifest, pool capping, target sampling, and model are bit-identical and the <code>ours_fixed</code> control row is directly comparable to the published <code>results_ext.csv</code>. <code>extended_pipeline.py</code> itself is never edited — its resume guard keys only on <code>(seed, target, setting)</code>, so adding methods there would make it skip every fold against the existing results file.</p>
+<p><code>SMOKE</code> env-var toggle (<code>ADAPTIVE_SMOKE</code>, default on): smoke = 1 seed, 1 target (In-the-Wild), 64–128-clip caps; real = seeds 0–2 × 4 targets, published caps. <strong>Deliberately never trains and never downloads</strong> — asserts required corpora are present and raises <code>SystemExit</code> otherwise (<code>REQUIRED_DATA</code> list), explicitly to stop a copied-loop accident from starting a 45GB MLAAD download on a machine where <code>data/mlaad</code> is missing (a trap called out by name in <code>PROJECT_LOG.md</code> §11's closing paragraph — MLAAD only ever fed source training, which this file doesn't do, so it's omitted entirely and target pools stay bit-identical without it).</p>
+<ul class="fnlist">
+<li><code class="sig">build_manifest()</code>, <code class="sig">cap_per_class</code>, <code class="sig">decode</code>, <code class="sig">build_cache</code>, <code class="sig">get_batch</code>, <code class="sig">augment</code>, <code class="sig">idx_of</code>, <code class="sig">sample_source</code>, <code class="sig">sample_target</code>, <code class="sig">class XLSRDetector</code>, <code class="sig">class RawNet2Lite</code>, <code class="sig">fit</code>, <code class="sig">set_tta_params</code>, <code class="sig">adapt</code>, <code class="sig">tent</code>, <code class="sig">bn_only</code>, <code class="sig">oracle</code> — the copied section 1–5 infra, structurally identical to <code>extended_pipeline.py</code>'s (see that entry above for detail); <code>RUN_ORACLE/RUN_RAWNET/RUN_BN_ONLY = False</code> here since this is an adaptation-only comparison.</li>
+<li><code class="sig">score_aug(model, idx)</code> — scores the augmented view once, pre-adaptation, used only to size the budget when <code>adapt_q=True</code> — gated deliberately so the fixed arm never consumes this extra draw from the CUDA RNG (the exact thing <code>verify_reduction.py</code> checks for).</li>
+<li><code class="sig">_snapshot(model)</code> / <code class="sig">_restore(model, snap)</code> — the collapse-guard's model checkpoint/rollback.</li>
+<li><code class="sig">record_trace(**row)</code> — appends one row per epoch to <code>adaptive_trace{_smoke}.csv</code>, the intended source for a new paper figure (per-epoch q/λ/shift/pi_real/stopped-reason diagnostics) — <strong>not yet a real figure</strong>, since the real grid hasn't run.</li>
+<li><code class="sig">adapt_adaptive(model, idx, adapt_q=True, adapt_e=True, tag, seed, target, method, epochs=TTA_EPOCHS)</code> — <strong>the core loop</strong>, one code path with two independent boolean switches so every ablation arm runs identical code. With both switches <code>False</code> it must be numerically identical to the published <code>adapt()</code> above it in the same file — that reduction is what <code>verify_reduction.py</code> asserts. λ is fixed at <code>LAMBDA_CONS=0.3</code> in every arm (never gated — see <code>adaptive_tta.py</code>'s dropped <code>lambda_from_churn</code>). Budget sizing (BIC-guarded prevalence) happens once, from the frozen pre-adaptation model, for the same re-estimation-compounds-mistakes reason as <code>protocol_a.py</code>'s <code>prior_aware</code> path. Per epoch: collapse check first (reverts to snapshot + returns immediately if triggered), then computes <code>q_t</code> via the curriculum ramp (if <code>adapt_q</code>) or the fixed <code>Q</code> (if not), assigns pseudo-labels via <code>AT.pseudo_labels</code>, trains the same CE(confident) + λ·MSE(consistency) objective as the fixed method, then checks <code>AT.should_stop</code> (if <code>adapt_e</code>) or a fixed-epoch-count stop.</li>
+<li><code class="sig">run_grid()</code> — for each (seed, target): loads the read-only source checkpoint from <code>ckpt_ext/</code> (skips the fold entirely if missing — this run never trains one), runs <code>{source, ours_fixed, ours_adaptive}</code> plus, on <code>ABLATION_SEEDS</code> (seed 0 only, for compute), single-knob arms <code>ours_aq</code> (q-only) and <code>ours_ae</code> (E-only); plus an inductive check (adapt on half the target, eval on the disjoint half). Resume guard keys on <code>(seed, target, method, setting)</code> — finer-grained than <code>extended_pipeline.py</code>'s, so a restart resumes per method rather than per fold.</li>
+</ul>
+<div class="trace-box ind"><span class="label">Paper trace</span>Narrated as an in-progress phase in <code>PROJECT_LOG.md</code> §11 and referenced by <code>CLAUDE.md</code>'s new "Adaptive q/E (Phase 4, pre-GPU validated, not yet run at scale)" section. No results from this script appear in <code>main.tex</code>/<code>main_icassp.tex</code> yet — the real 4×3 grid awaits the 35GB-GPU cloud session documented in <code>MONDAY_HANDOFF.md</code>.</div>
+</div>
+</details>
+
+<details class="file" id="f-test_adaptive_tta" data-name="test_adaptive_tta.py" data-badge="badge-sup" data-badge-text="Support — the CPU validation gate">
+<summary><div class="summary-left"><h3 class="file-title">test_adaptive_tta.py</h3><span class="file-purpose">36 plain-assert CPU checks on synthetic score arrays — how the 3 mechanisms got tested before any GPU time</span></div><span class="badge badge-sup">Support</span></summary>
+<div class="file-body">
+<p>Plain asserts/prints (<code>check(name, cond, detail)</code> helper), not pytest — repo has no test runner configured; this and <code>verify_reduction.py</code> are the only two "test" files that exist. Run: <code>python test_adaptive_tta.py</code>.</p>
+<p>Notable checks, numbered as in the file:</p>
+<ul class="fnlist">
+<li><strong>[1]</strong> churn responds to a destroyed ranking (sanity floor: shuffled augmented scores should read as pure-null churn).</li>
+<li><strong>[2] NEGATIVE RESULT, deliberately preserved</strong> — sweeps true AUC over .60–.99 at fixed augmentation (λ moves by 0.017) vs. sweeping augmentation magnitude at fixed AUC (λ moves by 0.165); asserts <code>span_noise &gt; 5·span_auc</code> and <code>span_auc &lt; 0.05</code>. This is the proof that <code>lambda_from_churn</code> reads the augmentation constant, not the corpus — "pinned down so the finding is not rediscovered later" per the file's own comment.</li>
+<li><strong>[4]/[5]</strong> — prevalence recovery at 97.5% skew (recovers to within 0.02 of true 0.025) and the BIC guard shrinking a genuinely single-blob distribution back to <code>π=0.5</code>.</li>
+<li><strong>[7]</strong> — asserts <code>pseudo_labels</code> is bit-identical to the inline tail rule in <code>extended_pipeline.py</code>.</li>
+<li><strong>[8]</strong> — <code>select_q_max</code> checks framed explicitly around the fact that it's not used for its originally intended purpose, only as a widening brake.</li>
+<li><strong>[9]/[10]/[10b]</strong> — q-ramp shape, the stopping rule (including a regression test reproducing the exact shift sequence — <code>[0.0505, 0.0370, 0.0223, 0.0091, 0.0168]</code> — that cut a real smoke run short at epoch 4/5, asserting the sustained-divergence rule now tolerates it), and <code>score_shift</code> vs. label-churn's degeneracy (constructs a case where relabeling is frozen but scores measurably sharpen, to show why the stopping signal had to change).</li>
+<li><strong>[11]/[12]</strong> — <code>epoch_churn</code> ignoring confident-set-size changes caused by the ramp itself (vs. genuine flips), and the collapse guard's three trigger conditions.</li>
+</ul>
+<div class="trace-box sup"><span class="label">Support role</span>Not cited in either paper draft (it's a test file), but is the artifact that makes PROJECT_LOG §11's "three mechanisms killed before any GPU time" claim checkable/reproducible rather than asserted.</div>
+</div>
+</details>
+
+<details class="file" id="f-verify_reduction" data-name="verify_reduction.py" data-badge="badge-sup" data-badge-text="Support — the load-bearing gate">
+<summary><div class="summary-left"><h3 class="file-title">verify_reduction.py</h3><span class="file-purpose">asserts adapt_adaptive(False,False) is bitwise identical to the published adapt() — must pass before any adaptive-vs-fixed comparison means anything</span></div><span class="badge badge-sup">Support</span></summary>
+<div class="file-body">
+<p>Needs a GPU (uses the smoke config by default via <code>ADAPTIVE_SMOKE=1</code>). Rationale stated in its own docstring: if <code>adapt_adaptive(adapt_q=False, adapt_e=False)</code> diverges from <code>extended_pipeline</code>-style <code>adapt()</code> for any reason — a different tail rule, different RNG consumption order, an extra forward pass — every difference in the eventual results table is confounded by the refactor rather than by the schedules being tested.</p>
+<ul class="fnlist">
+<li><code class="sig">run(fn, seed=0)</code> — seeds both <code>torch</code> and <code>numpy</code>, runs a method function on a deep-copied source model, returns the resulting score array.</li>
+</ul>
+<p>Main block: loads the seed-0 In-the-Wild source checkpoint, runs both <code>P.adapt(m, i)</code> (the published loop) and <code>P.adapt_adaptive(m, i, adapt_q=False, adapt_e=False, ...)</code> (the new loop with both switches off) under identical seeding, and compares the resulting score arrays with <code>np.array_equal</code>. <strong>Subtle point called out explicitly</strong>: <code>adapt_adaptive</code> does an extra augmented-scoring pass to size the budget, drawing from the CUDA RNG — that pass is gated on <code>adapt_q=True</code> specifically so the fixed-arm comparison consumes exactly the same RNG draws the published loop does. Reports PASS if bitwise identical, PASS-within-tolerance if the max difference is <code>&lt;1e-6</code> (same arithmetic, different order), else raises <code>SystemExit</code> with "the ablation is confounded".</p>
+<div class="trace-box sup"><span class="label">Support role</span>Load-bearing gate, not a cited artifact. <code>MONDAY_HANDOFF.md</code>'s opening prompt calls this out as a hard rule: "do not start the grid if it fails."</div>
+</div>
+</details>
+
+<details class="file" id="f-cloud_monday" data-name="cloud_monday.py / cloud_monday.ipynb" data-badge="badge-sup" data-badge-text="Support — the pending GPU run driver">
+<summary><div class="summary-left"><h3 class="file-title">cloud_monday.py / cloud_monday.ipynb</h3><span class="file-purpose">the actual cloud session that will produce Phase 4's first real numbers — not yet run</span></div><span class="badge badge-sup">Support</span></summary>
+<div class="file-body">
+<p>Jupytext notebook for a fresh cloud box with no data (~35GB GPU target). Box-checks GPU/disk, clones the repo (finds the upload directory by <em>searching</em> for the uploaded files rather than guessing a path — a JupyterLab breadcrumb "/work" turned out to be relative to the notebook server root on a real box, not an absolute path, so a hardcoded guess silently failed there once), copies uploaded checkpoints into place, runs <code>verify_reduction.py</code> as a hard gate, then runs the 4-target×3-seed adaptive grid (<code>adaptive_pipeline.py</code>'s <code>run_grid()</code>) followed by Protocol A's adaptive arm. Expects four uploads: <code>ckpt_ext/</code> (12 checkpoints, 2.3GB — skips ~3h of source training and a 57GB MLAAD download entirely), <code>kaggle.json</code>, <code>ckpt_protocol_a_rawboost.pt</code> (193MB, skips 16 epochs of Protocol A source training), and <code>results_protocol_a.csv</code> (so only the new adaptive arm runs there, ~1h instead of ~5h). Stated time budget: ~40min setup, ~5min verify_reduction gate, ~6h grid, ~1h Protocol A.</p>
+<div class="trace-box sup"><span class="label">Support role</span>This is the literal script that, once run, would generate the numbers Phase 4 currently lacks. Nothing to trace against the paper yet — it hasn't executed.</div>
+</div>
+</details>
+
+<details class="file" id="f-monday_handoff" data-name="MONDAY_HANDOFF.md" data-badge="badge-sup" data-badge-text="Runbook, not code">
+<summary><div class="summary-left"><h3 class="file-title">MONDAY_HANDOFF.md</h3><span class="file-purpose">self-contained runbook for starting a fresh cloud session cold, with no prior conversation context</span></div><span class="badge badge-sup">Support</span></summary>
+<div class="file-body">
+<p>Not a script — a markdown runbook meant to be pasted as the opening message of a brand-new session on a cloud box with no data and no repo. Documents: the opening prompt to paste (§0), a one-paragraph restatement of what Phase 4 is and why (§1), the four required uploads and what breaks if each is missing (§2, mirrors <code>cloud_monday.py</code>'s upload table), and a shell-command walkthrough of setup/verify/grid/report (§3–§7) as the non-notebook equivalent of <code>cloud_monday.ipynb</code>. States two hard rules explicitly: <code>verify_reduction.py</code> must pass before the grid starts, and nothing must ever trigger an MLAAD download (57GB) since with <code>ckpt_ext/</code> uploaded nothing trains and MLAAD is never needed.</p>
+<div class="trace-box sup"><span class="label">Not a paper artifact</span>Operational documentation for reproducing the pending Phase 4 run — worth mentioning to a reviewer only as evidence the pending numbers have a concrete, checked path to being produced, not as something citable itself.</div>
+</div>
+</details>
+
+<!-- ======================================================= -->
+<h2 id="misc">Miscellaneous / Exploratory Scripts &amp; Shell Wrappers <span class="badge badge-ind tag">mostly live, some superseded</span></h2>
+<p>Several files here are jupytext notebooks stored as <code>.py</code> (percent-cell format, meant to run cell-by-cell in Jupyter/Colab/cloud, not as plain scripts). Grouped roughly by role: data download, the main extended-grid pipeline, post-hoc analysis notebooks, figure generation, and one-off follow-up/rebuttal scripts.</p>
+
+<details class="file" id="f-extended_pipeline" data-name="extended_pipeline.py" data-badge="badge-yes" data-badge-text="In paper — primary grid">
+<summary><div class="summary-left"><h3 class="file-title">extended_pipeline.py</h3><span class="file-purpose">the canonical 4-target × 6-method leave-one-corpus-out experiment grid — backs the paper's main table</span></div><span class="badge badge-yes">In paper</span></summary>
+<div class="file-body">
+<p><strong>Purpose.</strong> Full grid: 4 EER-capable targets (ASVspoof2019, dataset2, In-the-Wild, Arabic) × {source, Tent, self-train-only, ours, BN-only, oracle} + a from-scratch RawNet2-lite baseline, plus MLAAD folded in as a fake-only source-diversity/held-out-language diagnostic corpus. Has a <code>PILOT</code> mode (1 fold, single seed/target) to validate a batch/LR fix before the full overnight matrix.</p>
+<p>Shares its infra skeleton (<code>build_manifest</code>, <code>cap_per_class</code>, <code>decode</code>, <code>build_cache</code>, <code>get_batch</code>, <code>augment</code>, <code>idx_of</code>, <code>sample_source</code>, <code>sample_target</code>, <code>XLSRDetector</code>, <code>trainable</code>, <code>eer</code>, <code>score</code>, <code>metrics</code>, <code>fit</code>, <code>set_tta_params</code>, <code>adapt</code>, <code>tent</code>, <code>record</code>) with <code>analysis_pipeline.py</code>/<code>asdg_pipeline.py</code>/<code>sweep2_pipeline.py</code> — all forked from a common template. New here:</p>
+<ul class="fnlist">
+<li><code class="sig">class RawNet2Lite(nn.Module)</code> — compact from-scratch raw-waveform CNN: SincNet-like strided conv stem + 4 residual conv blocks (1×1-conv shortcuts) + bidirectional GRU + linear head. Built explicitly to separate "does SSL pretraining help" from "does adaptation help," since it has no SSL component.</li>
+<li><code class="sig">bn_only(model, idx)</code> — AdaBN-style baseline: forward passes in <code>train()</code> mode with no gradient/labels, just updating norm-layer running stats.</li>
+<li><code class="sig">oracle(model, idx_labeled, epochs)</code> — supervised fine-tune directly on target labels; explicitly documented as <strong>not a fair TTA baseline</strong>, an upper-bound reference only.</li>
+</ul>
+<p>Main grid loop trains/loads cached source checkpoints, runs all 6 methods, records to <code>results_{pilot|ext}.csv</code>, plus an inductive check and the MLAAD held-out-language recall diagnostic.</p>
+<div class="trace-box yes"><span class="label">Paper trace</span>This is the <strong>primary, canonical grid</strong>. <code>analysis_pipeline.py</code> explicitly says "run this after extended_pipeline.ipynb has finished (it reuses those checkpoints)"; <code>lambda_selector.py</code>, <code>make_auc_gain_scatter.py</code>, <code>sweep2_pipeline.py</code>, and <code>summarize_ext.py</code> all consume its outputs (<code>ckpt_ext/</code>, <code>results_ext.csv</code>). Backs <code>tab:main</code>, <code>tab:backbone</code>, and Oracle/BN-only rows in both drafts.</div>
+</div>
+</details>
+
+<details class="file" id="f-analysis_pipeline" data-name="analysis_pipeline.py" data-badge="badge-yes" data-badge-text="In paper">
+<summary><div class="summary-left"><h3 class="file-title">analysis_pipeline.py</h3><span class="file-purpose">post-hoc 4-part analysis notebook, run after extended_pipeline — divergence, DANN, per-language, t-SNE</span></div><span class="badge badge-yes">In paper</span></summary>
+<div class="file-body">
+<p>Four independently-toggleable parts (<code>RUN_DIVERGENCE</code>, <code>RUN_DANN</code>, <code>RUN_PERLANG</code>, <code>RUN_TSNE</code> booleans, so one failing part doesn't kill the rest).</p>
+<ul class="fnlist">
+<li><strong>Part A — domain divergence.</strong> <code class="sig">proxy_a_distance(Es, Et, seed, cv)</code> — trains a cross-validated logistic-regression domain discriminator on source vs. target embeddings, returns proxy 𝒜-distance <code>d_A = 2(2·acc-1)</code> and discriminator accuracy. A loop over seeds/targets correlates <code>d_A</code> before/after adaptation with EER gain.</li>
+<li><strong>Part B — DANN baseline.</strong> <code class="sig">class GradReverse(torch.autograd.Function)</code> (standard GRL, a second independent implementation from <code>losses.py</code>'s). <code class="sig">train_dann(target, seed, epochs, lambda_max)</code> — trains a DANN baseline to convergence (unlike the earlier DA-RAD pilot's GRL, this is trained fully) as a fair comparison point against the paper's TTA method.</li>
+<li><strong>Part C — per-language.</strong> MLAAD fake-recall by language, split by <code>HELDOUT_LANGS</code> vs. seen languages, using <code class="sig">get_source_model</code>.</li>
+<li><strong>Part D — embedding geometry.</strong> t-SNE plot of source/target embeddings before/after adaptation from cached <code>.npz</code> files; writes <code>fig_tsne.png</code>.</li>
+</ul>
+<p>Shared helpers: <code class="sig">build_manifest()</code> (cloud MLAAD path variant), <code class="sig">class XLSRDetector</code>, <code class="sig">set_tta_params</code>, <code class="sig">adapt</code> (the validated TTA method, reproduced again here), <code class="sig">get_source_model</code> (loads a cached checkpoint or trains fresh), <code class="sig">load_part(part)</code> (reads back <code>results_{part}.csv</code> for the closing summary).</p>
+<div class="trace-box yes"><span class="label">Paper trace</span>Section headers map 1:1 onto <code>main.tex</code> §III-E / §V-F (<code>tab:divergence</code>), §V-G (<code>fig:embed</code>), §V-H (<code>fig:perlang</code>), and the real DANN baseline (<code>tab:dann</code>).</div>
+</div>
+</details>
+
+<details class="file" id="f-asdg_pipeline" data-name="asdg_pipeline.py" data-badge="badge-yes" data-badge-text="In paper">
+<summary><div class="summary-left"><h3 class="file-title">asdg_pipeline.py</h3><span class="file-purpose">the ASDG baseline (Xie et al. 2024) run through the same grid — closes a gap the paper's own Related Work claimed but never tested</span></div><span class="badge badge-yes">In paper</span></summary>
+<div class="file-body">
+<p>Docstring states its own motivation explicitly: <code>main.tex</code>'s Related Work claims the method "beats ASDG" but that comparison had never actually been run before this script (referred to internally as "Task #8 in the project tracker"). Uses the <strong>local</strong> MLAAD path, unlike <code>extended_pipeline.py</code>'s cloud path (noted explicitly in comments as a difference to be aware of).</p>
+<ul class="fnlist">
+<li><code class="sig">build_cache(df)</code> — same GPU-cache pattern, but additionally returns a domain-id tensor needed for ASDG's cross-domain loss terms.</li>
+<li><code class="sig">train_asdg(target, seed, epochs)</code> — trains <code>XLSRDetector</code> with <code>CE + LAMBDA_ASDG · ASDGLoss(emb, y, dom)</code>, importing <code>ASDGLoss</code> directly from <code>losses.py</code> — the one place that loss actually gets used end-to-end for a reported result (rather than only self-tested).</li>
+<li><code class="sig">main()</code> — resumable (skips already-recorded seed/target pairs), writes <code>results_asdg.csv</code>.</li>
+</ul>
+<p>Has a <code>SMOKE</code> gate (must smoke-test before the real 3-seed×4-target run) — the "cheap dry run first" convention used across the cloud/GPU-heavy scripts.</p>
+<div class="trace-box yes"><span class="label">Paper trace</span><code>main.tex</code> §V-E, <code>tab:dann</code>'s ASDG column. Docstring matches <code>\cite{asdg}</code>'s described aggregation-separation baseline exactly.</div>
+</div>
+</details>
+
+<details class="file" id="f-improve_rawnet2lite" data-name="improve_rawnet2lite.py" data-badge="badge-yes" data-badge-text="In paper">
+<summary><div class="summary-left"><h3 class="file-title">improve_rawnet2lite.py</h3><span class="file-purpose">40-epoch, cosine-LR retrain of RawNet2Lite — resolves whether its collapse in the main grid was an SSL-necessity finding or just undertraining</span></div><span class="badge badge-yes">In paper</span></summary>
+<div class="file-body">
+<p>Docstring: addresses <code>main.tex</code>'s Limitations item 5 directly — was RawNet2-lite's collapse evidence SSL pretraining is <em>necessary</em>, or an artifact of being undertrained (original run: 8 epochs, no LR schedule)? Reruns with 40 epochs + <code>CosineAnnealingLR</code> + weight decay (1e-4), same leave-one-corpus-out protocol/manifest as <code>extended_pipeline.py</code>.</p>
+<ul class="fnlist">
+<li><code class="sig">build_manifest()</code> — local MLAAD layout; comment notes a prior bug where stale post-<code>reset_index</code> indices silently misaligned <code>idx_of()</code> lookups, "wasted cloud GPU time once before; caught here in smoke test."</li>
+<li><code class="sig">class RawNet2Lite(nn.Module)</code> — same architecture as <code>extended_pipeline.py</code>'s, with an added <code>Dropout(0.3)</code> on the pooled embedding.</li>
+<li><code class="sig">fit(model, idx, epochs, tag)</code> — now with <code>CosineAnnealingLR</code> and weight decay, the key differences vs. the original 8-epoch run.</li>
+</ul>
+<div class="trace-box yes"><span class="label">Paper trace</span><code>main.tex</code> §V-D closing paragraph: "retraining it for 40 epochs with a cosine learning-rate schedule… does not close the gap" — near-verbatim match to the docstring.</div>
+</div>
+</details>
+
+<details class="file" id="f-lambda_selector" data-name="lambda_selector.py" data-badge="badge-yes" data-badge-text="In paper">
+<summary><div class="summary-left"><h3 class="file-title">lambda_selector.py</h3><span class="file-purpose">label-free heuristic testing whether the consistency term will help or hurt on a given target — no new training, inference only over cached checkpoints</span></div><span class="badge badge-yes">In paper</span></summary>
+<div class="file-body">
+<p>Docstring frames this as addressing "Limitations item 1" of the paper: at deployment, no target labels exist, so can you decide whether to enable the consistency term without them? Uses the 12 existing <code>ckpt_ext/</code> checkpoints (4 targets × 3 seeds).</p>
+<ul class="fnlist">
+<li><code class="sig">tail_separation(s, q)</code> — primary label-free proxy: <code>mean(top-quantile scores) - mean(bottom-quantile scores)</code>; a large gap ⇒ good ranking ⇒ consistency should help.</li>
+<li><code class="sig">tail_purity_proxy(s, q)</code> — an alternative quantile-spread stat, docstring-flagged "use with care" — a less-trusted secondary signal.</li>
+</ul>
+<p>Main block computes the label-free proxies from raw unlabeled target scores, then loads <code>results_ext.csv</code> to compute the <em>real</em> Δ₂ (self-training-only→ours EER delta, consistency's true marginal contribution — labels used only for validation, never for the proxy itself), correlates proxy vs. real Δ₂, saves <code>lambda_selector_proxy.csv</code> / <code>_validation.csv</code>.</p>
+<div class="trace-box yes"><span class="label">Paper trace — reinterpreted in the latest pull</span><code>main.tex</code> Limitation #1 no longer calls this simply a failure. r=+0.74 (p=0.006) is now read as <strong>correct in magnitude, inverted from a "reliability" reading</strong>: high tail separation means a <em>saturated</em> score distribution, and the consistency term's stop-gradient MSE freezes an already-overconfident boundary rather than smoothing it — a calibration property, exactly what the paper's ranking-transfers-but-calibration-doesn't thesis predicted a working signal would have to measure. The paper still keeps λ fixed at 0.3, not because the signal is uninformative but because the fixed-λ-vs-per-point-oracle gap is only 0.24 EER pooled over 12 (target,seed) points — too small for 12 points to resolve. See <a href="#f-adaptive_tta"><code>adaptive_tta.py</code></a> (Phase 4) for the follow-up module built on this reinterpretation.</div>
+</div>
+</details>
+
+<details class="file" id="f-make_auc_gain_scatter" data-name="make_auc_gain_scatter.py" data-badge="badge-yes" data-badge-text="In paper">
+<summary><div class="summary-left"><h3 class="file-title">make_auc_gain_scatter.py</h3><span class="file-purpose">figure generator — source AUC vs. EER gain scatter, the "ranking-precondition" evidence</span></div><span class="badge badge-yes">In paper</span></summary>
+<div class="file-body">
+<p>Flat script, no functions, no GPU. Loads <code>results_ext.csv</code>, pivots to <code>eer_gain</code> vs. <code>auc_source</code> per (target, seed), scatters colored by target with a least-squares trend line and Pearson-r annotation, saves <code>fig_auc_gain.png</code>. Supports the Limitations claim that TTA's benefit tracks source ranking quality — directly ties to PROJECT_LOG §5's AUC-transfers finding.</p>
+<div class="trace-box yes"><span class="label">Paper trace</span><code>fig:aucgain</code> (r=+0.57), referenced in both <code>main.tex</code> and <code>main_icassp.tex</code>.</div>
+</div>
+</details>
+
+<details class="file" id="f-make_figure" data-name="make_figure.py" data-badge="badge-yes" data-badge-text="In paper">
+<summary><div class="summary-left"><h3 class="file-title">make_figure.py</h3><span class="file-purpose">figure generator — real/fake score histograms before/after TTA, the local companion to cloud_pipeline.py's inline plot</span></div><span class="badge badge-yes">In paper</span></summary>
+<div class="file-body">
+<ul class="fnlist">
+<li><code class="sig">logit(s)</code> — clips to <code>[1e-4, 1-1e-4]</code>, computes <code>log(s/(1-s))</code>.</li>
+</ul>
+<p>Rest is a flat script: loads a saved <code>fig_score_dist.npz</code>, computes AUC/accuracy/EER (via the shared <code>metrics.compute_eer</code>) per panel, plots two histograms, saves <code>fig_score_dist.png</code>. Mirrors — and is explicitly referenced as a local fallback by — the inline plotting section at the end of <code>cloud_pipeline.py</code> ("figure skipped... run make_figure.py locally on fig_score_dist.npz").</p>
+<div class="trace-box yes"><span class="label">Paper trace</span><code>fig:scores</code>, referenced in both <code>main.tex</code> and <code>main_icassp.tex</code>.</div>
+</div>
+</details>
+
+<details class="file" id="f-make_perlang_figure" data-name="make_perlang_figure.py" data-badge="badge-yes" data-badge-text="In paper (main.tex only)">
+<summary><div class="summary-left"><h3 class="file-title">make_perlang_figure.py</h3><span class="file-purpose">figure generator — MLAAD fake-recall by language bar chart</span></div><span class="badge badge-yes">In paper</span></summary>
+<div class="file-body">
+<p>Flat script. Aggregates <code>results_perlang.csv</code> by language, averaged over the 4 leave-one-corpus-out source models, sorted ascending, colored by whether the language was held out (orange) or seen (green) in training. Annotates the overall mean line and a specific outlier: language <code>"mt"</code> (Maltese) scored poorly by the In-the-Wild source model — a hardcoded annotation baked in from real observed data, not a speculative placeholder. Saves <code>fig_perlang.png</code>.</p>
+<div class="trace-box ind"><span class="label">Paper trace</span><code>fig:perlang</code> is referenced in <code>main.tex</code>/<code>main_fa.tex</code> §V-H, but <strong>dropped from the condensed <code>main_icassp.tex</code></strong> for space — so this figure is in the long draft only.</div>
+</div>
+</details>
+
+<details class="file" id="f-summarize_ext" data-name="summarize_ext.py" data-badge="badge-sup" data-badge-text="Support — load-bearing">
+<summary><div class="summary-left"><h3 class="file-title">summarize_ext.py</h3><span class="file-purpose">single source of truth for every paper table generated from results_ext.csv</span></div><span class="badge badge-sup">Support</span></summary>
+<div class="file-body">
+<p>CLI: <code>python summarize_ext.py</code> (human-readable) or <code>--latex</code> (LaTeX table bodies for copy-paste into <code>main.tex</code>). Explicitly exists to prevent hand-transcription errors when the grid is rerun.</p>
+<ul class="fnlist">
+<li><code class="sig">load()</code> — reads <code>results_ext.csv</code>, returns the full df plus filtered transductive/xlsr subsets.</li>
+<li><code class="sig">auc_fmt(v)</code> — formats AUC dropping a leading zero (IEEE house style, <code>0.991</code>→<code>.991</code>), with a docstring warning against a naive <code>.replace("0.", ".")</code> that previously corrupted unrelated numbers (turned <code>20.52</code> into <code>2.52</code>).</li>
+<li><code class="sig">main_table</code>, <code class="sig">seed_detail</code>, <code class="sig">gain_decomp</code>, <code class="sig">inductive</code>, <code class="sig">backbone</code>, <code class="sig">auc_gain_corr</code> — one formatter per paper table/statistic. <code>seed_detail</code> flags single-seed EER collapses (<code>eer.max()>40 and eer.min()<20</code>); <code>gain_decomp</code> decomposes total gain into D1 (source→ST-only) and D2 (ST-only→ours, consistency's marginal contribution).</li>
+<li><code class="sig">_check_formatting()</code> — self-test/assertion guarding <code>auc_fmt</code> against the exact regression documented above, run unconditionally at module entry.</li>
+</ul>
+<div class="trace-box sup"><span class="label">Support role</span>Not itself cited in either draft, but is the canonical table-generation tool behind <code>tab:main</code>/<code>tab:backbone</code>/<code>tab:gaindecomp</code>'s numbers — load-bearing infrastructure, referenced by PROJECT_LOG §10 as the output source.</div>
+</div>
+</details>
+
+<details class="file" id="f-cloud_pipeline" data-name="cloud_pipeline.py" data-badge="badge-ind" data-badge-text="Indirect — superseded precursor">
+<summary><div class="summary-left"><h3 class="file-title">cloud_pipeline.py</h3><span class="file-purpose">earlier 3-target cloud TTA notebook, precursor to extended_pipeline.py</span></div><span class="badge badge-ind">Indirect</span></summary>
+<div class="file-body">
+<p>Paired with <code>cloud_pipeline.ipynb</code> (both git-modified per the repo status — presumably still actively maintained/kept in sync, even if superseded as a results source). Implements the full TTA pipeline end-to-end for 3 targets (In-the-Wild, ASVspoof2021-DF, Arabic — no MLAAD, no dataset2), using a standard PyTorch <code>DataLoader</code>/<code>Dataset</code> rather than the GPU-resident cache used by later scripts.</p>
+<ul class="fnlist">
+<li><code class="sig">fetch_arabic(out)</code>, <code class="sig">_asvspoof2021_rows(root)</code>, <code class="sig">build_manifest()</code>, <code class="sig">balanced(df,n,seed)</code>, <code class="sig">load_audio(path)</code>, <code class="sig">class AudioDS(Dataset)</code>, <code class="sig">loader(df,bs,shuffle)</code> — standard DataLoader-based data plumbing (the pre-GPU-cache era of this pipeline family).</li>
+<li><code class="sig">class XLSRDetector</code>, <code class="sig">fit</code>, <code class="sig">set_tta_params</code>, <code class="sig">tta(...)</code>, <code class="sig">tent(...)</code> — the same method family, DataLoader-based version.</li>
+</ul>
+<p>Module-level (not function-wrapped) experiment loop: 3 seeds × 3 targets, saves <code>cloud_results_per_seed.csv</code>, <code>cloud_results.csv</code>, an ablation section (<code>cloud_ablation.csv</code>), an inductive-check section (<code>cloud_inductive.csv</code>), and an insight-figure section (<code>fig_score_dist.png</code>).</p>
+<div class="trace-box ind"><span class="label">Paper trace</span>Its own docstring says "outputs ready for main.tex Table 1," but its target set doesn't match the paper's final 4-target grid — <code>main.tex</code>'s intro explicitly calls out an "earlier two-target pilot… numbers should not be compared directly," which this (or <code>overnight_pipeline.py</code>) is. Superseded by <code>extended_pipeline.py</code> as the results source, but not itself unreferenced — the paper acknowledges its existence as a superseded precursor.</div>
+</div>
+</details>
+
+<details class="file" id="f-sweep2_pipeline" data-name="sweep2_pipeline.py" data-badge="badge-no" data-badge-text="Not incorporated">
+<summary><div class="summary-left"><h3 class="file-title">sweep2_pipeline.py</h3><span class="file-purpose">adaptation-only follow-up sweep (λ and epoch-count) reusing extended_pipeline's source checkpoints</span></div><span class="badge badge-no">Not incorporated</span></summary>
+<div class="file-body">
+<p>Never retrains sources (comment: "never train anything in this script") — read-only over <code>ckpt_ext/</code>. Part A: consistency-weight λ sweep on 2 targets (dataset2 = low-source-AUC case, arabic = high-AUC). Part B: adaptation-epoch sweep (E=8 vs. default E=4) across all 4 targets.</p>
+<ul class="fnlist">
+<li>Hardcoded <code>EXPECT_LANGS = ["mt","sl","hu","hr","fi","lt"]</code> assertion — aborts with <code>SystemExit(1)</code> if the held-out MLAAD language set doesn't match <code>extended_pipeline.py</code>'s, since results wouldn't be comparable otherwise.</li>
+<li>Checkpoint-EER verification: reloads and rescores each checkpoint, skips a fold if the EER mismatches the recorded source EER by &gt;0.5 points ("checkpoint or data pool differs, results would not be comparable").</li>
+</ul>
+<div class="trace-box no"><span class="label">No trace in paper</span><code>ICASSP_PLAN.md</code> §P3 explicitly lists "Re-running the hyperparameter sweep… leave it" as a deliberately-not-done item. <code>main.tex</code>'s <code>tab:sweep</code> is stated to be "a two-target seed-0 artifact" predating the 4-target extension — this script's finer-grained λ-grid output (<code>results_sweep2.csv</code>) is not what <code>tab:sweep</code> reports.</div>
+</div>
+</details>
+
+<details class="file" id="f-sweep_reseeded" data-name="sweep_reseeded.py" data-badge="badge-ind" data-badge-text="Likely trace, unconfirmed">
+<summary><div class="summary-left"><h3 class="file-title">sweep_reseeded.py</h3><span class="file-purpose">corrected redo of an earlier sweep whose RNG-stream confound made its absolute values untrustworthy</span></div><span class="badge badge-ind">Likely trace</span></summary>
+<div class="file-body">
+<p>The original "cloud sweep" shared one continuous RNG stream across all configurations — adjacent sweep points differed partly by batch-order/augmentation noise rather than purely by the hyperparameter under test. This script re-seeds <code>torch.manual_seed(RUN_SEED)</code> before each configuration to remove that confound. Explicitly caveats: still one seed per point, not a full seed-repeated CI.</p>
+<ul class="fnlist">
+<li><code class="sig">batched(paths, bs)</code> — thread-pool decode generator, yields decoded batches from a path list.</li>
+<li><code class="sig">adapt(model, paths, q, epochs, lam, lr)</code> — the TTA method, path-based rather than index-based.</li>
+<li>Main block varies one knob at a time from a <code>GRID</code> against <code>BASE</code> defaults, reseeding and rescoring each point, deduping coincident configs, appending to <code>sweep_reseeded.csv</code>.</li>
+</ul>
+<div class="trace-box ind"><span class="label">Paper trace</span><code>main.tex</code>'s footnote to <code>tab:sweep</code> describes exactly this same fix ("every point reported here re-seeds <code>torch.manual_seed(0)</code>"), so this script (or an equivalent run) plausibly <em>did</em> produce the reported sweep numbers — but it is not named directly, so treat as likely-but-unconfirmed in review rather than a hard citation.</div>
+</div>
+</details>
+
+<details class="file" id="f-embedding_analysis" data-name="embedding_analysis.py" data-badge="badge-no" data-badge-text="No trace — orphan figure">
+<summary><div class="summary-left"><h3 class="file-title">embedding_analysis.py</h3><span class="file-purpose">one-off t-SNE + domain-invariance-probe analysis, hardcoded to a single target</span></div><span class="badge badge-no">No trace</span></summary>
+<div class="file-body">
+<p>Standalone local script, hardcoded <code>TARGET="in_the_wild"</code>, dependent on a <code>cloud_bundle/</code> directory not referenced by any other file examined — likely an ad-hoc extraction from a downloaded cloud results bundle.</p>
+<ul class="fnlist">
+<li><code class="sig">domain_probe(emb_a, emb_b, n_splits)</code> — cross-validated logistic-regression accuracy distinguishing source vs. target embeddings (should drop toward 50% if adaptation removes domain signal).</li>
+<li><code class="sig">adapt(model, paths, q, lam, epochs, lr, bs)</code> — the same TTA method, a slower file-path-based variant (no GPU cache) for this one-off analysis.</li>
+</ul>
+<p>Main block: computes domain-probe accuracy before/after adaptation, runs t-SNE on both, plots <code>fig_embedding_geometry.png</code>, writes <code>embedding_results.txt</code>.</p>
+<div class="trace-box no"><span class="label">No trace in paper</span><strong>Verified by grep</strong>: <code>fig_embedding_geometry.png</code> is not <code>\includegraphics</code>'d anywhere in <code>main.tex</code>, <code>main_icassp.tex</code>, or <code>main_fa.tex</code>. It appears superseded by <code>fig_tsne_multitarget.png</code>, produced instead by <code>analysis_pipeline.py</code>'s Part D. Both the script and its output artifact are orphans as far as the current paper drafts go — flag this directly in review.</div>
+</div>
+</details>
+
+<details class="file" id="f-download_arabic" data-name="download_arabic.py" data-badge="badge-no" data-badge-text="No trace (functional only)">
+<summary><div class="summary-left"><h3 class="file-title">download_arabic.py</h3><span class="file-purpose">downloads &amp; extracts the Arabic ArAD HF dataset to disk</span></div><span class="badge badge-no">No trace</span></summary>
+<div class="file-body">
+<ul class="fnlist">
+<li><code class="sig">main()</code> — loads the HF dataset with <code>Audio(decode=False)</code> (avoids a torchcodec dependency), writes raw wav bytes to <code>data/arabic_arad/&lt;split&gt;/&lt;real|fake&gt;/&lt;idx&gt;.wav</code>. Idempotent — skips files that already exist.</li>
+</ul>
+<div class="trace-box no"><span class="label">No trace in paper (functional dependency only)</span>Not named in either draft, but its output (the Arabic ArAD corpus) is heavily used — <code>tab:datastats</code> reports counts from it. The <em>dataset</em> is cited; the download script isn't. Its logic is also duplicated inline as <code>fetch_arabic()</code> in the cloud notebooks rather than imported.</div>
+</div>
+</details>
+
+<details class="file" id="f-download_data" data-name="download_data.py" data-badge="badge-no" data-badge-text="No trace (functional only)">
+<summary><div class="summary-left"><h3 class="file-title">download_data.py</h3><span class="file-purpose">Kaggle CLI downloader + verifier for ASVspoof2019-LA and In-the-Wild, written for the DA-RAD study</span></div><span class="badge badge-no">No trace</span></summary>
+<div class="file-body">
+<ul class="fnlist">
+<li><code class="sig">_present(target, cfg)</code> — checks whether expected files already exist.</li>
+<li><code class="sig">_verify(target, cfg)</code> — asserts expected files/glob counts are non-zero.</li>
+<li><code class="sig">download(name, cfg, root)</code> — downloads via <code>kaggle datasets download</code> subprocess if not present, then verifies.</li>
+<li><code class="sig">main()</code> — argparse CLI (<code>--root</code>, <code>--only</code>).</li>
+</ul>
+<div class="trace-box no"><span class="label">No trace in paper (functional dependency only)</span>Scoped in its own docstring to "the extra corpora for the DA-RAD generalization study" — that study is abandoned, but the corpora it fetches (ASVspoof2019-LA, In-the-Wild) are foundational and reused by the working TTA pipeline too. The script itself isn't dead code, just uncited.</div>
+</div>
+</details>
+
+<details class="file" id="f-verify_downloads" data-name="verify_downloads.py" data-badge="badge-no" data-badge-text="No trace">
+<summary><div class="summary-left"><h3 class="file-title">verify_downloads.py</h3><span class="file-purpose">post-download QA notebook cell — file-count &amp; decode-sanity checks</span></div><span class="badge badge-no">No trace</span></summary>
+<div class="file-body">
+<p>Jupytext percent-format cell, explicitly documented as "paste as a cell after the download cell finishes."</p>
+<ul class="fnlist">
+<li><code class="sig">check_count(name, pattern, expect, recursive)</code> — globs files, compares count to a hardcoded expected value (25380 ASVspoof2019 flacs, 31779 In-the-Wild wavs, 19561 Arabic wavs), prints OK/WARN/FAIL.</li>
+<li><code class="sig">check_decode(name, files, k=20, seed)</code> — samples up to <code>k</code> files, attempts <code>sf.read</code>, reports failures.</li>
+</ul>
+<div class="trace-box no"><span class="label">No trace in paper</span>Pure data-integrity tooling, RUN_GUIDE-adjacent — a regression guard against corrupted/incomplete downloads, not a research artifact. Not expected to appear in a paper.</div>
+</div>
+</details>
+
+<h3 style="margin-top:44px; color:var(--muted); font-weight:600; text-transform:uppercase; font-size:.85rem; letter-spacing:.04em;">Shell wrappers</h3>
+<p style="color:var(--muted); font-size:.9rem;">All four hardcode <code>cd /home/general/Desktop/deepfake_project</code> — a specific cloud/remote machine path, <strong>not</strong> this local repo root — evidence they were written to run on a particular cloud instance, not portable scripts.</p>
+
+<details class="file" id="f-run_ablation" data-name="run_ablation.sh" data-badge="badge-ind" data-badge-text="Backs a narrated (failed) result">
+<summary><div class="summary-left"><h3 class="file-title">run_ablation.sh</h3><span class="file-purpose">drives the DA-RAD ablation table — the negative result</span></div><span class="badge badge-ind">Indirect</span></summary>
+<div class="file-body">
+<p>Invokes <code>trainer.py</code> 4 times (<code>xlsr</code>, <code>rawboost</code>, <code>grl</code>, <code>darad</code> configs) on <code>protoB_train.csv</code>/<code>protoB_itw_test.csv</code>, incrementally adding one DA-RAD component per run (RawBoost → +gradient-reversal → +Real-Anchored). Parses "Best val EER" from each run's log, appends to <code>ablation_results.txt</code>. Comment: "the first direct test of whether DA-RAD closes the cross-corpus gap."</p>
+<div class="trace-box ind"><span class="label">Paper trace</span>The shell driver behind the DA-RAD ablation narrated in <code>main.tex</code>/PROJECT_LOG §4 as a failed result — the result is in the paper, this script is not named or shown.</div>
+</div>
+</details>
+
+<details class="file" id="f-run_gonogo" data-name="run_gonogo.sh" data-badge="badge-ind" data-badge-text="Backs a narrated (failed) result">
+<summary><div class="summary-left"><h3 class="file-title">run_gonogo.sh</h3><span class="file-purpose">GO/NO-GO decision script — DA-RAD losses with an unfrozen encoder</span></div><span class="badge badge-ind">Indirect</span></summary>
+<div class="file-body">
+<p>Invokes <code>trainer.py</code> 3 times (<code>xlsr</code> baseline, <code>+anchor</code>, full <code>darad</code>) with the top-4 XLS-R layers <em>unfrozen</em> this time (vs. the ablation's frozen encoder) — testing whether DA-RAD helps once the encoder can adapt. Comment states the decision logic: "If anchor/darad beat xlsr -&gt; signal to scale up on better GPUs." Writes <code>gonogo_results.txt</code>.</p>
+<div class="trace-box ind"><span class="label">Paper trace</span>Same status as <code>run_ablation.sh</code> — the negative DA-RAD conclusion this produced is narrated, the script itself isn't cited by name.</div>
+</div>
+</details>
+
+<details class="file" id="f-run_tta_confirm" data-name="run_tta_confirm.sh" data-badge="badge-yes" data-badge-text="Backs the working method">
+<summary><div class="summary-left"><h3 class="file-title">run_tta_confirm.sh</h3><span class="file-purpose">confirms the winning st_cons config is stable across seeds and a second OOD target</span></div><span class="badge badge-yes">In paper</span></summary>
+<div class="file-body">
+<p>Invokes <code>tta.py --mode realmanifold --no-anchor</code> across 3 seeds on In-the-Wild (<code>protoB_itw_test.csv</code>) and ASVspoof2021-DF (<code>protoA_test.csv</code>), appends to <code>tta_results.txt</code>.</p>
+<div class="trace-box yes"><span class="label">Paper trace</span>Shell driver for the validated TTA method's multi-seed/multi-target confirmation, PROJECT_LOG §5.</div>
+</div>
+</details>
+
+<details class="file" id="f-run_tta_validation" data-name="run_tta_validation.sh" data-badge="badge-yes" data-badge-text="Backs the working method">
+<summary><div class="summary-left"><h3 class="file-title">run_tta_validation.sh</h3><span class="file-purpose">full Real-Manifold TTA validation suite — multi-seed, component ablation, inductive check</span></div><span class="badge badge-yes">In paper</span></summary>
+<div class="file-body">
+<p>Runs the full validation suite via <code>tta.py</code>: multi-seed (3) full method, a component ablation (<code>st_only</code>, <code>st_anchor</code>, <code>st_cons</code> — isolating self-training/anchor/consistency terms individually), and an inductive check (adapt on In-the-Wild split A, eval on disjoint split B). Truncates/rewrites <code>tta_results.txt</code> at the start.</p>
+<div class="trace-box yes"><span class="label">Paper trace</span>Shell driver for the TTA method's component-ablation and inductive-check numbers, PROJECT_LOG §5.</div>
+</div>
+</details>
+
+<!-- ======================================================= -->
+<h2 id="quicklist">Quick-Scan Summary — everything flagged "No trace in paper"</h2>
+<p>For fast review triage: these files/artifacts have zero footprint in <code>main.tex</code>, <code>main_icassp.tex</code>, or <code>main_fa.tex</code> — either superseded, purely functional/infra, or unpublished exploratory work. None of this is a criticism by itself (data downloaders and QA scripts aren't supposed to be cited); the ones worth actually raising in review are marked <strong>flag</strong>.</p>
+<table>
+<tr><th>File / artifact</th><th>Why no trace</th><th>Review note</th></tr>
+<tr><td><code>sampler.py</code></td><td>DA-RAD infra; DA-RAD narrated only in prose</td><td>expected — consistent with the rest of the abandoned DA-RAD line</td></tr>
+<tr><td><code>trainer.py</code></td><td>produced the DA-RAD ablation result, but isn't itself named</td><td>expected</td></tr>
+<tr><td><code>repair_tta.py</code> + <code>repair_results.csv</code></td><td>unpublished RePAIR-TTA pilot, outcome unresolved</td><td><strong>flag</strong> — worth a one-line mention in review that this exists as unpublished follow-on work</td></tr>
+<tr><td><code>models/lcnn.py</code></td><td>defined but not imported anywhere in the files examined; not named in either draft</td><td><strong>flag</strong> — genuinely dead code as far as this codebase's active pipeline goes</td></tr>
+<tr><td><code>embedding_analysis.py</code> + <code>fig_embedding_geometry.png</code></td><td>orphan script and orphan figure, superseded by <code>analysis_pipeline.py</code> Part D / <code>fig_tsne_multitarget.png</code></td><td><strong>flag</strong> — candidate for deletion, or explicitly note as superseded</td></tr>
+<tr><td><code>download_arabic.py</code>, <code>download_data.py</code></td><td>data-acquisition utilities; their <em>output</em> is used, the scripts aren't cited</td><td>expected, no action needed</td></tr>
+<tr><td><code>verify_downloads.py</code></td><td>pure QA tooling</td><td>expected, no action needed</td></tr>
+<tr><td><code>sweep2_pipeline.py</code> + <code>results_sweep2.csv</code></td><td><code>ICASSP_PLAN.md</code> explicitly says this sweep is deliberately not incorporated</td><td>expected — a known, documented scope decision</td></tr>
+<tr><td><code>results_pilot.csv</code>, <code>results_ext_3seed_backup.csv</code>, <code>sweep_6ep.csv</code>, <code>sweep_final.csv</code></td><td>superseded intermediate result artifacts (seed count grew 3→5; pilot preceded the full grid)</td><td>expected, safe to archive</td></tr>
+</table>
+
+<div class="callout warn" style="margin-top:28px">
+<strong>Also worth raising in review, independent of code tracing:</strong> <code>ICASSP_PLAN.md</code> (dated 2026-08-05) lists blockers for the Sept 16, 2026 ICASSP deadline that do not appear to be implemented yet in the current <code>main_icassp.tex</code>/<code>main.tex</code> — missing significance testing (5 seeds can't reach p&lt;0.05 per-target; no <code>stats_tests.py</code> exists in the repo), an asymmetric DANN/ASDG seed count (3 vs. 5), and unverified citations (DANN/AdaBN/Ben-David/In-the-Wild flagged explicitly in PROJECT_LOG §10 as "unverified before submission"). Not a code-tracing issue, but likely to come up with a PhD reviewer.
+</div>
+
+<div class="callout" style="margin-top:16px">
+<strong>Status as of the 2026-08-10 pull:</strong> Phase 4 (adaptive q/E) is real, tested code with a documented negative-result trail (3 mechanisms killed on CPU before GPU spend) — but it has produced <strong>zero result numbers yet</strong>. <code>results_adaptive.csv</code> and <code>adaptive_trace.csv</code> don't exist in the repo until <code>cloud_monday.py</code> or <code>ADAPTIVE_SMOKE=0 python adaptive_pipeline.py</code> is actually run on a GPU box. If reviewing this with a PhD student soon, flag explicitly that Phase 4 is presented here as validated <em>mechanism</em>, not validated <em>results</em> — don't let smoke-run numbers (128 clips, ~0.8% per-clip resolution) get quoted as if they were the real grid.
+</div>
+
+<footer>Generated from a full read of every <code>.py</code>/<code>.sh</code> file at the repo root plus <code>models/</code>, cross-referenced against <code>main.tex</code>, <code>main_icassp.tex</code>, <code>main_fa.tex</code>, <code>report_tables.tex</code>, <code>results.tex</code>, <code>PROJECT_LOG.md</code>, <code>README.md</code>, <code>RUN_GUIDE.md</code>, <code>ICASSP_PLAN.md</code>, and <code>REPAIR_TTA_IDEA.md</code>. Updated 2026-08-10 against commits <code>2ba4a16</code>–<code>c1efb55</code> (adaptive q/E: <code>adaptive_tta.py</code>, <code>adaptive_pipeline.py</code>, <code>test_adaptive_tta.py</code>, <code>verify_reduction.py</code>, <code>cloud_monday.py</code>/<code>.ipynb</code>, <code>MONDAY_HANDOFF.md</code>; patched <code>protocol_a.py</code>; rewritten <code>main.tex</code>/<code>main_icassp.tex</code> Limitation-1 passages; <code>PROJECT_LOG.md</code> §11).</footer>
+
+</div>
+</body>
+</html>
