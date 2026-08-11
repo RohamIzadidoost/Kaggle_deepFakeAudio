@@ -166,7 +166,11 @@ print("kaggle credentials ok")
 # slow both and confuse the timings the supervisor budgets against.
 
 # %%
-out = subprocess.run("ps -eo pid,etime,args | grep -E '[a]daptive_pipeline|[e]xtended_pipeline|[a]nalysis_pipeline|[a]sdg_pipeline|[t]uesday_runner'",
+# "import kaggle" is in this list on purpose: the MLAAD download runs as an
+# inline `python -c` child of the supervisor, so killing the supervisor orphans
+# it rather than stopping it. It then keeps writing into data/mlaad and holds
+# NFS handles that make `rm -rf data/mlaad` fail with "Device or resource busy".
+out = subprocess.run("ps -eo pid,etime,args | grep -E '[a]daptive_pipeline|[e]xtended_pipeline|[a]nalysis_pipeline|[a]sdg_pipeline|[t]uesday_runner|[i]mport kaggle'",
                      shell=True, capture_output=True, text=True).stdout
 print(out or "(nothing running)")
 if out.strip():
@@ -174,7 +178,7 @@ if out.strip():
     print(">>> a supervisor orphans the pipeline it launched, it does not stop it:")
     print(">>>")
     print(">>>   pkill -f tuesday_runner; sleep 3; \\")
-    print(">>>     pkill -f 'extended_pipeline|analysis_pipeline|asdg_pipeline'")
+    print(">>>     pkill -f 'extended_pipeline|analysis_pipeline|asdg_pipeline|import kaggle'")
     print(">>>")
     print(">>> then re-run this cell to confirm, and delete a stale lock if any:")
     print(">>>   rm -f tuesday_runner.lock")

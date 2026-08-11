@@ -91,9 +91,27 @@ def save_state(st):
     json.dump(st, open(STATE, "w"), indent=1)
 
 
-def have_mlaad():
+# A complete MLAAD v5 is 154 meta.csv across 38 languages (57 GB), measured
+# against the known-good local copy. The threshold is deliberately below 154 so
+# a slightly different Kaggle packaging still passes, but far above the handful
+# of files a part-finished download leaves behind.
+MLAAD_MIN_META = int(os.environ.get("MLAAD_MIN_META", "100"))
+
+
+def mlaad_meta_count():
     import glob
-    return bool(glob.glob("data/mlaad/**/meta.csv", recursive=True))
+    return len(glob.glob("data/mlaad/**/meta.csv", recursive=True))
+
+
+def have_mlaad():
+    """Complete enough to train on.
+
+    Emphatically not "does any file exist". An earlier version returned True on
+    the first meta.csv it found, which would have accepted a 31 GB half-download
+    left by two concurrent downloaders and trained seeds 5-9 on a partial corpus
+    without a single error anywhere.
+    """
+    return mlaad_meta_count() >= MLAAD_MIN_META
 
 
 def run_mlaad():
@@ -103,9 +121,17 @@ def run_mlaad():
     ~/.local/bin, which is not on PATH on a stock JupyterLab image. That cost a
     silent hours-long failure on Monday.
     """
+    n = mlaad_meta_count()
     if have_mlaad():
-        log("mlaad already present, skipping download")
+        log(f"mlaad already present ({n} meta.csv), skipping download")
         return True
+    if n > 0:
+        # Partial. Resuming onto it risks a mix of half-written files, and the
+        # kaggle client will not repair what it already thinks it fetched.
+        import shutil as _sh
+        log(f"mlaad is PARTIAL ({n}/{MLAAD_MIN_META}+ meta.csv) -- removing and "
+            f"re-downloading from scratch")
+        _sh.rmtree("data/mlaad", ignore_errors=True)
     log("downloading MLAAD (~57 GB) -- required by every source-training job")
     r = subprocess.run(
         [PY, "-c", "import kaggle; kaggle.api.dataset_download_files("
@@ -161,7 +187,8 @@ def main():
         # nothing would report an error. A wasted session is recoverable;
         # silently non-comparable seeds in the paper are not.
         if cmd is not None and not have_mlaad():
-            log(f"ABORT before {name}: data/mlaad is missing or empty.")
+            log(f"ABORT before {name}: data/mlaad has {mlaad_meta_count()} meta.csv, "
+                f"need >= {MLAAD_MIN_META} (a complete copy has 154).")
             log("  Every P1 job trains source models and MLAAD is in every source")
             log("  pool. Running without it would silently train seeds on a")
             log("  different composition than seeds 0-4, making them")
