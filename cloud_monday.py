@@ -302,9 +302,17 @@ print(subprocess.run("tail -25 run_log_adaptive.txt", shell=True,
 if os.path.exists("results_adaptive.csv"):
     import pandas as pd
     d = pd.read_csv("results_adaptive.csv")
-    print(f"\n{len(d)} rows so far\n")
-    print(d.pivot_table(index=["target", "seed"], columns="method",
-                        values="eer").round(2).to_string())
+    print(f"\n{len(d)} rows so far")
+    # Filter to transductive. Without this, pivot_table's default mean() averages
+    # the transductive and inductive rows for `source` and `ours_adaptive` (the
+    # only two methods that have both), silently shifting them relative to every
+    # other arm and disagreeing with the log.
+    for setting in ("transductive", "inductive"):
+        s = d[d.setting == setting]
+        if len(s):
+            print(f"\n--- {setting} ---")
+            print(s.pivot_table(index=["target", "seed"], columns="method",
+                                values="eer").round(2).to_string())
 
 # %% [markdown]
 # ## 11. Protocol A — the skewed-pool arm
