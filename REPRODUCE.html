@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Reproducing Results — Audio Deepfake Detection Codebase</title>
+<style>
+  :root{
+    --bg:#0b0d12; --panel:#12151c; --panel2:#171b24; --text:#dde3ee; --muted:#8b93a7;
+    --border:#262b38; --accent:#5b9dff; --code:#0e1117;
+    --yes:#1f8a4c; --yes-bg:#12301f; --no:#d64545; --no-bg:#301414; --ind:#c98a1f; --ind-bg:#2f2412; --sup:#6a7280; --sup-bg:#1c1f27;
+  }
+  @media (prefers-color-scheme: light){
+    :root{ --bg:#f5f6f8; --panel:#ffffff; --panel2:#f0f1f4; --text:#1a1d24; --muted:#5b6270;
+      --border:#dde1e8; --accent:#2461cf; --code:#f4f5f7;
+      --yes:#1f8a4c; --yes-bg:#e3f5ea; --no:#c53030; --no-bg:#fbe6e6; --ind:#a3690f; --ind-bg:#fbf0dc; --sup:#5b6270; --sup-bg:#eceef2; }
+  }
+  :root[data-theme="dark"]{ --bg:#0b0d12; --panel:#12151c; --panel2:#171b24; --text:#dde3ee; --muted:#8b93a7; --border:#262b38; --accent:#5b9dff; --code:#0e1117; --yes:#1f8a4c; --yes-bg:#12301f; --no:#d64545; --no-bg:#301414; --ind:#c98a1f; --ind-bg:#2f2412; --sup:#6a7280; --sup-bg:#1c1f27; }
+  :root[data-theme="light"]{ --bg:#f5f6f8; --panel:#ffffff; --panel2:#f0f1f4; --text:#1a1d24; --muted:#5b6270; --border:#dde1e8; --accent:#2461cf; --code:#f4f5f7; --yes:#1f8a4c; --yes-bg:#e3f5ea; --no:#c53030; --no-bg:#fbe6e6; --ind:#a3690f; --ind-bg:#fbf0dc; --sup:#5b6270; --sup-bg:#eceef2; }
+
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;line-height:1.55;margin:0;}
+  .wrap{max-width:1180px;margin:0 auto;padding:32px 20px 120px;}
+  h1{font-size:1.9rem;margin-bottom:4px}
+  .subtitle{color:var(--muted);margin-top:0;margin-bottom:28px;font-size:.95rem}
+  h2{font-size:1.4rem;border-bottom:1px solid var(--border);padding-bottom:8px;margin-top:52px;}
+  h2 .tag{font-size:.65rem;vertical-align:middle;margin-left:10px;}
+  h3{font-size:1.05rem;margin:26px 0 8px;}
+  h4{font-size:.95rem;margin:18px 0 6px;color:var(--accent)}
+  p{margin:.5em 0}
+  code, .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:.88em;}
+  code{background:var(--code); padding:1px 5px; border-radius:4px; border:1px solid var(--border);}
+  pre{background:var(--code); border:1px solid var(--border); border-radius:8px; padding:12px 14px; overflow-x:auto; font-size:.83rem;}
+  pre code{background:none;border:none;padding:0;}
+  a{color:var(--accent); text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  .badge{display:inline-block; font-size:.68rem; font-weight:700; letter-spacing:.03em; padding:3px 9px; border-radius:100px; text-transform:uppercase; white-space:nowrap;}
+  .badge-yes{color:var(--yes); background:var(--yes-bg); border:1px solid var(--yes);}
+  .badge-no{color:var(--no); background:var(--no-bg); border:1px solid var(--no);}
+  .badge-ind{color:var(--ind); background:var(--ind-bg); border:1px solid var(--ind);}
+  .badge-sup{color:var(--sup); background:var(--sup-bg); border:1px solid var(--sup);}
+
+  .callout{border-left:4px solid var(--accent); background:var(--panel2); padding:10px 16px; border-radius:0 8px 8px 0; margin:14px 0; font-size:.92rem;}
+  .callout.warn{border-color:var(--no); }
+  .callout.warn strong{color:var(--no)}
+  .callout.ok{border-color:var(--yes);}
+  .callout.ok strong{color:var(--yes)}
+
+  table{width:100%; border-collapse:collapse; margin:14px 0; font-size:.88rem;}
+  th,td{text-align:left; padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:top;}
+  th{color:var(--muted); font-weight:600; font-size:.78rem; text-transform:uppercase; letter-spacing:.03em;}
+  tr:hover td{background:var(--panel2);}
+
+  .step{background:var(--panel); border:1px solid var(--border); border-radius:10px; margin:16px 0; padding:16px 20px;}
+  .step > h4{margin-top:0;}
+  .stepnum{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-size:.75rem;font-weight:700;margin-right:8px;}
+
+  .toc{background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:18px 22px; margin:20px 0 36px;}
+  .toc h2{margin-top:0; border:none; padding-bottom:4px; font-size:1.1rem;}
+  .toc ul{margin:0; padding-left:20px;}
+  .toc li{margin-bottom:4px; font-size:.92rem;}
+
+  .backlink{font-size:.85rem;color:var(--muted);margin-bottom:20px;display:inline-block;}
+
+  footer{margin-top:80px; padding-top:20px; border-top:1px solid var(--border); color:var(--muted); font-size:.8rem;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<a class="backlink" href="CODE_WALKTHROUGH.html">&larr; back to CODE_WALKTHROUGH.html</a>
+<h1>Reproducing Results — Audio Deepfake Detection Codebase</h1>
+<p class="subtitle">End-to-end commands for every phase in <code>CODE_WALKTHROUGH.html</code>, in the order you'd actually run them, with the expected outputs and the gotchas the code itself defends against. Written 2026-08-11 against commits up to <code>1e5e90e</code>. Companion doc to <code>CLAUDE.md</code> (which has the terse command list) and <code>RUN_GUIDE.md</code> (the original Phase 3 notebook runbook) — this page ties all phases together into one path and adds the things that only exist as fix-commit history: the DANN merge behavior, the resumability guarantees, and what each script does when its prerequisites are missing.</p>
+
+<div class="toc">
+<h2>Sections</h2>
+<ul>
+  <li><a href="#setup">0 — Environment setup</a></li>
+  <li><a href="#phase1">1 — Phase 1: baseline + AttentiveSpecCNN (local, CPU/small-GPU)</a></li>
+  <li><a href="#phase23">2 — Phase 2/3: DA-RAD ablation (failed, kept for the paper's negative result) &amp; TTA (the working method)</a></li>
+  <li><a href="#phase3grid">3 — Phase 3 extended: the 4-target×N-seed cross-corpus grid, DANN, ASDG</a></li>
+  <li><a href="#stats">4 — Statistical significance</a></li>
+  <li><a href="#tuesday">5 — Unattended cloud session (Tuesday P1 supervisor)</a></li>
+  <li><a href="#phase4-repro">6 — Phase 4: adaptive q/E (validated mechanism, excluded from this paper)</a></li>
+  <li><a href="#gotchas">7 — Cross-cutting gotchas</a></li>
+  <li><a href="#paper">8 — Rebuilding the paper PDF</a></li>
+</ul>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="setup">0 — Environment setup</h2>
+<div class="step">
+<p>A venv lives in <code>env/</code>; pinned versions matter (numpy/pandas ABI compatibility, <code>librosa</code>/<code>numba</code> deliberately removed to avoid a conflict) — don't casually bump <code>requirements.txt</code>.</p>
+<pre><code>source env/bin/activate
+pip install -r requirements.txt   # only if env/ needs rebuilding</code></pre>
+<p>Everything below assumes this venv is active and the working directory is the repo root.</p>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="phase1">1 — Phase 1: baseline + AttentiveSpecCNN</h2>
+<p>Runs locally (CPU is workable; a small GPU speeds up <code>train.py</code>). This is the fully reproducible half of the project — every step below is deterministic given the fixed <code>--seed</code> defaults and produces the exact tables cited in <code>report_tables.tex</code>.</p>
+
+<div class="step"><h4><span class="stepnum">1</span>Build the manifest</h4>
+<pre><code>python build_manifest.py --root data --out manifest.csv</code></pre>
+<p>Walks the 6 raw corpora under <code>data/</code> (ASVspoof2021 DF, the LibriSpeech-real/TTS-fake set, MLAAD v5, ASVspoof2019 LA, In-the-Wild, Arabic ArAD) and merges them into one labeled, speaker-tagged CSV. Expect real/fake totals printed at the end — sanity-check against Table I in the paper (19,251 real / 595,513 fake before balancing) before moving on; a wildly different count usually means a corpus directory is missing or partially downloaded.</p>
+</div>
+
+<div class="step"><h4><span class="stepnum">2</span>Build the balanced subset</h4>
+<pre><code>python build_balanced_subset.py --manifest manifest.csv --out manifest_balanced.csv</code></pre>
+<p>Water-fills the ~97%-fake manifest down to a class-balanced, generator-diverse subset (default <code>--ratio 1.0</code>, i.e. fake count ≈ real count). Deterministic given <code>--seed</code> (default 42).</p>
+</div>
+
+<div class="step"><h4><span class="stepnum">3</span>Speaker-disjoint split</h4>
+<pre><code>python split_manifest.py --manifest manifest_balanced.csv --out_dir splits</code></pre>
+<p>Produces <code>splits/train.csv</code>, <code>val.csv</code>, <code>test.csv</code> via <code>StratifiedGroupKFold</code> grouped on the speaker column, so no speaker's utterances cross a split boundary. The script asserts empty pairwise speaker-set intersections and will raise if that assertion fails — treat that as a hard stop, not something to catch and ignore, since it's the leakage fix over the original paper's methodology.</p>
+</div>
+
+<div class="step"><h4><span class="stepnum">4</span>Classical baseline (Table II, GNB/NMF rows)</h4>
+<pre><code>python paper_baseline.py</code></pre>
+<p>MFCC→GNB→NMF→{GNB,LR,RF,KNN} reproduction of the original paper. First run extracts and caches MFCC features under <code>features_cache/</code> (MD5-keyed on the file list, so re-runs on the same split are fast); writes <code>baseline_results.csv</code>. Expect ~13% EER / ~85% bal-acc for the best classical row — that's the number the DL model has to beat.</p>
+</div>
+
+<div class="step"><h4><span class="stepnum">5</span>Train AttentiveSpecCNN</h4>
+<pre><code>python train.py --epochs 15</code></pre>
+<p>Key flags: <code>--batch_size</code> (64), <code>--lr</code> (1e-3), <code>--workers</code> (8), <code>--seed</code> (42), <code>--out</code> (checkpoint path, default <code>attentive_spec_cnn.pt</code>). Trains with class-weighted <code>CrossEntropyLoss</code>, checkpoints on <em>val EER improving</em> (not val loss), reloads the best checkpoint at the end, evaluates on the held-out test split, and merges the result row into <code>baseline_results.csv</code> (replacing any prior <code>AttentiveSpecCNN</code> row, so reruns don't duplicate) plus writes <code>results.csv</code>. Expect ~4.81% EER / ~93.84% bal-acc in-domain.</p>
+<div class="callout warn"><strong>If real-class metrics look suspiciously bad</strong> (e.g. near-0 real recall on ASVspoof-heavy splits), check that <code>deepfake_dataset.load_audio</code>'s <code>librosa</code> fallback is actually firing — <code>libsndfile</code> silently fails to decode a large fraction of ASVspoof2021 FLACs, and without the fallback roughly half the real-class audio loads as zeros, teaching a "silence→real" shortcut. This should not reproduce on a clean checkout (the fallback is unconditional), but it's the single most likely cause if numbers regress after touching <code>deepfake_dataset.py</code>.</div>
+</div>
+
+<div class="step"><h4><span class="stepnum">6</span>Explainability figures</h4>
+<pre><code>python explain.py --n 6</code></pre>
+<p>Grad-CAM + attention-curve figures for a balanced sample of test clips (or one file via <code>--file</code>). Needs the checkpoint from step 5. Produces the PNGs referenced by <code>fig:explain</code> in <code>report_tables.tex</code>.</p>
+</div>
+
+<div class="step"><h4><span class="stepnum">7</span>Leave-one-source-out generalization study</h4>
+<pre><code>python cross_dataset.py --epochs 10</code></pre>
+<p>Trains 3 from-scratch folds (hold out ASVspoof / dataset_2 / MLAAD in turn, train on the rest), reports EER/bal-acc/AUC where the held-out fold has both classes, and <code>fake_recall</code> for MLAAD (fake-only, no EER possible). Writes <code>cross_dataset_results.csv</code>. Expect AUC to collapse toward 0.42–0.56 out-of-source — this is the result (Table III / <code>fig:cross</code>) that motivated the entire Phase 2/3 cross-corpus research line, so a collapse here is <strong>correct</strong>, not a bug to chase.</p>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="phase23">2 — Phase 2/3 core: DA-RAD (failed) &amp; TTA (working)</h2>
+<p>These are driven by shell wrappers rather than a single script, and need a GPU (fine-tuned XLS-R encoder). All four hardcode a specific cloud-machine path (<code>cd /home/general/Desktop/deepfake_project</code>) inside the <code>.sh</code> files — edit that line, or just run the underlying <code>trainer.py</code>/<code>tta.py</code> invocations directly, if reproducing somewhere else.</p>
+
+<div class="step"><h4><span class="stepnum">1</span>DA-RAD ablation (negative result, kept for the paper's ablation table)</h4>
+<pre><code>bash run_ablation.sh    # frozen encoder: xlsr / +rawboost / +grl / +darad
+bash run_gonogo.sh      # unfrozen top-4 XLS-R layers: xlsr / +anchor / +darad</code></pre>
+<p>Writes <code>ablation_results.txt</code> / <code>gonogo_results.txt</code>. <strong>Expected outcome: every DA-RAD component (gradient-reversal, Real-Anchored contrastive) makes EER worse</strong> — GRL is described in <code>PROJECT_LOG.md</code> §4 as "catastrophically unstable," Real-Anchor as collapsing the model to ~50% EER (chance). Do not treat a bad result here as something to debug; it's the recorded negative finding.</p>
+</div>
+
+<div class="step"><h4><span class="stepnum">2</span>Test-time adaptation (the method that works)</h4>
+<pre><code>bash run_tta_confirm.sh      # 3 seeds x 2 OOD targets, appends to tta_results.txt
+bash run_tta_validation.sh   # multi-seed + component ablation (st_only/st_anchor/st_cons) + inductive check</code></pre>
+<p><code>run_tta_validation.sh</code> truncates/rewrites <code>tta_results.txt</code> at the start — run this one before <code>run_tta_confirm.sh</code> if you want both sets of numbers in the same file, since the confirm script only appends. Both drive <code>tta.py</code> directly (<code>--mode realmanifold --no-anchor</code> and friends); see <code>tta.py</code>'s own docstring for the full flag list (defaults: <code>q=0.3</code>, <code>λ=0.3</code>, <code>E=4</code>).</p>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="phase3grid">3 — Phase 3 extended: the main cross-corpus grid</h2>
+<p>This is the heavy, incremental, GPU-hours-scale run — the primary source of <code>tab:main</code>, the backbone table, and the DANN/divergence/per-language tables. Per <code>RUN_GUIDE.md</code>, this normally runs from <code>overnight_pipeline.ipynb</code> (decodes all audio once into a single fp16 GPU tensor, no DataLoader workers — shared-memory workers previously crashed), but the individual pipeline scripts below can also be invoked standalone, which is what the Tuesday supervisor (<a href="#tuesday">§5</a>) actually does.</p>
+
+<div class="step"><h4><span class="stepnum">1</span>Main grid (4 targets × seeds)</h4>
+<pre><code># full run, all default seeds:
+python extended_pipeline.py
+# a single additional seed (what the Tuesday supervisor uses to extend coverage):
+EXT_SEEDS=5 python extended_pipeline.py</code></pre>
+<p>Appends to <code>results_ext.csv</code>, one row per (target, seed, method) fold, with its own resume guard — a fold already present is skipped, so re-running after an interruption costs no repeated GPU time. Reuses the 12 <code>ckpt_ext/</code> source checkpoints once they exist rather than retraining. <strong>First run on a machine without <code>data/mlaad</code> triggers a 45GB MLAAD auto-download</strong> — see <a href="#gotchas">§7</a> before starting this unattended.</p>
+</div>
+
+<div class="step"><h4><span class="stepnum">2</span>Post-hoc analysis (divergence, DANN, per-language, t-SNE)</h4>
+<pre><code>python analysis_pipeline.py               # all 4 parts
+ANALYSIS_PARTS=dann DANN_SEEDS=3,4 python analysis_pipeline.py   # DANN only, specific seeds</code></pre>
+<p>Run <em>after</em> <code>extended_pipeline.py</code> — it explicitly says so in its own docstring, since it reuses those checkpoints. <code>ANALYSIS_PARTS</code> lets you re-run just one of the 4 parts (divergence / DANN / per-language / t-SNE) without recomputing the others.</p>
+<div class="callout warn"><strong>DANN output path.</strong> <code>record()</code> writes DANN results under <code>analysis_res/results_dann.csv</code>, <em>not</em> the repo-root <code>results_dann.csv</code> that <code>stats_tests.py</code> reads. If running this manually (not via <code>tuesday_runner.py</code>, which does this for you via <code>publish_dann()</code>), merge the two by <code>(seed, target, method)</code> — do not <code>cp</code>/<code>shutil.copy</code> one over the other, since <code>analysis_pipeline.py</code> only writes the seeds it was asked for and a plain copy will delete whichever seeds aren't in the smaller file.</div>
+</div>
+
+<div class="step"><h4><span class="stepnum">3</span>ASDG baseline</h4>
+<pre><code>python asdg_pipeline.py
+ASDG_SEEDS=3,4 python asdg_pipeline.py   # extend seed coverage the same way as EXT_SEEDS</code></pre>
+<p>Writes/extends <code>results_asdg.csv</code>. Same resume-by-fold guarantee as <code>extended_pipeline.py</code>.</p>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="stats">4 — Statistical significance</h2>
+<div class="step">
+<pre><code>python stats_tests.py</code></pre>
+<p>Pure CPU, seconds, no GPU — reads <code>results_ext.csv</code> / <code>results_dann.csv</code> / <code>results_asdg.csv</code>, pairs runs by <code>(target, seed)</code>, and reports pooled Wilcoxon signed-rank (ours vs. source/tent/st_only/dann/asdg) plus 10k-resample bootstrap 95% CIs per target. Writes <code>stats_results.csv</code>.</p>
+<div class="callout warn"><strong>n matters here more than anywhere else in the repo.</strong> Wilcoxon at n=5 pairs cannot reach p&lt;0.05 at all — the floor is the combinatorial <code>2/2⁵=0.0625</code>, not a power/effect-size problem. n=6 gives <code>2/2⁶=0.031</code>. If a per-target p-value looks stuck above 0.05, check <code>len(keys)</code> (printed as <code>n=</code> in the output) before concluding the effect isn't significant — it may just mean that target hasn't accumulated a 6th seed yet.</div>
+<p>Safe (and cheap) to re-run after every partial GPU session — this is exactly what <code>tuesday_runner.py</code> does unconditionally at the end of its run, even if every job in its queue was skipped.</p>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="tuesday">5 — Unattended cloud session (Tuesday P1 supervisor)</h2>
+<p>The recommended way to extend the seed grid on a fresh cloud GPU box without babysitting it. This is what steps 3–4 above look like when automated end-to-end with resumability and a wall-clock budget.</p>
+
+<div class="step">
+<pre><code>TUESDAY_BUDGET_H=23 nohup python tuesday_runner.py > logs/tuesday.out 2>&1 &</code></pre>
+<p>Works a fixed priority queue (ext seed 4 → ext seed 5 → asdg 3,4 → dann 3,4 → ext 6–9) against the budget, skipping any job that no longer fits the remaining time. Hard-gates every job on a complete MLAAD download (154+ <code>meta.csv</code> files) before running anything, since every remaining job trains source models and a partial/missing MLAAD would silently train on a non-comparable source composition rather than error. Refuses to start a second instance (PID-file lock at <code>tuesday_runner.lock</code>) — if you need to take over from a dead process: <code>pkill -f tuesday_runner && rm tuesday_runner.lock</code>.</p>
+<p>Or via the notebook front-end (same launch, plus environment/repo setup cells): open <code>cloud_tuesday.ipynb</code>, Run All Cells, then close the browser — the last cell detaches the supervisor so it survives the kernel and the connection dropping.</p>
+<pre><code>tail -f run_log_tuesday.txt          # live progress
+cat tuesday_state.json               # which jobs have completed</code></pre>
+<div class="callout ok"><strong>Fully resumable by design.</strong> Every underlying pipeline (<code>extended_pipeline.py</code>, <code>asdg_pipeline.py</code>, <code>analysis_pipeline.py</code>) appends to its CSV per fold with its own <code>(seed, target)</code> resume guard, and the supervisor keeps <code>tuesday_state.json</code> on top of that. Killing and re-launching <code>tuesday_runner.py</code> at any point repeats no completed GPU work. The one exception is DANN, which has no resume guard of its own — the supervisor passes it explicit <code>DANN_SEEDS=3,4</code> so it can't duplicate seeds 0–2, and merges (not copies) its output back to the root <code>results_dann.csv</code>.</div>
+<p>A job is only marked done if its declared output CSV actually gained rows on a clean exit — a script that exits 0 without adding data is logged and treated as <code>FAILED</code>, not silently accepted, after an earlier session lost 4.5h of budget to exactly that failure mode (see <code>tuesday_runner.py</code>'s entry in <code>CODE_WALKTHROUGH.html</code> §Phase 5 for the full story).</p>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="phase4-repro">6 — Phase 4: adaptive q/E (validated mechanism, excluded from this paper)</h2>
+<div class="callout warn"><strong>Scope note.</strong> <code>ICASSP_PLAN.md</code> §P3 lists adaptive q/E and Protocol A as deliberately excluded from this paper's submission. Reproduce this only if you're specifically investigating the adaptive-schedule side project, not as part of getting the paper's headline numbers.</div>
+
+<div class="step"><h4><span class="stepnum">1</span>CPU-only validation (no GPU needed)</h4>
+<pre><code>python test_adaptive_tta.py      # 36 checks, includes 3 confounded mechanisms as recorded negative results
+python verify_reduction.py       # MUST pass before trusting any adaptive-vs-fixed comparison</code></pre>
+<p><code>verify_reduction.py</code> asserts that the adaptive loop with both switches off is <em>bitwise identical</em> to the published, non-adaptive <code>adapt()</code>. If it fails, every subsequent adaptive-vs-fixed result is confounded by the refactor itself, not by the schedules being tested — do not proceed past a failure here.</p>
+</div>
+
+<div class="step"><h4><span class="stepnum">2</span>Smoke run (small subsets, sanity-check only)</h4>
+<pre><code>python adaptive_pipeline.py</code></pre>
+<p>Writes <code>*_smoke.csv</code> outputs on ~128 clips (~0.8% per-clip resolution). This validates that the mechanism runs end-to-end, not any actual result — don't quote these numbers.</p>
+</div>
+
+<div class="step"><h4><span class="stepnum">3</span>Real run (needs a GPU box with no local data — see MONDAY_HANDOFF.md)</h4>
+<pre><code>ADAPTIVE_SMOKE=0 python adaptive_pipeline.py    # 4 targets x seeds 0-2</code></pre>
+<p><code>MONDAY_HANDOFF.md</code> / <code>cloud_monday.ipynb</code> is the full runbook for a fresh cloud session: required uploads (<code>ckpt_ext/</code> source checkpoints, <code>kaggle.json</code>, the Protocol A RawBoost checkpoint, and its results CSV) to avoid a ~3h retrain and a 57GB MLAAD download that this path never actually needs. Time budget: ~40min setup, ~5min <code>verify_reduction.py</code> gate, ~6h for the grid, ~1h for Protocol A's adaptive arm.</p>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="gotchas">7 — Cross-cutting gotchas</h2>
+<table>
+<tr><th>Symptom</th><th>Cause</th><th>Fix / where it's handled</th></tr>
+<tr><td>First <code>extended_pipeline.py</code> run hangs downloading ~45–57GB</td><td>MLAAD auto-downloads if <code>data/mlaad</code> is missing or incomplete</td><td>Upload <code>ckpt_ext/</code> checkpoints to skip source training entirely (Phase 4 path), or budget an hour for the download; <code>tuesday_runner.py</code>'s <code>run_mlaad()</code> does this via the <code>kaggle</code> Python API, not the CLI (the CLI binary is often off <code>PATH</code> on cloud JupyterLab images)</td></tr>
+<tr><td>Two supervisor processes both downloading MLAAD into the same directory</td><td>No lock on repeated launches</td><td><code>tuesday_runner.py</code> now refuses to start a second instance (<code>tuesday_runner.lock</code>); if genuinely stuck, <code>pkill -f tuesday_runner && rm tuesday_runner.lock</code></td></tr>
+<tr><td>A results CSV looks like it lost seeds after a merge step</td><td><code>shutil.copy</code>-style publish overwriting instead of merging (specifically <code>analysis_res/results_dann.csv</code> → root)</td><td>Merge by <code>(seed, target, method)</code>, new rows winning ties — <code>publish_dann()</code> in <code>tuesday_runner.py</code> is the reference implementation</td></tr>
+<tr><td>A background job "succeeded" (exit 0) but nothing changed</td><td>An env-var override sat in a dead branch (e.g. <code>EXT_SEEDS</code> under a branch gated by <code>PILOT</code>, which defaulted to the other value) and the job re-checked an already-recorded fold</td><td>Check the target CSV's row count before/after, not just the exit code — <code>tuesday_runner.py</code>'s job loop does this automatically now</td></tr>
+<tr><td>Real-class metrics unexpectedly bad on ASVspoof-heavy splits</td><td><code>libsndfile</code> silently fails to decode some ASVspoof FLACs</td><td>Confirm <code>deepfake_dataset.load_audio</code>'s <code>librosa</code>/ffmpeg fallback is active (it's unconditional on a clean checkout)</td></tr>
+<tr><td>Wilcoxon p-value stuck above 0.05 on one target</td><td>n=5 pairs cannot reach p&lt;0.05 at all (combinatorial floor)</td><td>Get a 6th seed for that target (<code>EXT_SEEDS=5</code>/etc.), not a different test</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="paper">8 — Rebuilding the paper PDF</h2>
+<div class="step">
+<p><code>main.tex</code> (the general IEEE draft) and <code>main_icassp.tex</code> (the ICASSP-scoped draft) both live at the repo root alongside compiled <code>main.pdf</code> / <code>main_icassp.pdf</code>. Rebuild with a standard LaTeX toolchain, e.g.:</p>
+<pre><code>latexmk -pdf main.tex
+latexmk -pdf main_icassp.tex</code></pre>
+<p>Figures referenced from the tex sources (<code>fig_*.png</code>) are produced by <code>explain.py</code>, <code>cross_dataset.py</code>, <code>make_figure.py</code>, <code>make_perlang_figure.py</code>, and <code>make_auc_gain_scatter.py</code> — generate results first (§1–§4 above), then figures, then compile.</p>
+</div>
+
+<footer>Companion to <a href="CODE_WALKTHROUGH.html">CODE_WALKTHROUGH.html</a> (function-by-function file tour) and <code>CLAUDE.md</code> (terse command reference). Written 2026-08-11 against commits up to <code>1e5e90e</code>.</footer>
+
+</div>
+</body>
+</html>
