@@ -48,6 +48,14 @@ from tqdm.auto import tqdm
 
 PILOT = True   # <-- run this first (1 fold). Only then set False for the full matrix.
 
+# Setting EXT_SEEDS means "run the real grid for these seeds", so it must also
+# leave PILOT mode -- otherwise the override below sits in a dead branch and the
+# run silently does the pilot fold instead. That exact mistake cost a GPU
+# session: six seed jobs exited 0 in ~72 s each, having only re-checked the
+# already-recorded pilot fold in results_pilot.csv, and were recorded as done.
+if os.environ.get("EXT_SEEDS"):
+    PILOT = False
+
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 USE_BF16 = torch.cuda.is_available() and torch.cuda.is_bf16_supported()
 torch.backends.cuda.matmul.allow_tf32 = True
@@ -78,7 +86,12 @@ else:
     # only seeds 3-4 train fresh): tightens seed variance, strengthens the
     # AUC-vs-gain correlation (n=12 -> n=20), and enables real significance
     # testing instead of "k/N seeds improved" language.
-    SEEDS, TARGETS = [0, 1, 2, 3, 4], EER_TARGETS
+    # EXT_SEEDS lets a supervisor run one seed at a time without editing this
+    # file (P1.1 extends 5 -> 10 seeds). Default is unchanged, and the resume
+    # guard below still skips any (seed, target) already in results_ext.csv.
+    SEEDS = [int(s) for s in os.environ["EXT_SEEDS"].split(",")] \
+        if os.environ.get("EXT_SEEDS") else [0, 1, 2, 3, 4]
+    TARGETS = EER_TARGETS
     SOURCE_EPOCHS, TTA_EPOCHS = 8, 4
     SOURCE_PER_CLASS, TARGET_PER_CLASS, MAX_PER_CORPUS_CLASS = 5000, 3000, 6000
     RUN_ORACLE, RUN_RAWNET, RUN_BN_ONLY = True, True, True

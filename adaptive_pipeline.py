@@ -691,8 +691,20 @@ def run_grid():
             tgt_idx = idx_of(tgt_df)
             log(f"  target {len(tgt_df)} clips")
 
+            # A corrupt checkpoint must cost one fold, not the whole run. An
+            # incomplete 2.3 GB upload of ckpt_ext killed a session here: torch
+            # raised "failed finding central directory" on one file and the
+            # exception propagated out of the fold loop, abandoning the ten
+            # folds that came after it.
             source = XLSRDetector(encoder_amp=ENCODER_AMP).to(DEVICE)
-            source.load_state_dict(torch.load(ckpt, map_location=DEVICE), strict=False)
+            try:
+                source.load_state_dict(torch.load(ckpt, map_location=DEVICE), strict=False)
+            except Exception as e:
+                log(f"  !! {ckpt} failed to load ({type(e).__name__}: {e}) -- "
+                    f"skipping this fold; re-upload the file and re-run to resume")
+                del source
+                torch.cuda.empty_cache()
+                continue
 
             methods = {
                 "source":        None,

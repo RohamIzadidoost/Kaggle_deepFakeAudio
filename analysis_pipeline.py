@@ -56,6 +56,13 @@ from sklearn.metrics import roc_curve, roc_auc_score, accuracy_score
 from tqdm.auto import tqdm
 
 RUN_DIVERGENCE, RUN_DANN, RUN_PERLANG, RUN_TSNE = True, True, True, True
+# ANALYSIS_PARTS lets a supervisor run just one part (P1.2 needs DANN only; the
+# divergence / per-language / t-SNE analyses are already done and would be
+# recomputed for nothing). Default keeps all four on.
+if os.environ.get("ANALYSIS_PARTS"):
+    _p = {s.strip() for s in os.environ["ANALYSIS_PARTS"].split(",")}
+    RUN_DIVERGENCE, RUN_DANN = "div" in _p, "dann" in _p
+    RUN_PERLANG, RUN_TSNE = "lang" in _p, "tsne" in _p
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 USE_BF16 = torch.cuda.is_available() and torch.cuda.is_bf16_supported()
@@ -74,7 +81,11 @@ N_HELDOUT_LANGS = 6
 EER_TARGETS = ["asvspoof2019", "dataset2", "in_the_wild", "arabic"]
 
 SEEDS_DIV = [0]                     # divergence analysis: seed 0 is enough
-SEEDS_DANN = [0, 1, 2]              # DANN baseline: match the main grid
+# DANN_SEEDS override for P1.2 (3 -> 5 seeds). NOTE: unlike the other pipelines
+# this part has NO resume guard -- it appends whatever seeds it is given, so
+# pass only the seeds that are actually missing from results_dann.csv.
+SEEDS_DANN = [int(s) for s in os.environ["DANN_SEEDS"].split(",")] \
+    if os.environ.get("DANN_SEEDS") else [0, 1, 2]
 TARGETS = EER_TARGETS
 
 SRC_CKPT_DIR = "ckpt_ext"           # reuse the extended grid's source models (read-only, external)
