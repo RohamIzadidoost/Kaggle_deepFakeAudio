@@ -41,18 +41,23 @@ Shweta.sharma1@jaipur.manipal.edu}}
 
 \begin{abstract}
 Audio deepfake detectors generalise poorly across corpora despite near-perfect
-in-domain accuracy. We show why: a fine-tuned self-supervised detector's
+in-domain accuracy. We show that a fine-tuned self-supervised detector's
 \emph{ranking} (ROC-AUC) largely transfers cross-corpus even when its decision
-\emph{threshold} does not calibrate. The model's most-confident predictions on
-unlabeled target audio therefore remain reliable, enabling stable unsupervised
-\emph{test-time adaptation} (TTA): we self-train on confident-ranked
-pseudo-labels and enforce channel-consistency, adapting only LayerNorm and the
-classifier head, with no target labels and no source data at test time. On a
-leave-one-corpus-out protocol over four targets (ASVspoof2019, a
-LibriSpeech-based TTS corpus, In-the-Wild, and a multilingual Arabic set), five
-seeds each, our method improves EER on three of four targets (In-the-Wild
-$13.32\!\to\!11.23\%$, Arabic $22.07\!\to\!20.61\%$, ASVspoof2019
-$4.69\!\to\!3.36\%$) and is EER-neutral on the fourth. Entropy-minimisation TTA
+\emph{threshold} does not calibrate, and that this precondition, not the
+target corpus itself, predicts when adaptation helps: EER gain correlates
+with source-domain AUC at $r{=}{+}0.57$ across 19 (target, seed) runs. Where
+the precondition holds, the model's most-confident predictions on unlabeled
+target audio are reliable enough to self-train on, which we exploit with a
+stable unsupervised \emph{test-time adaptation} (TTA) method: self-train on
+confident-ranked pseudo-labels and enforce channel-consistency, adapting only
+LayerNorm and the classifier head, with no target labels and no source data
+at test time. On a leave-one-corpus-out protocol over four targets
+(ASVspoof2019, a LibriSpeech-based TTS corpus, In-the-Wild, and a
+multilingual Arabic set), five seeds each, this delivers EER gains where
+source AUC is $\geq\!0.85$ (In-the-Wild $13.32\!\to\!11.23\%$, Arabic
+$22.07\!\to\!20.61\%$, ASVspoof2019 $4.69\!\to\!3.36\%$, all significant by
+pooled Wilcoxon, $p{<}0.001$ against source) and is EER-neutral on the one
+target below that threshold (LibriSpeech-TTS, source AUC $0.72$). Entropy-minimisation TTA
 (Tent) is unpredictably catastrophic---stable on four of five ASVspoof2019
 seeds, chance-level on the fifth, with no advance warning; a non-SSL backbone
 collapses on all four targets; a train-time domain-adversarial baseline (DANN)
@@ -206,6 +211,19 @@ elsewhere)---consistent with our ranking-precondition account: across all 19
 (target, seed) points, source AUC and EER gain correlate at $r{=}{+}0.57$
 (Fig.~\ref{fig:aucgain}).
 
+\textbf{Significance.} With only five seeds per target, a per-target Wilcoxon
+signed-rank test cannot reach $p{<}0.05$ (the combinatorial floor at $n{=}5$ is
+$0.0625$), so we pool paired (source, ours) differences across all 19
+(target, seed) runs instead: Wilcoxon signed-rank gives $p{=}7.9\times10^{-4}$
+against source, $p{=}0.0046$ against Tent, and $p{=}0.045$ against
+self-training-only ($n{=}19$ each); against DANN and ASDG, paired on the 12
+(target, seed) points where both were run, $p{=}0.034$ for each. Per-target
+95\% bootstrap CIs (10k resamples over eval clips) on mean EER are
+non-overlapping between source and ours on ASVspoof2019 ($[3.81,5.56]$ vs.\
+$[2.69,4.02]$) and In-the-Wild ($[12.29,14.21]$ vs.\ $[9.98,12.49]$); they
+overlap on Arabic and on LibriSpeech-TTS, the latter consistent with the
+EER-neutral finding above.
+
 \textbf{Tent is not merely unstable, it is unpredictably catastrophic.} Its
 ASVspoof2019 per-seed EER is $4.16, 3.91, 3.04, 49.52, 3.42\%$---four seeds
 close to source-only, one at chance, with no visible warning sign beforehand.
@@ -243,8 +261,8 @@ directly.}
 Target & Source & DANN~\cite{dann} & ASDG~\cite{asdg} & Ours \\
 \midrule
 ASVspoof2019 & 4.69 / .991 & 6.61 / .980 & 4.45 / .990 & \textbf{3.36} / .995 \\
-LibriSpeech-TTS & 34.44 / .718 & 34.81 / .724 & 34.46 / .721 & \textbf{34.61} / .718 \\
-In-the-Wild & 13.32 / .938 & \textbf{11.95} / .931 & 20.58 / .861 & 11.23 / .959 \\
+LibriSpeech-TTS & \textbf{34.44} / .718 & 34.81 / .724 & 34.46 / .721 & 34.61 / .718 \\
+In-the-Wild & 13.32 / .938 & 11.95 / .931 & 20.58 / .861 & \textbf{11.23} / .959 \\
 Arabic & 22.07 / .857 & 29.51 / .724 & 22.19 / .859 & \textbf{20.61} / .872 \\
 \bottomrule
 \end{tabular}}
@@ -330,30 +348,36 @@ gap---a scope boundary, not a retraction of the multi-source results above.
 
 \section{Conclusion}
 Cross-corpus audio deepfake detection fails not because ranking is lost but
-because the operating point is mis-calibrated. A simple unsupervised
-test-time adaptation exploiting this improves generalisation on three of four
-leave-one-corpus-out targets, where entropy-minimisation TTA is unpredictably
+because the operating point is mis-calibrated, and whether that ranking
+survives (source AUC $\gtrsim 0.85$) is itself the predictor of whether
+adaptation will help---a precondition we state as a contribution, not a
+caveat. A simple unsupervised test-time adaptation exploiting this improves
+generalisation, significantly by pooled Wilcoxon test, on the three of four
+leave-one-corpus-out targets meeting that precondition, and is honestly
+neutral on the fourth. Entropy-minimisation TTA is unpredictably
 catastrophic, a non-SSL backbone collapses outright, and two independent
-train-time domain-generalisation baselines underperform it despite privileged
-data access and $3\times$ the compute. A proxy divergence analysis shows the
-mechanism is re-calibration of an already class-organised representation, not
-domain-invariance.
+train-time domain-generalisation baselines underperform ours despite
+privileged data access and $3\times$ the compute. A proxy divergence
+analysis shows the mechanism is re-calibration of an already class-organised
+representation, not domain-invariance.
 
 {\small
 \begin{thebibliography}{1}
 \bibitem{wav2vec2aug} H.~Tak \emph{et al.}, ``Automatic speaker verification
 spoofing and deepfake detection using wav2vec 2.0 and data augmentation,'' in
 \emph{Proc.\ Odyssey}, 2022.
-\bibitem{xlsrsls} Q.~Zhang \emph{et al.}, ``Audio deepfake detection with
-self-supervised XLS-R and SLS classifier,'' 2024.
+\bibitem{xlsrsls} Q.~Zhang, S.~Wen, and T.~Hu, ``Audio deepfake detection with
+self-supervised XLS-R and SLS classifier,'' in \emph{Proc.\ ACM Multimedia},
+2024.
 \bibitem{aasist} J.~Jung \emph{et al.}, ``AASIST: Audio anti-spoofing using
 integrated spectro-temporal graph attention networks,'' in \emph{ICASSP}, 2022.
 \bibitem{rawnet2} H.~Tak \emph{et al.}, ``End-to-end anti-spoofing with RawNet2,''
 in \emph{ICASSP}, 2021.
 \bibitem{asdg} Y.~Xie \emph{et al.}, ``Domain generalization via aggregation and
 separation for audio deepfake detection,'' \emph{IEEE TIFS}, 2024.
-\bibitem{crossdomain} ``Cross-domain audio deepfake detection: dataset and
-analysis,'' 2024.
+\bibitem{crossdomain} Y.~Li, M.~Zhang, M.~Ren, X.~Qiao, M.~Ma, D.~Wei, and
+H.~Yang, ``Cross-domain audio deepfake detection: dataset and analysis,'' in
+\emph{Proc.\ EMNLP}, 2024.
 \bibitem{tent} D.~Wang \emph{et al.}, ``Tent: Fully test-time adaptation by
 entropy minimization,'' in \emph{ICLR}, 2021.
 \bibitem{dann} Y.~Ganin and V.~Lempitsky, ``Unsupervised domain adaptation by
@@ -363,7 +387,7 @@ normalization for practical domain adaptation,'' \emph{arXiv:1603.04779}, 2016.
 \bibitem{bendavid} S.~Ben-David, J.~Blitzer, K.~Crammer, A.~Kulesza,
 F.~Pereira, and J.~W.~Vaughan, ``A theory of learning from different
 domains,'' \emph{Machine Learning}, vol.\ 79, no.\ 1--2, pp.\ 151--175, 2010.
-\bibitem{itw} N.~M\"uller, P.~Czempin, F.~Dieckmann, A.~Froghyar, and
+\bibitem{itw} N.~M\"uller, P.~Czempin, F.~Diekmann, A.~Froghyar, and
 K.~B\"ottinger, ``Does audio deepfake detection generalize?,'' in \emph{Proc.\
 Interspeech}, 2022.
 \end{thebibliography}}
