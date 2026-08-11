@@ -212,12 +212,27 @@ for f in ("results_ext.csv", "results_dann.csv", "results_asdg.csv"):
 # reviewer objection R1 closed.
 
 # %%
-print(subprocess.run([sys.executable, "stats_tests.py"],
-                     capture_output=True, text=True).stdout[-4000:])
+# These last two cells are for *after* the run. On "Run All Cells" they fire a
+# few seconds after launch, so they no-op while the supervisor is alive rather
+# than reporting half-empty results and writing a premature archive.
+def runner_alive():
+    return bool(subprocess.run("ps -eo args | grep -c '[t]uesday_runner'",
+                               shell=True, capture_output=True,
+                               text=True).stdout.strip() not in ("0", ""))
+
+if runner_alive():
+    print("supervisor still running -- re-run this cell when it has finished.")
+    print("progress: cell 7 above, or `tail -f run_log_tuesday.txt`")
+else:
+    print(subprocess.run([sys.executable, "stats_tests.py"],
+                         capture_output=True, text=True).stdout[-4000:])
 
 # %%
-subprocess.run("tar czf tuesday_results.tar.gz results_ext.csv results_dann.csv "
-               "results_asdg.csv stats_results.csv run_log_tuesday.txt "
-               "run_log_ext.txt logs/ 2>/dev/null; ls -la tuesday_results.tar.gz",
-               shell=True)
-print("\ndownload tuesday_results.tar.gz and commit the CSVs")
+if runner_alive():
+    print("supervisor still running -- re-run this cell to package results.")
+else:
+    subprocess.run("tar czf tuesday_results.tar.gz results_ext.csv results_dann.csv "
+                   "results_asdg.csv stats_results.csv run_log_tuesday.txt "
+                   "run_log_ext.txt logs/ 2>/dev/null; ls -la tuesday_results.tar.gz",
+                   shell=True)
+    print("\ndownload tuesday_results.tar.gz and commit the CSVs")
