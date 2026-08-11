@@ -78,7 +78,12 @@ else:
     # only seeds 3-4 train fresh): tightens seed variance, strengthens the
     # AUC-vs-gain correlation (n=12 -> n=20), and enables real significance
     # testing instead of "k/N seeds improved" language.
-    SEEDS, TARGETS = [0, 1, 2, 3, 4], EER_TARGETS
+    # EXT_SEEDS lets a supervisor run one seed at a time without editing this
+    # file (P1.1 extends 5 -> 10 seeds). Default is unchanged, and the resume
+    # guard below still skips any (seed, target) already in results_ext.csv.
+    SEEDS = [int(s) for s in os.environ["EXT_SEEDS"].split(",")] \
+        if os.environ.get("EXT_SEEDS") else [0, 1, 2, 3, 4]
+    TARGETS = EER_TARGETS
     SOURCE_EPOCHS, TTA_EPOCHS = 8, 4
     SOURCE_PER_CLASS, TARGET_PER_CLASS, MAX_PER_CORPUS_CLASS = 5000, 3000, 6000
     RUN_ORACLE, RUN_RAWNET, RUN_BN_ONLY = True, True, True

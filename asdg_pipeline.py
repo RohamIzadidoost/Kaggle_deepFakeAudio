@@ -72,7 +72,10 @@ if SMOKE:
     SOURCE_EPOCHS = 2
     SOURCE_PER_CLASS, TARGET_PER_CLASS, MAX_PER_CORPUS_CLASS = 300, 300, 600
 else:
-    SEEDS = [0, 1, 2]           # matches SEEDS_DANN in analysis_pipeline.py
+    # ASDG_SEEDS override: P1.2 takes this baseline from 3 to 5 seeds. Default
+    # unchanged; the (seed, target) resume guard still skips completed folds.
+    SEEDS = [int(s) for s in os.environ["ASDG_SEEDS"].split(",")] \
+        if os.environ.get("ASDG_SEEDS") else [0, 1, 2]
     TARGETS = EER_TARGETS
     SOURCE_EPOCHS = 8           # matches the main grid + DANN baseline
     SOURCE_PER_CLASS, TARGET_PER_CLASS, MAX_PER_CORPUS_CLASS = 5000, 3000, 6000
