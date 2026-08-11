@@ -170,8 +170,14 @@ out = subprocess.run("ps -eo pid,etime,args | grep -E '[a]daptive_pipeline|[e]xt
                      shell=True, capture_output=True, text=True).stdout
 print(out or "(nothing running)")
 if out.strip():
-    print("\n>>> Something is already running. Stop it before launching, e.g.:")
-    print(">>>   pkill -f adaptive_pipeline")
+    print("\n>>> Something is already running. Stop it AND its children -- killing")
+    print(">>> a supervisor orphans the pipeline it launched, it does not stop it:")
+    print(">>>")
+    print(">>>   pkill -f tuesday_runner; sleep 3; \\")
+    print(">>>     pkill -f 'extended_pipeline|analysis_pipeline|asdg_pipeline'")
+    print(">>>")
+    print(">>> then re-run this cell to confirm, and delete a stale lock if any:")
+    print(">>>   rm -f tuesday_runner.lock")
 
 # %% [markdown]
 # ## 6. Launch and walk away

@@ -54,6 +54,7 @@ DEADLINE = T0 + BUDGET_H * 3600
 os.makedirs("logs", exist_ok=True)
 LOG = "run_log_tuesday.txt"
 STATE = "tuesday_state.json"
+LOCK = "tuesday_runner.lock"
 
 
 def log(msg):
@@ -118,7 +119,32 @@ def run_mlaad():
     return ok
 
 
+def acquire_lock():
+    """Refuse to start if another supervisor is already running.
+
+    Two instances is not a harmless duplicate: they both begin at job one, so
+    they both drive a 57 GB MLAAD download into the same directory, and they
+    both write tuesday_state.json. Observed live -- two runners 33 and 25
+    minutes in. A corrupt corpus is worse than no corpus, because training
+    proceeds on it silently.
+    """
+    if os.path.exists(LOCK):
+        try:
+            pid = int(open(LOCK).read().strip())
+            os.kill(pid, 0)          # signal 0 = "does this pid exist?"
+        except (ValueError, ProcessLookupError, PermissionError):
+            log(f"stale lock from a dead pid, taking over")
+        else:
+            log(f"ANOTHER SUPERVISOR IS ALREADY RUNNING (pid {pid}). Exiting.")
+            log(f"  To take over:  pkill -f tuesday_runner && rm {LOCK}")
+            return False
+    open(LOCK, "w").write(str(os.getpid()))
+    return True
+
+
 def main():
+    if not acquire_lock():
+        return
     log(f"=== Tuesday supervisor | budget {BUDGET_H:.1f} h | python {PY} ===")
     log(f"deadline {time.strftime('%H:%M:%S', time.localtime(DEADLINE))}")
     st = load_state()
@@ -181,6 +207,8 @@ def main():
     except Exception as e:
         log(f"stats_tests failed: {type(e).__name__}: {e}")
 
+    if os.path.exists(LOCK):
+        os.remove(LOCK)
     log(f"=== DONE after {(time.time()-T0)/3600:.2f} h ===")
     for f in ("results_ext.csv", "results_dann.csv", "results_asdg.csv"):
         if os.path.exists(f):
