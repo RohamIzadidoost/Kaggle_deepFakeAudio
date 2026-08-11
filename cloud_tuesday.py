@@ -116,6 +116,34 @@ print("\nckpt_ext:", len(glob.glob("ckpt_ext/*.pt")), "checkpoints")
 print(subprocess.run(["df", "-h", "."], capture_output=True, text=True).stdout)
 
 # %% [markdown]
+# ## 3b. Checkpoint integrity
+#
+# This is what killed Monday's run: one file in the 2.3 GB `ckpt_ext/` upload
+# arrived truncated, `torch.load` raised *"failed finding central directory"*,
+# and the exception propagated out of the fold loop and abandoned the ten
+# remaining folds. Verifying now costs seconds.
+#
+# Today's grid trains seeds 5–9 from scratch and does not read these files, so a
+# failure here does **not** block the session — but you want to know which
+# uploads are corrupt before relying on them for anything else.
+
+# %%
+import torch
+
+bad = []
+for c in sorted(glob.glob("ckpt_ext/*.pt")):
+    try:
+        torch.load(c, map_location="cpu")
+    except Exception as e:
+        bad.append((c, f"{type(e).__name__}"))
+print(f"checked {len(glob.glob('ckpt_ext/*.pt'))} checkpoints, {len(bad)} corrupt")
+for c, e in bad:
+    print("  CORRUPT:", c, e)
+if bad:
+    print("\nRe-upload just these files. Today's P1 jobs do not need them"
+          "\n(seeds 5-9 train fresh), so the session can proceed regardless.")
+
+# %% [markdown]
 # ## 4. Kaggle credentials
 #
 # MLAAD (~57 GB) is required: every P1 job trains source models, and MLAAD is

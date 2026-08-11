@@ -127,6 +127,21 @@ def main():
         if name in st["done"]:
             log(f"{name}: already done in a previous run, skipping")
             continue
+
+        # Hard gate. Every remaining job trains source models, and MLAAD is in
+        # every source pool. If it is missing, build_manifest() simply yields no
+        # mlaad rows and training proceeds happily on a DIFFERENT source
+        # composition -- seeds 5-9 would then not be comparable to seeds 0-4 and
+        # nothing would report an error. A wasted session is recoverable;
+        # silently non-comparable seeds in the paper are not.
+        if cmd is not None and not have_mlaad():
+            log(f"ABORT before {name}: data/mlaad is missing or empty.")
+            log("  Every P1 job trains source models and MLAAD is in every source")
+            log("  pool. Running without it would silently train seeds on a")
+            log("  different composition than seeds 0-4, making them")
+            log("  incomparable. Fix the download, then re-run this script --")
+            log("  it resumes and repeats no completed work.")
+            break
         if left_h() < est * 0.75:
             log(f"{name}: needs ~{est:.1f} h, only {left_h():.1f} h left -- skipping to next")
             continue
