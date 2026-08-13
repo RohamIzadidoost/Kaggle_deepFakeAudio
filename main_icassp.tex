@@ -95,10 +95,10 @@ Our contributions: (i) the empirical finding that ranking transfers
 cross-corpus even when the threshold does not, and its consequence for
 unsupervised adaptation; (ii) a simple, stable TTA method---confident-ranked
 pseudo-label self-training plus channel-consistency, adapting only LayerNorm
-and the head; (iii) a four-target, multilingual, five-seed leave-one-corpus-out
+and the head; (iii) a four-target, multilingual, ten-seed leave-one-corpus-out
 evaluation against seven comparison points (source-only, Tent, BatchNorm-only
 recalibration, self-training-only, a non-SSL backbone, DANN, and an
-ASDG-style aggregation-separation baseline), reported honestly including the
+ASDG-style aggregation-separation baseline), including the
 one target where the method does not help; (iv) a mechanistic analysis---proxy
 $\mathcal{A}$-distance before/after adaptation---showing the gain does
 \emph{not} come from erasing domain identity.
@@ -247,7 +247,7 @@ it for 40 epochs with stronger regularisation does not close the gap, ruling
 out undertraining as the explanation. Both train-time baselines are beaten
 pooled over all 40 (target, seed) pairs ($30/40$, $p{<}10^{-4}$ each) despite
 privileged target access, but at ten seeds the per-target picture is narrower
-than a three-seed comparison suggested, and we state it plainly: our margin is
+than a three-seed comparison suggested: our margin is
 significant on Arabic and ASVspoof2019 against both, while on In-the-Wild we
 tie DANN ($5/10$ seeds) and on LibriSpeech-TTS ASDG is the better method
 ($32.64\%$ vs.\ our $33.74\%$). DANN is markedly worse on Arabic ($28.53\%$
@@ -332,13 +332,36 @@ Oracle (target-supervised) & 0.89 / .999 & 13.93 / .939 & 4.42 / .992 & 9.50 / .
 \section{Discussion and Limitations}
 The method is transductive (unlabeled target inputs at adaptation time, the
 standard TTA setting); an inductive check tracks the transductive numbers
-closely on every target, including reproducing the LibriSpeech-TTS null result
-rather than hiding it. We enumerate the remaining limitations explicitly:
+closely on every target, including reproducing the LibriSpeech-TTS null result.
+We report per-target, per-seed numbers throughout rather than a single
+aggregate, so that the limitations below can be read against the evidence:
 
 \begin{itemize}
 \item \textbf{Needs an already-reliable source ranking.} A from-scratch or
 low-AUC starting point is not a regime we can currently rescue
 (Fig.~\ref{fig:aucgain}).
+\item \textbf{Class balance is a second precondition, alongside AUC.} On the
+regime matching the official ASVspoof2021-DF protocol (train on 2019-LA alone),
+source-only reaches $26.33\%$ EER and TTA actively \emph{harms}
+($42.46\%$) under that evaluation set's $97.5\%$-spoof imbalance. The cause is
+structural, not incidental: the fixed-quantile rule labels the bottom $q$ of the
+pool ``confident real'' whatever the true prior, so under severe skew that
+bucket fills with mislabelled spoof and self-training teaches the model that
+much of the fake class is real. Two label-free corrections fail to recover it---a
+prevalence-weighted budget helps under one source recipe ($32.58\%$) but not
+another ($42.46\%$), and adding a curriculum schedule over $q$ changes nothing
+($42.50\%$), in both cases still worse than not adapting at all. We therefore
+state moderate class balance as a precondition of the method rather than an
+implementation detail.
+\item \textbf{Not a state-of-the-art detector.} Our source model is an XLS-R
+encoder with a light attentive head trained on a leave-one-corpus-out pool, not
+a system tuned for any single benchmark, and published anti-spoofing results on
+the standard ASVspoof protocols reach substantially lower absolute EER than the
+source-only column here. The claim of this paper is the \emph{relative} gain
+from test-time adaptation on a fixed backbone, measured against that same
+backbone unadapted under an identical protocol; it should not be read as a
+competitive absolute result on any individual benchmark, and the mechanism
+would have to be re-verified on a stronger source model before it could be.
 \item \textbf{Fixed hyperparameters.} $q,\lambda,E$ are chosen without target
 labels and are not per-target optimal. A label-free tail-separation statistic
 predicts $\Delta_2$ strongly but with the sign inverted from a reliability
@@ -348,8 +371,8 @@ effect, consistent with the ranking-calibration account. Acting on it does not
 pay at our scale (fixed $\lambda$ is within $0.24$ EER of a per-point oracle),
 so $\lambda$ stays constant.
 \item \textbf{Scale.} Four targets, ten seeds. Growing from three to ten seeds
-did not uniformly strengthen our claims, and we report both directions: it made
-the per-target significance tests possible at all, and it confirmed Tent's
+did not uniformly strengthen our claims: it made
+the per-target significance tests possible at all, and confirmed Tent's
 collapse as routine rather than a single unlucky run, but it also shrank the
 margin over the train-time DG baselines from a three-of-four sweep to a pooled
 result with two clear per-target wins. Four corpora remain few enough that the
@@ -357,12 +380,6 @@ $\mathrm{AUC}\!\geq\!0.84$ precondition is calibrated on a handful of points.
 \item \textbf{SSL dependency.} The gain requires an SSL-pretrained backbone
 (Sec.~\ref{sec:results}); it is an adaptation layer on top of an
 already-transferable representation, not a backbone-agnostic recipe.
-\item \textbf{Single-source scope.} On the harder regime matching the official
-ASVspoof2021-DF protocol (train on 2019-LA alone), source-only reaches only
-$26.33\%$ EER and naive TTA actively harms performance under that evaluation
-set's severe class imbalance ($97.5\%$ spoof); we diagnose and partially
-correct this with a label-free prevalence estimator but do not yet close the
-gap---a scope boundary, not a retraction of the multi-source results above.
 \end{itemize}
 
 \section{Conclusion}
@@ -372,8 +389,8 @@ survives (source AUC $\gtrsim 0.84$) is itself the predictor of whether
 adaptation will help---a precondition we state as a contribution, not a
 caveat. A simple unsupervised test-time adaptation exploiting this improves
 generalisation, significantly by per-target Wilcoxon test, on the three of four
-leave-one-corpus-out targets meeting that precondition, and is honestly
-neutral on the fourth. Entropy-minimisation TTA is unpredictably
+leave-one-corpus-out targets meeting that precondition, and is neutral on the
+fourth. Entropy-minimisation TTA is unpredictably
 catastrophic, a non-SSL backbone collapses outright, and two independent
 train-time domain-generalisation baselines underperform ours despite
 privileged data access and $3\times$ the compute. A proxy divergence

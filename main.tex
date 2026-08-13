@@ -1104,7 +1104,19 @@ source model's score-distribution shape, not only to class imbalance, and a
 deployable version needs a prevalence estimator that degrades gracefully
 rather than silently, which is not something we solve here.
 
-We report this honestly as a scope boundary rather than retracting the paper's
+A third correction also fails. Adding a curriculum schedule over $q$---starting
+from a strict high-purity tail and widening to the published value, on the
+reasoning that early epochs are where confirmation bias is cheapest to
+acquire---leaves the result unchanged at $42.50\%$ EER / $.686$ AUC. The
+per-epoch trace shows why: the BIC guard we attach to the prevalence estimator
+declines to trust the two-component fit on this pool and falls back to a
+symmetric budget, so the schedule reduces to the fixed rule it was meant to
+replace. The guard behaves as designed---it refuses a prior it cannot verify---but
+the consequence is that none of the three label-free corrections we have tried
+recovers the loss, and all three remain worse than not adapting at all
+($26.52\%$).
+
+This is a scope boundary rather than a retraction of the paper's
 central claims, which are about the multi-source, class-balanced
 leave-one-corpus-out protocol throughout: our method targets adaptation across
 corpora that are individually reasonably represented in the source pool, and
