@@ -76,3 +76,39 @@
 [15:19:53]   ours_prior_rawboost    official DF EER  42.46%  AUC 0.6878  n_scored 400435  n_missing 133493
 [15:19:53]   ours_prior_rawboost (disjoint) EER  42.48%  AUC 0.6878  n 380435
 [15:19:53] DONE in 165.9 min | peak GPU 6.8 GB
+[14:12:27] === Protocol A | SMOKE=False | bf16=True ===
+[14:12:32] 2019-LA train: 25380 clips (2580 bonafide / 22800 spoof)
+[14:12:32] DF eval (phase=eval, on disk): 400435 clips (11136 bonafide / 389299 spoof)
+[14:12:34] loaded existing source checkpoint ckpt_protocol_a_rawboost.pt (delete it to retrain)
+[14:12:34] already recorded: {'source_rawboost', 'ours_prior_rawboost', 'ours_prior', 'ours', 'source', 'ours_rawboost'}
+[14:12:34] source_rawboost already recorded, skipping re-score
+[14:12:34] ours_rawboost already recorded, skipping
+[14:12:34] ours_prior_rawboost already recorded, skipping
+[14:12:34] [adaptive] adapting on 20000 unlabeled DF eval clips (BIC-guarded prevalence + q ramp + score-movement stopping, no labels used)
+[14:12:48]   adapt pool 20000 clips = 2.56 GB (pinned CPU)  prior_aware=False
+[14:14:28]   estimated P(real) = 0.4603 (bic_delta 71087.1, shrunk_to_symmetric=False)
+[14:14:28]   pseudo-real budget 0.2762  pseudo-fake budget 0.3238
+[14:19:45]   adapt epoch 1/8  confident 10719/20000  q=0.100 shift=nan
+[14:25:01]   adapt epoch 2/8  confident 5730/20000  q=0.129 shift=0.03033
+[14:30:18]   adapt epoch 3/8  confident 10222/20000  q=0.157 shift=0.03782
+[14:35:34]   adapt epoch 4/8  confident 12546/20000  q=0.186 shift=0.03195
+[14:40:51]   adapt epoch 5/8  confident 13142/20000  q=0.214 shift=0.01121
+[14:46:08]   adapt epoch 6/8  confident 13735/20000  q=0.243 shift=0.01405
+[14:51:24]   adapt epoch 7/8  confident 12585/20000  q=0.271 shift=0.01575
+[14:56:41]   adapt epoch 8/8  confident 14961/20000  q=0.300 shift=0.01270
+[14:56:41]   stopping after epoch 8: max_epochs
+[14:56:41] scoring DF eval with the adaptive (ours_adaptive_rawboost) model
+[14:57:04]     ours_adaptive_rawboost scored 4096/400435  177 clips/s  eta 37.3 min
+[15:00:29]     ours_adaptive_rawboost scored 40960/400435  180 clips/s  eta 33.4 min
+[15:04:16]     ours_adaptive_rawboost scored 81920/400435  180 clips/s  eta 29.5 min
+[15:08:04]     ours_adaptive_rawboost scored 122880/400435  180 clips/s  eta 25.7 min
+[15:11:51]     ours_adaptive_rawboost scored 163840/400435  180 clips/s  eta 21.9 min
+[15:15:38]     ours_adaptive_rawboost scored 204800/400435  180 clips/s  eta 18.1 min
+[15:19:26]     ours_adaptive_rawboost scored 245760/400435  180 clips/s  eta 14.3 min
+[15:23:14]     ours_adaptive_rawboost scored 286720/400435  180 clips/s  eta 10.5 min
+[15:27:01]     ours_adaptive_rawboost scored 327680/400435  180 clips/s  eta 6.7 min
+[15:30:49]     ours_adaptive_rawboost scored 368640/400435  180 clips/s  eta 2.9 min
+[15:33:45]     ours_adaptive_rawboost scored 400435/400435  180 clips/s  eta 0.0 min
+[15:33:46]   ours_adaptive_rawboost official DF EER  42.50%  AUC 0.6862  n_scored 400435  n_missing 133493
+[15:33:46]   ours_adaptive_rawboost (disjoint) EER  42.46%  AUC 0.6862  n 380435
+[15:33:46] DONE in 81.3 min | peak GPU 5.4 GB

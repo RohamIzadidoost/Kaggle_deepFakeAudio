@@ -1,0 +1,148 @@
+[04:09:44] === Tuesday supervisor | budget 23.0 h | python /opt/conda/bin/python ===
+[04:09:44] deadline 03:09:44
+[04:09:44] --- mlaad_download (est 1.5 h, 23.0 h left) ---
+[04:09:44] downloading MLAAD (~57 GB) -- required by every source-training job
+[04:17:55] === Tuesday supervisor | budget 23.0 h | python /opt/conda/bin/python ===
+[04:17:55] deadline 03:17:55
+[04:17:55] --- mlaad_download (est 1.5 h, 23.0 h left) ---
+[04:17:55] downloading MLAAD (~57 GB) -- required by every source-training job
+[04:48:04] === Tuesday supervisor | budget 23.0 h | python /opt/conda/bin/python ===
+[04:48:04] deadline 03:48:04
+[04:48:04] --- mlaad_download (est 1.5 h, 23.0 h left) ---
+[04:48:04] downloading MLAAD (~57 GB) -- required by every source-training job
+[04:52:34] mlaad download rc=-15 present=False
+[04:52:34]   stderr tail: 
+[04:52:34] --- mlaad_download: FAILED in 0.07 h ---
+[04:52:34] ABORT before ext_seed4: data/mlaad is missing or empty.
+[04:52:34]   Every P1 job trains source models and MLAAD is in every source
+[04:52:34]   pool. Running without it would silently train seeds on a
+[04:52:34]   different composition than seeds 0-4, making them
+[04:52:34]   incomparable. Fix the download, then re-run this script --
+[04:52:34]   it resumes and repeats no completed work.
+[04:52:34] --- refreshing statistics on whatever landed ---
+[04:52:35] === Pooled Wilcoxon signed-rank (transductive, all targets/seeds) ===
+ours vs. source: n=19, ours lower EER, median diff=-1.004, W=17.0, p=0.0007896
+ours vs. tent: n=19, ours lower EER, median diff=-1.754, W=27.0, p=0.004578
+ours vs. st_only: n=19, ours lower EER, median diff=-0.522, W=45.0, p=0.04456
+ours vs. dann: n=12, ours lower EER, median diff=-3.463, W=12.0, p=0.03418
+ours vs. asdg: n=12, ours lower EER, median diff=-1.164, W=12.0, p=0.03418
+
+=== Bootstrap 95% CI on per-target mean EER (source vs. ours, transductive) ===
+arabic         source   n_clips_runs=4  mean EER=22.07  95% CI=[20.92, 23.46]
+arabic         ours     n_clips_runs=4  mean EER=20.61  95% CI=[20.05, 21.46]
+asvspoof2019   source   n_clips_runs=5  mean EER=4.69  95% CI=[3.81, 5.56]
+asvspoof2019   ours     n_clips_runs=5  mean EER=3.36  95% CI=[2.69, 4.02]
+dataset2       source   n_clips_runs=5  mean EER=34.44  95% CI=[33.25, 35.85]
+dataset2       ours     n_clips_runs=5  mean EER=34.61  95% CI=[33.26, 36.02]
+in_the_wild    source   n_clips_runs=5  mean EER=13.32  95% CI=[12.29, 14.21]
+in_the_wild    ours     n_clips_runs=5  mean EER=11.23  95% CI=[9.98, 12.49]
+
+Wrote stats_results.csv
+
+[04:52:35] === DONE after 0.08 h ===
+[04:52:35] results_ext.csv: 190 rows, seeds [0, 1, 2, 3, 4]
+[04:52:35] results_dann.csv: 12 rows, seeds [0, 1, 2]
+[04:52:35] results_asdg.csv: 12 rows, seeds [0, 1, 2]
+[04:55:46] === Tuesday supervisor | budget 23.0 h | python /opt/conda/bin/python ===
+[04:55:46] deadline 03:55:46
+[04:55:46] --- mlaad_download (est 1.5 h, 23.0 h left) ---
+[04:55:46] downloading MLAAD (~57 GB) -- required by every source-training job
+[06:00:42] mlaad download rc=0 present=True
+[06:00:42] --- mlaad_download: ok in 1.08 h ---
+[06:00:42] --- ext_seed4 (est 1.3 h, 21.9 h left) ---
+[06:01:56] --- ext_seed4: ok in 0.02 h ---
+[06:01:56] --- ext_seed5 (est 4.8 h, 21.9 h left) ---
+[06:03:01] --- ext_seed5: ok in 0.02 h ---
+[06:03:01] --- asdg_seed34 (est 1.2 h, 21.9 h left) ---
+[07:11:52] --- asdg_seed34: ok in 1.15 h ---
+[07:11:52] --- dann_seed34 (est 4.5 h, 20.7 h left) ---
+[09:20:23] --- dann_seed34: ok in 2.14 h ---
+[09:20:24] --- ext_seed6 (est 4.8 h, 18.6 h left) ---
+[09:21:27] --- ext_seed6: ok in 0.02 h ---
+[09:21:27] --- ext_seed7 (est 4.8 h, 18.6 h left) ---
+[09:22:32] --- ext_seed7: ok in 0.02 h ---
+[09:22:32] --- ext_seed8 (est 4.8 h, 18.6 h left) ---
+[09:23:38] --- ext_seed8: ok in 0.02 h ---
+[09:23:38] --- ext_seed9 (est 4.8 h, 18.5 h left) ---
+[09:24:43] --- ext_seed9: ok in 0.02 h ---
+[09:24:43] --- refreshing statistics on whatever landed ---
+[09:24:44] === Pooled Wilcoxon signed-rank (transductive, all targets/seeds) ===
+ours vs. source: n=19, ours lower EER, median diff=-1.004, W=17.0, p=0.0007896
+ours vs. tent: n=19, ours lower EER, median diff=-1.754, W=27.0, p=0.004578
+ours vs. st_only: n=19, ours lower EER, median diff=-0.522, W=45.0, p=0.04456
+ours vs. dann: n=12, ours lower EER, median diff=-3.463, W=12.0, p=0.03418
+ours vs. asdg: n=19, ours lower EER, median diff=-1.181, W=36.0, p=0.01597
+
+=== Bootstrap 95% CI on per-target mean EER (source vs. ours, transductive) ===
+arabic         source   n_clips_runs=4  mean EER=22.07  95% CI=[20.92, 23.46]
+arabic         ours     n_clips_runs=4  mean EER=20.61  95% CI=[20.05, 21.46]
+asvspoof2019   source   n_clips_runs=5  mean EER=4.69  95% CI=[3.81, 5.56]
+asvspoof2019   ours     n_clips_runs=5  mean EER=3.36  95% CI=[2.69, 4.02]
+dataset2       source   n_clips_runs=5  mean EER=34.44  95% CI=[33.25, 35.85]
+dataset2       ours     n_clips_runs=5  mean EER=34.61  95% CI=[33.26, 36.02]
+in_the_wild    source   n_clips_runs=5  mean EER=13.32  95% CI=[12.29, 14.21]
+in_the_wild    ours     n_clips_runs=5  mean EER=11.23  95% CI=[9.98, 12.49]
+
+Wrote stats_results.csv
+
+[09:24:44] === DONE after 4.48 h ===
+[09:24:44] results_ext.csv: 190 rows, seeds [0, 1, 2, 3, 4]
+[09:24:44] results_dann.csv: 12 rows, seeds [0, 1, 2]
+[09:24:44] results_asdg.csv: 20 rows, seeds [0, 1, 2, 3, 4]
+[09:39:46] === Tuesday supervisor | budget 23.0 h | python /opt/conda/bin/python ===
+[09:39:46] deadline 08:39:46
+[09:39:46] mlaad_download: already done in a previous run, skipping
+[09:39:46] --- ext_seed4 (est 1.3 h, 23.0 h left) ---
+[09:44:18] === Tuesday supervisor | budget 23.0 h | python /opt/conda/bin/python ===
+[09:44:18] deadline 08:44:18
+[09:44:18] mlaad_download: already done in a previous run, skipping
+[09:44:18] --- ext_seed4 (est 1.3 h, 23.0 h left) ---
+[10:15:23]     results_ext.csv: 190 -> 200 rows (+10)
+[10:15:23] --- ext_seed4: ok in 0.52 h ---
+[10:15:23] --- ext_seed5 (est 4.8 h, 22.5 h left) ---
+[10:49:54] === Tuesday supervisor | budget 23.0 h | python /opt/conda/bin/python ===
+[10:49:54] deadline 09:49:54
+[10:49:54] mlaad_download: already done in a previous run, skipping
+[10:49:54] ext_seed4: already done in a previous run, skipping
+[10:49:54] --- ext_seed5 (est 4.8 h, 23.0 h left) ---
+[12:48:19]     results_ext.csv: 190 -> 230 rows (+40)
+[12:48:19] --- ext_seed5: ok in 1.97 h ---
+[12:48:19] asdg_seed34: already done in a previous run, skipping
+[12:48:19] dann_seed34: already done in a previous run, skipping
+[12:48:19] --- ext_seed6 (est 4.8 h, 21.0 h left) ---
+[14:47:08]     results_ext.csv: 230 -> 270 rows (+40)
+[14:47:08] --- ext_seed6: ok in 1.98 h ---
+[14:47:08] --- ext_seed7 (est 4.8 h, 19.0 h left) ---
+[16:45:31]     results_ext.csv: 270 -> 310 rows (+40)
+[16:45:31] --- ext_seed7: ok in 1.97 h ---
+[16:45:31] --- ext_seed8 (est 4.8 h, 17.1 h left) ---
+[18:43:56]     results_ext.csv: 310 -> 350 rows (+40)
+[18:43:56] --- ext_seed8: ok in 1.97 h ---
+[18:43:56] --- ext_seed9 (est 4.8 h, 15.1 h left) ---
+[20:42:18]     results_ext.csv: 350 -> 390 rows (+40)
+[20:42:18] --- ext_seed9: ok in 1.97 h ---
+[20:42:18] published DANN: 12 + 8 -> 20 rows (seeds [0, 1, 2, 3, 4])
+[20:42:18] --- refreshing statistics on whatever landed ---
+[20:42:19] === Pooled Wilcoxon signed-rank (transductive, all targets/seeds) ===
+ours vs. source: n=39, ours lower EER, median diff=-1.308, W=92.5, p=8.892e-06
+ours vs. tent: n=39, ours lower EER, median diff=-12.617, W=58.0, p=2.913e-07
+ours vs. st_only: n=39, ours lower EER, median diff=-0.522, W=198.0, p=0.00654
+ours vs. dann: n=19, ours lower EER, median diff=-3.619, W=32.0, p=0.009453
+ours vs. asdg: n=12, ours lower EER, median diff=-1.164, W=12.0, p=0.03418
+
+=== Bootstrap 95% CI on per-target mean EER (source vs. ours, transductive) ===
+arabic         source   n_clips_runs=9  mean EER=22.91  95% CI=[22.05, 23.77]
+arabic         ours     n_clips_runs=9  mean EER=21.31  95% CI=[20.67, 21.98]
+asvspoof2019   source   n_clips_runs=10  mean EER=5.03  95% CI=[4.27, 5.82]
+asvspoof2019   ours     n_clips_runs=10  mean EER=3.47  95% CI=[2.97, 3.99]
+dataset2       source   n_clips_runs=10  mean EER=33.54  95% CI=[32.43, 34.62]
+dataset2       ours     n_clips_runs=10  mean EER=33.74  95% CI=[32.49, 34.88]
+in_the_wild    source   n_clips_runs=10  mean EER=12.78  95% CI=[12.06, 13.50]
+in_the_wild    ours     n_clips_runs=10  mean EER=11.33  95% CI=[10.53, 12.21]
+
+Wrote stats_results.csv
+
+[20:42:19] === DONE after 9.87 h ===
+[20:42:19] results_ext.csv: 390 rows, seeds [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+[20:42:19] results_dann.csv: 20 rows, seeds [0, 1, 2, 3, 4]
+[20:42:19] results_asdg.csv: 12 rows, seeds [0, 1, 2]

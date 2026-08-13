@@ -1,0 +1,51 @@
+[04:28:53] === Wednesday supervisor | budget 24.0 h | python /opt/conda/bin/python ===
+[04:28:53] deadline 04:28:53
+[04:28:53] backed up 5 results files -> results_backup/20260812_042853/
+[04:28:53] removing corrupt/partial data/dataset_1/avsspoof-2021.zip
+[04:28:53] DF eval download started in background -> logs/df_download.log
+[04:28:53] --- ext_seed4 (est 0.7 h, 24.0 h left) ---
+[04:52:03]     results_ext.csv: 390 -> 400 rows (+10)
+[04:52:03] --- ext_seed4: ok in 0.39 h ---
+[04:52:03] backed up 5 results files -> results_backup/20260812_045203/
+[04:52:03] --- asdg_seed34 (est 1.2 h, 23.6 h left) ---
+[06:01:22]     results_asdg.csv: 12 -> 20 rows (+8)
+[06:01:22] --- asdg_seed34: ok in 1.16 h ---
+[06:01:22] backed up 5 results files -> results_backup/20260812_060122/
+[06:01:22] --- dann_seed59 (est 11.0 h, 22.5 h left) ---
+[11:20:33]     analysis_res/results_dann.csv: 8 -> 28 rows (+20)
+[11:20:33] --- dann_seed59: ok in 5.32 h ---
+[11:20:33] backed up 5 results files -> results_backup/20260812_112033/
+[11:20:33] --- asdg_seed59 (est 3.0 h, 17.1 h left) ---
+[14:12:23]     results_asdg.csv: 20 -> 40 rows (+20)
+[14:12:23] --- asdg_seed59: ok in 2.86 h ---
+[14:12:23] backed up 5 results files -> results_backup/20260812_141223/
+[14:12:23] --- protocol_a (est 2.0 h, 14.3 h left) ---
+[15:33:47]     results_protocol_a.csv: 10 -> 12 rows (+2)
+[15:33:47] --- protocol_a: ok in 1.36 h ---
+[15:33:47] backed up 5 results files -> results_backup/20260812_153347/
+[15:33:47] published DANN: 20 + 28 -> 40 rows (seeds [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+[15:33:47] backed up 5 results files -> results_backup/20260812_153347/
+[15:33:47] --- refreshing statistics ---
+[15:33:48] === Pooled Wilcoxon signed-rank (transductive, all targets/seeds) ===
+ours vs. source: n=40, ours lower EER, median diff=-1.157, W=95.5, p=5.845e-06
+ours vs. tent: n=40, ours lower EER, median diff=-14.892, W=58.0, p=1.461e-07
+ours vs. st_only: n=40, ours lower EER, median diff=-0.519, W=207.0, p=0.005577
+ours vs. dann: n=40, ours lower EER, median diff=-2.967, W=127.0, p=6.268e-05
+ours vs. asdg: n=40, ours lower EER, median diff=-2.424, W=123.0, p=4.73e-05
+
+=== Bootstrap 95% CI on per-target mean EER (source vs. ours, transductive) ===
+arabic         source   n_clips_runs=10  mean EER=22.50  95% CI=[21.36, 23.53]
+arabic         ours     n_clips_runs=10  mean EER=20.99  95% CI=[20.12, 21.79]
+asvspoof2019   source   n_clips_runs=10  mean EER=5.03  95% CI=[4.27, 5.82]
+asvspoof2019   ours     n_clips_runs=10  mean EER=3.47  95% CI=[2.97, 3.99]
+dataset2       source   n_clips_runs=10  mean EER=33.54  95% CI=[32.43, 34.62]
+dataset2       ours     n_clips_runs=10  mean EER=33.74  95% CI=[32.49, 34.88]
+in_the_wild    source   n_clips_runs=10  mean EER=12.78  95% CI=[12.06, 13.50]
+in_the_wild    ours     n_clips_runs=10  mean EER=11.33  95% CI=[10.53, 12.21]
+
+Wrote stats_results.csv
+
+[15:33:48] === DONE after 11.08 h ===
+[15:33:48] results_ext.csv: 400 rows, seeds [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+[15:33:48] results_dann.csv: 40 rows, seeds [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+[15:33:48] results_asdg.csv: 40 rows, seeds [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]

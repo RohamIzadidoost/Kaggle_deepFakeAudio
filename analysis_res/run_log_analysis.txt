@@ -1,0 +1,306 @@
+[07:11:57] device cuda | bf16 True | parts: div=False dann=True lang=False tsne=False
+[07:11:58] manifest:
+corpus        label
+arabic        fake      16991
+              real       2570
+asvspoof2019  fake      22800
+              real       2580
+dataset2      fake       2173
+              real       2274
+in_the_wild   fake      11816
+              real      19963
+mlaad         fake     154000
+[07:11:58] MLAAD held-out languages: ['mt', 'sl', 'hu', 'hr', 'fi', 'lt']
+[07:11:58] cache pool: 44997 clips
+corpus        label
+arabic        fake      6000
+              real      2570
+asvspoof2019  fake      6000
+              real      2580
+dataset2      fake      2173
+              real      2274
+in_the_wild   fake      6000
+              real      6000
+mlaad         fake     11400
+[07:13:14] cache ready: (44997, 64000) = 5.76 GB (77s)
+[07:13:16] encoder autocast: True
+[07:13:16] === B. DANN baseline ===
+[07:15:14]   dann seed3/asvspoof2019 epoch 1/8 cls-loss 0.5804 lambda 0.28
+[07:17:10]   dann seed3/asvspoof2019 epoch 2/8 cls-loss 0.8639 lambda 0.42
+[07:19:05]   dann seed3/asvspoof2019 epoch 3/8 cls-loss 2.2649 lambda 0.48
+[07:21:01]   dann seed3/asvspoof2019 epoch 4/8 cls-loss 0.3107 lambda 0.49
+[07:22:56]   dann seed3/asvspoof2019 epoch 5/8 cls-loss 0.2983 lambda 0.50
+[07:24:52]   dann seed3/asvspoof2019 epoch 6/8 cls-loss 0.8780 lambda 0.50
+[07:26:48]   dann seed3/asvspoof2019 epoch 7/8 cls-loss 1.2790 lambda 0.50
+[07:28:43]   dann seed3/asvspoof2019 epoch 8/8 cls-loss 0.4365 lambda 0.50
+[07:29:11]   DANN asvspoof2019 seed3: EER 6.32 AUC 0.983 (15.9 min)
+[07:31:08]   dann seed3/dataset2 epoch 1/8 cls-loss 0.5016 lambda 0.28
+[07:33:04]   dann seed3/dataset2 epoch 2/8 cls-loss 3.6760 lambda 0.42
+[07:34:59]   dann seed3/dataset2 epoch 3/8 cls-loss 0.9243 lambda 0.48
+[07:36:55]   dann seed3/dataset2 epoch 4/8 cls-loss 0.2919 lambda 0.49
+[07:38:50]   dann seed3/dataset2 epoch 5/8 cls-loss 0.3764 lambda 0.50
+[07:40:46]   dann seed3/dataset2 epoch 6/8 cls-loss 0.3014 lambda 0.50
+[07:42:42]   dann seed3/dataset2 epoch 7/8 cls-loss 0.1044 lambda 0.50
+[07:44:37]   dann seed3/dataset2 epoch 8/8 cls-loss 0.1460 lambda 0.50
+[07:44:59]   DANN dataset2 seed3: EER 33.40 AUC 0.703 (15.8 min)
+[07:46:57]   dann seed3/in_the_wild epoch 1/8 cls-loss 0.3885 lambda 0.28
+[07:48:52]   dann seed3/in_the_wild epoch 2/8 cls-loss 2.2343 lambda 0.42
+[07:50:48]   dann seed3/in_the_wild epoch 3/8 cls-loss 0.3955 lambda 0.48
+[07:52:43]   dann seed3/in_the_wild epoch 4/8 cls-loss 0.1572 lambda 0.49
+[07:54:39]   dann seed3/in_the_wild epoch 5/8 cls-loss 0.2031 lambda 0.50
+[07:56:35]   dann seed3/in_the_wild epoch 6/8 cls-loss 0.1849 lambda 0.50
+[07:58:30]   dann seed3/in_the_wild epoch 7/8 cls-loss 0.1632 lambda 0.50
+[08:00:26]   dann seed3/in_the_wild epoch 8/8 cls-loss 0.7964 lambda 0.50
+[08:00:56]   DANN in_the_wild seed3: EER 16.65 AUC 0.916 (15.9 min)
+[08:02:53]   dann seed3/arabic epoch 1/8 cls-loss 0.3755 lambda 0.28
+[08:04:48]   dann seed3/arabic epoch 2/8 cls-loss 45.2484 lambda 0.42
+[08:06:44]   dann seed3/arabic epoch 3/8 cls-loss 5.6302 lambda 0.48
+[08:08:40]   dann seed3/arabic epoch 4/8 cls-loss 1.0699 lambda 0.49
+[08:10:35]   dann seed3/arabic epoch 5/8 cls-loss 2.0376 lambda 0.50
+[08:12:31]   dann seed3/arabic epoch 6/8 cls-loss 0.9849 lambda 0.50
+[08:14:26]   dann seed3/arabic epoch 7/8 cls-loss 1.0777 lambda 0.50
+[08:16:22]   dann seed3/arabic epoch 8/8 cls-loss 0.6033 lambda 0.50
+[08:16:50]   DANN arabic seed3: EER 36.02 AUC 0.700 (15.9 min)
+[08:18:47]   dann seed4/asvspoof2019 epoch 1/8 cls-loss 0.8508 lambda 0.28
+[08:20:42]   dann seed4/asvspoof2019 epoch 2/8 cls-loss 17.0240 lambda 0.42
+[08:22:38]   dann seed4/asvspoof2019 epoch 3/8 cls-loss 12.7910 lambda 0.48
+[08:24:33]   dann seed4/asvspoof2019 epoch 4/8 cls-loss 1.7423 lambda 0.49
+[08:26:29]   dann seed4/asvspoof2019 epoch 5/8 cls-loss 1.2766 lambda 0.50
+[08:28:25]   dann seed4/asvspoof2019 epoch 6/8 cls-loss 0.9129 lambda 0.50
+[08:30:20]   dann seed4/asvspoof2019 epoch 7/8 cls-loss 0.5600 lambda 0.50
+[08:32:16]   dann seed4/asvspoof2019 epoch 8/8 cls-loss 0.5199 lambda 0.50
+[08:32:44]   DANN asvspoof2019 seed4: EER 14.85 AUC 0.927 (15.9 min)
+[08:34:41]   dann seed4/dataset2 epoch 1/8 cls-loss 0.3800 lambda 0.28
+[08:36:36]   dann seed4/dataset2 epoch 2/8 cls-loss 0.3828 lambda 0.42
+[08:38:32]   dann seed4/dataset2 epoch 3/8 cls-loss 0.2456 lambda 0.48
+[08:40:27]   dann seed4/dataset2 epoch 4/8 cls-loss 0.1335 lambda 0.49
+[08:42:23]   dann seed4/dataset2 epoch 5/8 cls-loss 0.2238 lambda 0.50
+[08:44:19]   dann seed4/dataset2 epoch 6/8 cls-loss 0.2823 lambda 0.50
+[08:46:14]   dann seed4/dataset2 epoch 7/8 cls-loss 0.2117 lambda 0.50
+[08:48:10]   dann seed4/dataset2 epoch 8/8 cls-loss 0.2476 lambda 0.50
+[08:48:32]   DANN dataset2 seed4: EER 35.65 AUC 0.691 (15.8 min)
+[08:50:29]   dann seed4/in_the_wild epoch 1/8 cls-loss 0.3163 lambda 0.28
+[08:52:25]   dann seed4/in_the_wild epoch 2/8 cls-loss 0.5309 lambda 0.42
+[08:54:20]   dann seed4/in_the_wild epoch 3/8 cls-loss 0.2589 lambda 0.48
+[08:56:16]   dann seed4/in_the_wild epoch 4/8 cls-loss 0.7864 lambda 0.49
+[08:58:12]   dann seed4/in_the_wild epoch 5/8 cls-loss 0.1303 lambda 0.50
+[09:00:07]   dann seed4/in_the_wild epoch 6/8 cls-loss 0.1132 lambda 0.50
+[09:02:03]   dann seed4/in_the_wild epoch 7/8 cls-loss 0.0773 lambda 0.50
+[09:03:58]   dann seed4/in_the_wild epoch 8/8 cls-loss 0.0738 lambda 0.50
+[09:04:28]   DANN in_the_wild seed4: EER 7.03 AUC 0.982 (15.9 min)
+[09:06:25]   dann seed4/arabic epoch 1/8 cls-loss 1.1842 lambda 0.28
+[09:08:21]   dann seed4/arabic epoch 2/8 cls-loss 26.6609 lambda 0.42
+[09:10:17]   dann seed4/arabic epoch 3/8 cls-loss 0.3184 lambda 0.48
+[09:12:12]   dann seed4/arabic epoch 4/8 cls-loss 0.2805 lambda 0.49
+[09:14:08]   dann seed4/arabic epoch 5/8 cls-loss 0.2368 lambda 0.50
+[09:16:03]   dann seed4/arabic epoch 6/8 cls-loss 0.2399 lambda 0.50
+[09:17:59]   dann seed4/arabic epoch 7/8 cls-loss 0.2308 lambda 0.50
+[09:19:55]   dann seed4/arabic epoch 8/8 cls-loss 0.2082 lambda 0.50
+[09:20:22]   DANN arabic seed4: EER 25.73 AUC 0.805 (15.9 min)
+[06:01:28] device cuda | bf16 True | parts: div=False dann=True lang=False tsne=False
+[06:01:28] manifest:
+corpus        label
+arabic        fake      16991
+              real       2570
+asvspoof2019  fake      22800
+              real       2580
+dataset2      fake       2173
+              real       2274
+in_the_wild   fake      11816
+              real      19963
+mlaad         fake     154000
+[06:01:28] MLAAD held-out languages: ['mt', 'sl', 'hu', 'hr', 'fi', 'lt']
+[06:01:29] cache pool: 44997 clips
+corpus        label
+arabic        fake      6000
+              real      2570
+asvspoof2019  fake      6000
+              real      2580
+dataset2      fake      2173
+              real      2274
+in_the_wild   fake      6000
+              real      6000
+mlaad         fake     11400
+[06:02:42] cache ready: (44997, 64000) = 5.76 GB (73s)
+[06:02:44] encoder autocast: True
+[06:02:44] === B. DANN baseline ===
+[06:04:42]   dann seed5/asvspoof2019 epoch 1/8 cls-loss 1.8457 lambda 0.28
+[06:06:38]   dann seed5/asvspoof2019 epoch 2/8 cls-loss 5.7999 lambda 0.42
+[06:08:33]   dann seed5/asvspoof2019 epoch 3/8 cls-loss 1.1756 lambda 0.48
+[06:10:29]   dann seed5/asvspoof2019 epoch 4/8 cls-loss 1.1028 lambda 0.49
+[06:12:24]   dann seed5/asvspoof2019 epoch 5/8 cls-loss 1.2913 lambda 0.50
+[06:14:20]   dann seed5/asvspoof2019 epoch 6/8 cls-loss 1.2177 lambda 0.50
+[06:16:16]   dann seed5/asvspoof2019 epoch 7/8 cls-loss 1.1588 lambda 0.50
+[06:18:11]   dann seed5/asvspoof2019 epoch 8/8 cls-loss 0.2436 lambda 0.50
+[06:18:39]   DANN asvspoof2019 seed5: EER 14.79 AUC 0.854 (15.9 min)
+[06:20:37]   dann seed5/dataset2 epoch 1/8 cls-loss 0.6350 lambda 0.28
+[06:22:32]   dann seed5/dataset2 epoch 2/8 cls-loss 5.3469 lambda 0.42
+[06:24:28]   dann seed5/dataset2 epoch 3/8 cls-loss 1.1429 lambda 0.48
+[06:26:23]   dann seed5/dataset2 epoch 4/8 cls-loss 0.5260 lambda 0.49
+[06:28:19]   dann seed5/dataset2 epoch 5/8 cls-loss 0.1599 lambda 0.50
+[06:30:14]   dann seed5/dataset2 epoch 6/8 cls-loss 0.1802 lambda 0.50
+[06:32:10]   dann seed5/dataset2 epoch 7/8 cls-loss 0.0983 lambda 0.50
+[06:34:06]   dann seed5/dataset2 epoch 8/8 cls-loss 0.2009 lambda 0.50
+[06:34:28]   DANN dataset2 seed5: EER 37.36 AUC 0.693 (15.8 min)
+[06:36:25]   dann seed5/in_the_wild epoch 1/8 cls-loss 0.3701 lambda 0.28
+[06:38:21]   dann seed5/in_the_wild epoch 2/8 cls-loss 3.5733 lambda 0.42
+[06:40:16]   dann seed5/in_the_wild epoch 3/8 cls-loss 1.2108 lambda 0.48
+[06:42:12]   dann seed5/in_the_wild epoch 4/8 cls-loss 0.7859 lambda 0.49
+[06:44:07]   dann seed5/in_the_wild epoch 5/8 cls-loss 0.2271 lambda 0.50
+[06:46:03]   dann seed5/in_the_wild epoch 6/8 cls-loss 0.1853 lambda 0.50
+[06:47:59]   dann seed5/in_the_wild epoch 7/8 cls-loss 0.1736 lambda 0.50
+[06:49:54]   dann seed5/in_the_wild epoch 8/8 cls-loss 0.1655 lambda 0.50
+[06:50:24]   DANN in_the_wild seed5: EER 13.23 AUC 0.942 (15.9 min)
+[06:52:21]   dann seed5/arabic epoch 1/8 cls-loss 0.4145 lambda 0.28
+[06:54:17]   dann seed5/arabic epoch 2/8 cls-loss 4.1529 lambda 0.42
+[06:56:13]   dann seed5/arabic epoch 3/8 cls-loss 0.3680 lambda 0.48
+[06:58:08]   dann seed5/arabic epoch 4/8 cls-loss 0.2238 lambda 0.49
+[07:00:04]   dann seed5/arabic epoch 5/8 cls-loss 0.1929 lambda 0.50
+[07:01:59]   dann seed5/arabic epoch 6/8 cls-loss 0.1287 lambda 0.50
+[07:03:55]   dann seed5/arabic epoch 7/8 cls-loss 0.1484 lambda 0.50
+[07:05:50]   dann seed5/arabic epoch 8/8 cls-loss 0.1530 lambda 0.50
+[07:06:18]   DANN arabic seed5: EER 22.72 AUC 0.847 (15.9 min)
+[07:08:15]   dann seed6/asvspoof2019 epoch 1/8 cls-loss 5.3828 lambda 0.28
+[07:10:11]   dann seed6/asvspoof2019 epoch 2/8 cls-loss 11.0279 lambda 0.42
+[07:12:06]   dann seed6/asvspoof2019 epoch 3/8 cls-loss 2.0864 lambda 0.48
+[07:14:02]   dann seed6/asvspoof2019 epoch 4/8 cls-loss 0.3577 lambda 0.49
+[07:15:58]   dann seed6/asvspoof2019 epoch 5/8 cls-loss 0.1672 lambda 0.50
+[07:17:53]   dann seed6/asvspoof2019 epoch 6/8 cls-loss 0.1163 lambda 0.50
+[07:19:49]   dann seed6/asvspoof2019 epoch 7/8 cls-loss 0.1134 lambda 0.50
+[07:21:44]   dann seed6/asvspoof2019 epoch 8/8 cls-loss 0.1388 lambda 0.50
+[07:22:12]   DANN asvspoof2019 seed6: EER 4.44 AUC 0.986 (15.9 min)
+[07:24:10]   dann seed6/dataset2 epoch 1/8 cls-loss 0.2860 lambda 0.28
+[07:26:05]   dann seed6/dataset2 epoch 2/8 cls-loss 1.6960 lambda 0.42
+[07:28:01]   dann seed6/dataset2 epoch 3/8 cls-loss 0.2751 lambda 0.48
+[07:29:56]   dann seed6/dataset2 epoch 4/8 cls-loss 0.0651 lambda 0.49
+[07:31:52]   dann seed6/dataset2 epoch 5/8 cls-loss 0.1395 lambda 0.50
+[07:33:48]   dann seed6/dataset2 epoch 6/8 cls-loss 0.0488 lambda 0.50
+[07:35:43]   dann seed6/dataset2 epoch 7/8 cls-loss 0.0520 lambda 0.50
+[07:37:39]   dann seed6/dataset2 epoch 8/8 cls-loss 0.1015 lambda 0.50
+[07:38:01]   DANN dataset2 seed6: EER 32.83 AUC 0.705 (15.8 min)
+[07:39:58]   dann seed6/in_the_wild epoch 1/8 cls-loss 0.8650 lambda 0.28
+[07:41:54]   dann seed6/in_the_wild epoch 2/8 cls-loss 2.8792 lambda 0.42
+[07:43:49]   dann seed6/in_the_wild epoch 3/8 cls-loss 1.3106 lambda 0.48
+[07:45:45]   dann seed6/in_the_wild epoch 4/8 cls-loss 0.6808 lambda 0.49
+[07:47:40]   dann seed6/in_the_wild epoch 5/8 cls-loss 0.2230 lambda 0.50
+[07:49:36]   dann seed6/in_the_wild epoch 6/8 cls-loss 0.1452 lambda 0.50
+[07:51:32]   dann seed6/in_the_wild epoch 7/8 cls-loss 0.1286 lambda 0.50
+[07:53:27]   dann seed6/in_the_wild epoch 8/8 cls-loss 0.1076 lambda 0.50
+[07:53:57]   DANN in_the_wild seed6: EER 14.12 AUC 0.915 (15.9 min)
+[07:55:54]   dann seed6/arabic epoch 1/8 cls-loss 0.4922 lambda 0.28
+[07:57:50]   dann seed6/arabic epoch 2/8 cls-loss 7.3398 lambda 0.42
+[07:59:45]   dann seed6/arabic epoch 3/8 cls-loss 2.0387 lambda 0.48
+[08:01:41]   dann seed6/arabic epoch 4/8 cls-loss 0.6742 lambda 0.49
+[08:03:36]   dann seed6/arabic epoch 5/8 cls-loss 0.7233 lambda 0.50
+[08:05:32]   dann seed6/arabic epoch 6/8 cls-loss 0.6042 lambda 0.50
+[08:07:28]   dann seed6/arabic epoch 7/8 cls-loss 0.1962 lambda 0.50
+[08:09:23]   dann seed6/arabic epoch 8/8 cls-loss 0.3121 lambda 0.50
+[08:09:51]   DANN arabic seed6: EER 32.37 AUC 0.679 (15.9 min)
+[08:11:49]   dann seed7/asvspoof2019 epoch 1/8 cls-loss 1.2078 lambda 0.28
+[08:13:44]   dann seed7/asvspoof2019 epoch 2/8 cls-loss 4.7039 lambda 0.42
+[08:15:40]   dann seed7/asvspoof2019 epoch 3/8 cls-loss 2.1790 lambda 0.48
+[08:17:36]   dann seed7/asvspoof2019 epoch 4/8 cls-loss 0.3892 lambda 0.49
+[08:19:31]   dann seed7/asvspoof2019 epoch 5/8 cls-loss 0.3238 lambda 0.50
+[08:21:27]   dann seed7/asvspoof2019 epoch 6/8 cls-loss 0.2789 lambda 0.50
+[08:23:23]   dann seed7/asvspoof2019 epoch 7/8 cls-loss 0.2164 lambda 0.50
+[08:25:18]   dann seed7/asvspoof2019 epoch 8/8 cls-loss 0.3538 lambda 0.50
+[08:25:46]   DANN asvspoof2019 seed7: EER 5.03 AUC 0.986 (15.9 min)
+[08:27:44]   dann seed7/dataset2 epoch 1/8 cls-loss 0.3027 lambda 0.28
+[08:29:39]   dann seed7/dataset2 epoch 2/8 cls-loss 1.8760 lambda 0.42
+[08:31:35]   dann seed7/dataset2 epoch 3/8 cls-loss 0.3178 lambda 0.48
+[08:33:31]   dann seed7/dataset2 epoch 4/8 cls-loss 0.1975 lambda 0.49
+[08:35:26]   dann seed7/dataset2 epoch 5/8 cls-loss 0.4183 lambda 0.50
+[08:37:22]   dann seed7/dataset2 epoch 6/8 cls-loss 0.4387 lambda 0.50
+[08:39:18]   dann seed7/dataset2 epoch 7/8 cls-loss 0.0921 lambda 0.50
+[08:41:13]   dann seed7/dataset2 epoch 8/8 cls-loss 0.0895 lambda 0.50
+[08:41:36]   DANN dataset2 seed7: EER 34.90 AUC 0.713 (15.8 min)
+[08:43:33]   dann seed7/in_the_wild epoch 1/8 cls-loss 0.3138 lambda 0.28
+[08:45:29]   dann seed7/in_the_wild epoch 2/8 cls-loss 2.7058 lambda 0.42
+[08:47:24]   dann seed7/in_the_wild epoch 3/8 cls-loss 0.2289 lambda 0.48
+[08:49:20]   dann seed7/in_the_wild epoch 4/8 cls-loss 0.3442 lambda 0.49
+[08:51:15]   dann seed7/in_the_wild epoch 5/8 cls-loss 0.1681 lambda 0.50
+[08:53:11]   dann seed7/in_the_wild epoch 6/8 cls-loss 0.1449 lambda 0.50
+[08:55:06]   dann seed7/in_the_wild epoch 7/8 cls-loss 0.1032 lambda 0.50
+[08:57:02]   dann seed7/in_the_wild epoch 8/8 cls-loss 0.0907 lambda 0.50
+[08:57:32]   DANN in_the_wild seed7: EER 9.82 AUC 0.963 (15.9 min)
+[08:59:29]   dann seed7/arabic epoch 1/8 cls-loss 0.3492 lambda 0.28
+[09:01:25]   dann seed7/arabic epoch 2/8 cls-loss 2.2070 lambda 0.42
+[09:03:20]   dann seed7/arabic epoch 3/8 cls-loss 0.4561 lambda 0.48
+[09:05:16]   dann seed7/arabic epoch 4/8 cls-loss 0.7171 lambda 0.49
+[09:07:11]   dann seed7/arabic epoch 5/8 cls-loss 0.5160 lambda 0.50
+[09:09:07]   dann seed7/arabic epoch 6/8 cls-loss 0.3159 lambda 0.50
+[09:11:02]   dann seed7/arabic epoch 7/8 cls-loss 0.2560 lambda 0.50
+[09:12:58]   dann seed7/arabic epoch 8/8 cls-loss 0.1769 lambda 0.50
+[09:13:26]   DANN arabic seed7: EER 22.11 AUC 0.810 (15.9 min)
+[09:15:23]   dann seed8/asvspoof2019 epoch 1/8 cls-loss 0.4099 lambda 0.28
+[09:17:19]   dann seed8/asvspoof2019 epoch 2/8 cls-loss 9.0628 lambda 0.42
+[09:19:14]   dann seed8/asvspoof2019 epoch 3/8 cls-loss 1.3476 lambda 0.48
+[09:21:10]   dann seed8/asvspoof2019 epoch 4/8 cls-loss 0.5397 lambda 0.49
+[09:23:05]   dann seed8/asvspoof2019 epoch 5/8 cls-loss 0.3433 lambda 0.50
+[09:25:01]   dann seed8/asvspoof2019 epoch 6/8 cls-loss 0.4332 lambda 0.50
+[09:26:56]   dann seed8/asvspoof2019 epoch 7/8 cls-loss 0.1682 lambda 0.50
+[09:28:52]   dann seed8/asvspoof2019 epoch 8/8 cls-loss 0.1432 lambda 0.50
+[09:29:20]   DANN asvspoof2019 seed8: EER 4.12 AUC 0.992 (15.9 min)
+[09:31:18]   dann seed8/dataset2 epoch 1/8 cls-loss 0.3488 lambda 0.28
+[09:33:13]   dann seed8/dataset2 epoch 2/8 cls-loss 1.7589 lambda 0.42
+[09:35:09]   dann seed8/dataset2 epoch 3/8 cls-loss 2.4208 lambda 0.48
+[09:37:04]   dann seed8/dataset2 epoch 4/8 cls-loss 0.6180 lambda 0.49
+[09:39:00]   dann seed8/dataset2 epoch 5/8 cls-loss 0.3888 lambda 0.50
+[09:40:55]   dann seed8/dataset2 epoch 6/8 cls-loss 0.0766 lambda 0.50
+[09:42:51]   dann seed8/dataset2 epoch 7/8 cls-loss 0.1108 lambda 0.50
+[09:44:46]   dann seed8/dataset2 epoch 8/8 cls-loss 0.6881 lambda 0.50
+[09:45:09]   DANN dataset2 seed8: EER 33.58 AUC 0.739 (15.8 min)
+[09:47:06]   dann seed8/in_the_wild epoch 1/8 cls-loss 0.4035 lambda 0.28
+[09:49:01]   dann seed8/in_the_wild epoch 2/8 cls-loss 3.2046 lambda 0.42
+[09:50:57]   dann seed8/in_the_wild epoch 3/8 cls-loss 0.8021 lambda 0.48
+[09:52:52]   dann seed8/in_the_wild epoch 4/8 cls-loss 0.3681 lambda 0.49
+[09:54:48]   dann seed8/in_the_wild epoch 5/8 cls-loss 0.1581 lambda 0.50
+[09:56:44]   dann seed8/in_the_wild epoch 6/8 cls-loss 0.0968 lambda 0.50
+[09:58:39]   dann seed8/in_the_wild epoch 7/8 cls-loss 0.0934 lambda 0.50
+[10:00:35]   dann seed8/in_the_wild epoch 8/8 cls-loss 0.0702 lambda 0.50
+[10:01:05]   DANN in_the_wild seed8: EER 8.00 AUC 0.951 (15.9 min)
+[10:03:03]   dann seed8/arabic epoch 1/8 cls-loss 0.3992 lambda 0.28
+[10:04:58]   dann seed8/arabic epoch 2/8 cls-loss 4.7966 lambda 0.42
+[10:06:54]   dann seed8/arabic epoch 3/8 cls-loss 1.7822 lambda 0.48
+[10:08:49]   dann seed8/arabic epoch 4/8 cls-loss 0.9670 lambda 0.49
+[10:10:45]   dann seed8/arabic epoch 5/8 cls-loss 0.2026 lambda 0.50
+[10:12:40]   dann seed8/arabic epoch 6/8 cls-loss 0.4631 lambda 0.50
+[10:14:36]   dann seed8/arabic epoch 7/8 cls-loss 0.1234 lambda 0.50
+[10:16:31]   dann seed8/arabic epoch 8/8 cls-loss 0.3555 lambda 0.50
+[10:16:59]   DANN arabic seed8: EER 29.55 AUC 0.779 (15.9 min)
+[10:18:56]   dann seed9/asvspoof2019 epoch 1/8 cls-loss 0.4658 lambda 0.28
+[10:20:52]   dann seed9/asvspoof2019 epoch 2/8 cls-loss 0.5122 lambda 0.42
+[10:22:47]   dann seed9/asvspoof2019 epoch 3/8 cls-loss 0.6791 lambda 0.48
+[10:24:43]   dann seed9/asvspoof2019 epoch 4/8 cls-loss 0.3424 lambda 0.49
+[10:26:38]   dann seed9/asvspoof2019 epoch 5/8 cls-loss 0.2749 lambda 0.50
+[10:28:34]   dann seed9/asvspoof2019 epoch 6/8 cls-loss 0.1484 lambda 0.50
+[10:30:30]   dann seed9/asvspoof2019 epoch 7/8 cls-loss 0.2037 lambda 0.50
+[10:32:25]   dann seed9/asvspoof2019 epoch 8/8 cls-loss 0.2918 lambda 0.50
+[10:32:53]   DANN asvspoof2019 seed9: EER 4.11 AUC 0.992 (15.9 min)
+[10:34:50]   dann seed9/dataset2 epoch 1/8 cls-loss 0.2583 lambda 0.28
+[10:36:45]   dann seed9/dataset2 epoch 2/8 cls-loss 0.7849 lambda 0.42
+[10:38:41]   dann seed9/dataset2 epoch 3/8 cls-loss 0.5057 lambda 0.48
+[10:40:37]   dann seed9/dataset2 epoch 4/8 cls-loss 1.2122 lambda 0.49
+[10:42:32]   dann seed9/dataset2 epoch 5/8 cls-loss 0.4717 lambda 0.50
+[10:44:28]   dann seed9/dataset2 epoch 6/8 cls-loss 0.4946 lambda 0.50
+[10:46:23]   dann seed9/dataset2 epoch 7/8 cls-loss 0.1430 lambda 0.50
+[10:48:19]   dann seed9/dataset2 epoch 8/8 cls-loss 0.1240 lambda 0.50
+[10:48:41]   DANN dataset2 seed9: EER 32.15 AUC 0.754 (15.8 min)
+[10:50:39]   dann seed9/in_the_wild epoch 1/8 cls-loss 0.3322 lambda 0.28
+[10:52:34]   dann seed9/in_the_wild epoch 2/8 cls-loss 4.4335 lambda 0.42
+[10:54:30]   dann seed9/in_the_wild epoch 3/8 cls-loss 0.2100 lambda 0.48
+[10:56:25]   dann seed9/in_the_wild epoch 4/8 cls-loss 0.2590 lambda 0.49
+[10:58:21]   dann seed9/in_the_wild epoch 5/8 cls-loss 0.1387 lambda 0.50
+[11:00:16]   dann seed9/in_the_wild epoch 6/8 cls-loss 0.2685 lambda 0.50
+[11:02:12]   dann seed9/in_the_wild epoch 7/8 cls-loss 0.1272 lambda 0.50
+[11:04:08]   dann seed9/in_the_wild epoch 8/8 cls-loss 0.2600 lambda 0.50
+[11:04:38]   DANN in_the_wild seed9: EER 28.75 AUC 0.775 (15.9 min)
+[11:06:35]   dann seed9/arabic epoch 1/8 cls-loss 0.3144 lambda 0.28
+[11:08:31]   dann seed9/arabic epoch 2/8 cls-loss 2.6622 lambda 0.42
+[11:10:26]   dann seed9/arabic epoch 3/8 cls-loss 0.4421 lambda 0.48
+[11:12:22]   dann seed9/arabic epoch 4/8 cls-loss 0.3050 lambda 0.49
+[11:14:18]   dann seed9/arabic epoch 5/8 cls-loss 0.2836 lambda 0.50
+[11:16:13]   dann seed9/arabic epoch 6/8 cls-loss 0.1177 lambda 0.50
+[11:18:09]   dann seed9/arabic epoch 7/8 cls-loss 0.3330 lambda 0.50
+[11:20:04]   dann seed9/arabic epoch 8/8 cls-loss 0.1913 lambda 0.50
+[11:20:32]   DANN arabic seed9: EER 28.32 AUC 0.796 (15.9 min)
