@@ -56,18 +56,19 @@ LayerNorm and the classifier head---no target labels and no source data at test
 time. We evaluate on a leave-one-corpus-out protocol over \emph{four} held-out
 targets---ASVspoof2019, a LibriSpeech-based TTS corpus, In-the-Wild, and a
 multilingual Arabic deepfake set---with a 38-language auxiliary corpus folded
-into every source pool, five seeds each (four for Arabic), and seven comparison
+into every source pool, ten seeds each, and seven comparison
 points (Tent, BatchNorm-only recalibration, self-training-only, a from-scratch
 non-SSL backbone, a train-time domain-adversarial baseline, and an
 aggregation-separation domain-generalisation baseline). The method improves
 Equal Error Rate (EER) on three of four targets (In-the-Wild
-$13.32\!\rightarrow\!11.23\%$, Arabic $22.07\!\rightarrow\!20.61\%$, ASVspoof2019
-$4.69\!\rightarrow\!3.36\%$) and is EER-neutral, not harmful, on the fourth
-(LibriSpeech-TTS, $34.44\!\rightarrow\!34.61\%$), where the domain gap is
+$12.78\!\rightarrow\!11.33\%$, Arabic $22.50\!\rightarrow\!20.99\%$, ASVspoof2019
+$5.03\!\rightarrow\!3.47\%$, each significant by a per-target Wilcoxon test at
+$p\!\leq\!0.03$) and is EER-neutral, not harmful, on the fourth
+(LibriSpeech-TTS, $33.54\!\rightarrow\!33.74\%$), where the domain gap is
 apparently not one our confidence-based mechanism can exploit. Entropy-minimisation
 TTA (Tent) collapses to chance on Arabic in every seed and is highly volatile on
 In-the-Wild, including an unpredictable full collapse on an otherwise-easy target
-(ASVspoof2019: stable in four of five seeds, chance-level in the fifth); a
+(ASVspoof2019: four of ten seeds at or near chance); a
 from-scratch RawNet2-style backbone without self-supervised pretraining collapses
 on all four targets; a train-time domain-adversarial baseline (DANN), trained for
 three\,$\times$ the compute of our method, underperforms it on three of four
@@ -433,24 +434,25 @@ test on the disjoint half) in Sec.~\ref{sec:inductive}.
 shared-memory exhaustion on our MIG GPU slice. bf16 autocast; Adam, lr
 $2\times10^{-4}$; top-4-layer XLS-R fine-tuning; source trained 8 epochs, batch
 32; single MIG 1g.35gb GPU slice ($\sim$33\,GB). All results are mean$\,\pm\,$std
-over five seeds (0--4) for ASVspoof2019, LibriSpeech-TTS, and In-the-Wild, and
-four seeds (0--3) for Arabic, where a fifth-seed cloud allocation was exhausted
-before that fold completed. Given this scale, we report per-seed sign
-consistency (``improved in $k/n$ seeds'') alongside the mean rather than a
-significance claim.
+over ten seeds (0--9) on every target, for our method and for every baseline it
+is compared against. At this scale a per-target Wilcoxon signed-rank test is
+attainable ($n{=}10$ has a combinatorial floor of $0.002$, against $0.0625$ at
+$n{=}5$), so we report it alongside per-seed sign consistency (``improved in
+$k/n$ seeds'') rather than substituting the latter for a significance claim.
 
 \section{Results}
 \subsection{Main cross-corpus results}
 \label{sec:main-results}
 Table~\ref{tab:main} is the main result: leave-one-corpus-out EER\,\%\,/\,AUC,
-mean over five seeds (four for Arabic), across all four targets and six
+mean over ten seeds, across all four targets and six
 methods. Three patterns stand out. First, \textbf{our method wins on three of
-four targets}: ASVspoof2019 ($4.69\!\to\!3.36$, improved in $5/5$ seeds, a
-$28.3\%$ relative reduction), In-the-Wild ($13.32\!\to\!11.23$, improved in
-$4/5$ seeds, a $15.7\%$ relative reduction), and Arabic ($22.07\!\to\!20.61$,
-improved in $4/4$ seeds, a $6.6\%$ relative reduction). Second, \textbf{on
-LibriSpeech-TTS the method is EER-neutral} ($34.44\!\to\!34.61$, improved in
-only $3/5$ seeds, within one standard deviation of source-only); we return to
+four targets}: ASVspoof2019 ($5.03\!\to\!3.47$, improved in $10/10$ seeds, a
+$31.1\%$ relative reduction, $p{=}0.0020$), Arabic ($22.50\!\to\!20.99$,
+improved in $10/10$ seeds, $6.7\%$, $p{=}0.0020$), and In-the-Wild
+($12.78\!\to\!11.33$, improved in $8/10$ seeds, $11.3\%$, $p{=}0.0293$).
+Second, \textbf{on LibriSpeech-TTS the method is EER-neutral}
+($33.54\!\to\!33.74$, improved in only $5/10$ seeds, $p{=}0.23$, within one
+standard deviation of source-only); we return to
 this in Sec.~\ref{sec:gaindecomp}. Third, \textbf{BN-only is numerically
 identical to source-only on every target}, as predicted by the LayerNorm
 argument in Sec.~III-B: there are no batch statistics for this architecture to
@@ -458,16 +460,18 @@ recompute, so this ablation is a clean negative control rather than a
 competing method.
 
 \textbf{Tent is not merely unstable, it is unpredictably catastrophic.} At
-three seeds, Tent's ASVspoof2019 result looked competitive with ours. A fourth
-and fifth seed changed that conclusion: per-seed EER is $4.16, 3.91, 3.04,
-49.52, 3.42\%$---four seeds close to source-only, one at chance. The mean,
-$12.81\!\pm\!20.52\%$, is meaningless as a point estimate (the standard
-deviation exceeds the mean), and no visible property of that seed's training
-run flagged it in advance; it looked like every other run until the score
-distribution collapsed. On Arabic, Tent is a \emph{consistent} failure rather
-than a volatile one: $48.16\!\pm\!2.28\%$, chance-level in all four seeds. On
-In-the-Wild it is volatile in the way we originally described,
-$26.66\!\pm\!11.09\%$, ranging seed-to-seed from a mild improvement over
+three seeds, Tent's ASVspoof2019 result looked competitive with ours. Ten
+seeds settle it: per-seed EER is $4.16$, $3.91$, $3.04$, $49.52$, $3.42$,
+$49.44$, $49.69$, $42.11$, $25.31$, $4.12\%$---five close to source-only, four
+at or near chance, one midway. The mean, $23.47\!\pm\!21.96\%$, is meaningless
+as a point estimate (the standard deviation is comparable to the mean), and no
+visible property of a collapsing seed's training run flagged it in advance; it
+looked like every other run until the score distribution collapsed. Doubling
+the seed count did not average the behaviour away, it showed the collapse to be
+routine rather than one unlucky run. On Arabic, Tent is a \emph{consistent}
+failure rather than a volatile one: $47.35\!\pm\!5.03\%$, chance-level in
+$9/10$ seeds. On In-the-Wild it is volatile in the way we originally described,
+$27.34\!\pm\!11.21\%$, ranging seed-to-seed from a mild improvement over
 source to a near-collapse. Only on LibriSpeech-TTS is it roughly neutral
 ($34.47\!\pm\!2.36\%$). We read the ASVspoof2019 result as the more important
 warning of the two failure modes: a method that is consistently bad
@@ -478,9 +482,9 @@ afford to check. This is the central empirical case for why the confident-
 pseudo-label design in Sec.~III-D---not TTA in general---is what makes
 adaptation dependable here: our method exhibits no comparable single-seed
 collapse on any target (Table~\ref{tab:main}'s largest std for \emph{ours} is
-$1.80$, on LibriSpeech-TTS, the one target where it does not help). The
+$2.01$, on LibriSpeech-TTS, the one target where it does not help). The
 \textbf{oracle} row shows substantial remaining headroom on every target
-(e.g.\ Arabic $20.61\!\to\!9.13\%$ with target labels), confirming none of the
+(e.g.\ Arabic $20.99\!\to\!9.50\%$ with target labels), confirming none of the
 unsupervised methods are anywhere near saturating what the architecture can
 achieve on these corpora.
 
@@ -498,13 +502,13 @@ ASVspoof2019 (Sec.~\ref{sec:main-results}).}
 \toprule
 Method & ASVspoof2019 & LibriSpeech-TTS (D2) & In-the-Wild & Arabic (ArAD) \\
 \midrule
-Source-only & 4.69 / .991 & 34.44 / .718 & 13.32 / .938 & 22.07 / .857 \\
-BN-only recalib.~\cite{adabn} & 4.69 / .991 (no-op) & 34.44 / .718 (no-op) & 13.32 / .938 (no-op) & 22.07 / .857 (no-op) \\
-Tent~\cite{tent} & 12.81$\pm$20.52 / .891 & 34.47$\pm$2.36 / .695 & 26.66$\pm$11.09 / .740 & 48.16$\pm$2.28 / .518 \\
-Self-training only & 3.89 / .989 & \textbf{34.10} / .704 & 12.10 / .942 & 21.85 / .856 \\
-\rowcolor{green!12}\textbf{Ours (TTA)} & \textbf{3.36} / .995 & 34.61 / .718 & \textbf{11.23} / .959 & \textbf{20.61} / .872 \\
+Source-only & 5.03 / .989 & 33.54 / .727 & 12.78 / .945 & 22.50 / .843 \\
+BN-only recalib.~\cite{adabn} & 5.03 / .989 (no-op) & 33.54 / .727 (no-op) & 12.78 / .945 (no-op) & 22.50 / .843 (no-op) \\
+Tent~\cite{tent} & 23.47$\pm$21.96 / .776 & 35.44$\pm$3.20 / .674 & 27.34$\pm$11.21 / .735 & 47.35$\pm$5.03 / .527 \\
+Self-training only & 4.20 / .987 & \textbf{33.39} / .709 & 11.55 / .950 & 22.19 / .846 \\
+\rowcolor{green!12}\textbf{Ours (TTA)} & \textbf{3.47} / .994 & 33.74 / .727 & \textbf{11.33} / .958 & \textbf{20.99} / .866 \\
 \midrule
-Oracle (supervised on target) & 0.73 / .999 & 12.89 / .946 & 3.87 / .993 & 9.13 / .970 \\
+Oracle (supervised on target) & 0.89 / .999 & 13.93 / .939 & 4.42 / .992 & 9.50 / .968 \\
 \bottomrule
 \end{tabular}
 \end{table*}
@@ -516,12 +520,12 @@ self-training step (source$\to$self-training-only) and a consistency step
 (self-training-only$\to$ours), per target. On three targets the two components
 are complementary: self-training alone captures most or some of the gain, and
 consistency adds a further reduction (largest on Arabic, the biggest domain
-gap: $-1.23$ points from consistency alone, helping in $4/4$ seeds). On
+gap: $-1.20$ points from consistency alone, helping in $10/10$ seeds). On
 \textbf{LibriSpeech-TTS, the pattern inverts}: self-training alone \emph{does}
-help ($-0.33$), but adding consistency \emph{costs} $+0.51$ and helps in
-\emph{none} of the five seeds, erasing the gain. We interpret this together
+help ($-0.15$), but adding consistency \emph{costs} $+0.35$ and helps in only
+$2/10$ seeds, erasing the gain. We interpret this together
 with the ranking-calibration story of Sec.~III-C: LibriSpeech-TTS is the target
-with the lowest source AUC ($0.718$, versus $\geq\!0.85$ on every other
+with the lowest source AUC ($0.727$, versus $\geq\!0.84$ on every other
 target), meaning the confident-tail pseudo-labels used by both components are
 themselves less reliable here; the consistency term, which pulls predictions on
 augmented and clean views together regardless of which one is correct, appears
@@ -544,10 +548,10 @@ $\Delta_1$: source$\to$self-training-only. $\Delta_2$: self-training-only$\to$ou
 \toprule
 Target & Source EER & $\Delta_1$ (self-train) & $\Delta_2$ (consistency) \\
 \midrule
-ASVspoof2019 & 4.69 & $-0.80$ & $-0.53$ \\
-LibriSpeech-TTS & 34.44 & $-0.33$ & \cellcolor{red!10}$+0.51$ \\
-In-the-Wild & 13.32 & $-1.22$ & $-0.87$ \\
-Arabic & 22.07 & $-0.23$ & $-1.23$ \\
+ASVspoof2019 & 5.03 & $-0.83$ & $-0.73$ \\
+LibriSpeech-TTS & 33.54 & $-0.15$ & \cellcolor{red!10}$+0.35$ \\
+In-the-Wild & 12.78 & $-1.23$ & $-0.22$ \\
+Arabic & 22.50 & $-0.30$ & $-1.20$ \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -589,10 +593,10 @@ results.}
 \toprule
 Target & XLS-R (ours) & RawNet2Lite (ours, non-SSL) \\
 \midrule
-ASVspoof2019 & 4.69 / .991 & 48.01 / .532 \\
-LibriSpeech-TTS & 34.44 / .718 & 50.98 / .480 \\
-In-the-Wild & 13.32 / .938 & 38.99 / .653 \\
-Arabic & 22.07 / .857 & 58.18 / .396 \\
+ASVspoof2019 & 5.03 / .989 & 48.62 / .523 \\
+LibriSpeech-TTS & 33.54 / .727 & 51.68 / .468 \\
+In-the-Wild & 12.78 / .945 & 39.46 / .650 \\
+Arabic & 22.50 / .843 & 56.52 / .416 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -618,17 +622,17 @@ them---and ASDG is exactly the experiment that isolates whether that omission
 matters. Both train for 8 epochs on the same source pool composition as the
 main grid.
 
-Both baselines underperform our method on three of four targets. DANN is close
-on ASVspoof2019 (both are near the oracle already) and markedly worse on Arabic
-($29.51\%$ vs.\ our $20.61\%$); ASDG is competitive with source-only on three
-targets but loses badly on In-the-Wild ($20.58\%$, worse than source-only's
-$13.32\%$), with a seed-level pattern that itself is informative: per-seed EER
-of $13.90, 19.78, 28.05\%$ is a \emph{monotonic} drift across seeds rather than
-noise around a mean, a milder version of the instability we document for Tent
-in Sec.~\ref{sec:main-results}. Between the two baselines, ASDG beats DANN on
-three of four targets (asvspoof2019, dataset2, arabic) but is worse than DANN,
-substantially, on the one target where DANN does well (In-the-Wild)---so
-neither baseline is uniformly better than the other, and \emph{both} are
+Both baselines are beaten pooled over all $40$ (target, seed) pairs ($30/40$,
+$p\!<\!10^{-4}$ each), but at ten seeds the per-target margin is narrower than a
+three-seed comparison suggested and we state it plainly: we win on Arabic and
+ASVspoof2019 against both, tie DANN on In-the-Wild ($5/10$ seeds), and lose to
+ASDG on LibriSpeech-TTS ($32.64\%$ vs.\ our $33.74\%$). DANN is markedly worse
+on Arabic ($28.53\%$ vs.\ our $20.99\%$) and remains the least seed-stable
+method we test (ASVspoof2019 EER ranges $3.23$--$14.85\%$). ASDG loses badly on
+In-the-Wild ($17.33\%$, worse than source-only's $12.78\%$). Between the two
+baselines, ASDG beats DANN on three of four targets but is worse than DANN on
+In-the-Wild---so neither baseline is uniformly better than the other, and
+\emph{both} are
 uniformly worse than test-time adaptation everywhere except LibriSpeech-TTS,
 the one target where our own method does not help either. Averaged over the
 three targets where our method helps, ASDG beats plain source-only fine-tuning
@@ -668,10 +672,10 @@ for that reason, not because it was cheaper.}
 \toprule
 Target & Source & DANN~\cite{dann} (30 min) & ASDG~\cite{asdg} & Ours (9 min) \\
 \midrule
-ASVspoof2019 & 4.69 / .991 & 6.61 / .980 & 4.45 / .990 & \textbf{3.36} / .995 \\
-LibriSpeech-TTS & 34.44 / .718 & 34.81 / .724 & 34.46 / .721 & \textbf{34.61} / .718 \\
-In-the-Wild & 13.32 / .938 & \textbf{11.95} / .931 & 20.58 / .861 & 11.23 / .959 \\
-Arabic & 22.07 / .857 & 29.51 / .724 & 22.19 / .859 & \textbf{20.61} / .872 \\
+ASVspoof2019 & 5.03 / .989 & 7.35 / .966 & 4.98 / .987 & \textbf{3.47} / .994 \\
+LibriSpeech-TTS & 33.54 / .727 & 34.43 / .717 & \textbf{32.64} / .749 & 33.74 / .727 \\
+In-the-Wild & 12.78 / .945 & 13.34 / .924 & 17.33 / .891 & \textbf{11.33} / .958 \\
+Arabic & 22.50 / .843 & 28.53 / .759 & 27.41 / .798 & \textbf{20.99} / .866 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -713,12 +717,13 @@ afford a validation signal.
 \centering
 \safefig{0.86\columnwidth}{fig_auc_gain.png}
 \caption{EER gain (source$-$ours) vs.\ source AUC before adaptation, one point
-per (target, seed), all $19$ leave-one-corpus-out runs (5 seeds per target, 4
-for Arabic). The positive trend ($r{=}{+}0.57$) supports the ranking-precondition
-account of Sec.~III-C: LibriSpeech-TTS (red), the lowest-AUC target, clusters at
-or below zero gain, while the higher-AUC targets cluster above it---the
-relationship strengthened, rather than weakened, when the seed count grew from
-3 to 5 per target ($r$ from $+0.41$ at $n{=}12$ to $+0.57$ at $n{=}19$), though
+per (target, seed), all $40$ leave-one-corpus-out runs (10 seeds per target).
+The positive trend ($r{=}{+}0.47$, $p{=}0.002$) supports the
+ranking-precondition account of Sec.~III-C: LibriSpeech-TTS (red), the
+lowest-AUC target, clusters at or below zero gain, while the higher-AUC targets
+cluster above it---the relationship survived the seed count growing from 3 to
+10 per target, at a somewhat smaller coefficient ($r$ from $+0.41$ at $n{=}12$
+to $+0.47$ at $n{=}40$, now with $p{=}0.002$), though
 one LibriSpeech-TTS seed still shows a small negative gain even relative to its
 own AUC.}
 \label{fig:aucgain}
@@ -756,8 +761,8 @@ $\lambda{=}1.0$ & \textbf{13.98} / \textbf{.937} & 25.28 / .832 \\
 To rule out transductive memorisation, we adapt on one half of each target and
 evaluate on the disjoint half (Table~\ref{tab:inductive}). The improvement
 holds up on the three targets where the transductive result is positive: EER
-improves on ASVspoof2019 ($4.80\!\to\!3.53$, $5/5$ seeds), In-the-Wild
-($13.45\!\to\!11.80$, $4/5$ seeds), and Arabic ($21.83\!\to\!21.12$, $3/4$
+improves on ASVspoof2019 ($5.07\!\to\!3.70$, $10/10$ seeds), In-the-Wild
+($12.73\!\to\!11.61$, $8/10$ seeds), and Arabic ($22.31\!\to\!21.47$, $9/10$
 seeds)---in every case within a point of the transductive result, so the gain
 reflects domain-level structure learned during adaptation, not memorisation of
 the specific clips scored; the sign consistency is slightly weaker than the
@@ -778,10 +783,10 @@ disjoint half. Mean EER\,\% over 5 seeds (4 for Arabic).}
 \toprule
 Target & Source (half) & Ours (half, disjoint eval) \\
 \midrule
-ASVspoof2019 & 4.80 & \textbf{3.53} \\
-LibriSpeech-TTS & 34.33 & 34.51 \\
-In-the-Wild & 13.45 & \textbf{11.80} \\
-Arabic & 21.83 & \textbf{21.12} \\
+ASVspoof2019 & 5.07 & \textbf{3.70} \\
+LibriSpeech-TTS & 33.45 & 33.58 \\
+In-the-Wild & 12.73 & \textbf{11.61} \\
+Arabic & 22.31 & \textbf{21.47} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -983,13 +988,12 @@ instability result, and leave $\lambda$ at a constant.
 \item \textbf{The method needs a source model with an already-reliable
 ranking.} The mechanism in Sec.~III-C requires confident-tail pseudo-labels to
 be trustworthy, which in turn requires source AUC on the target to be
-reasonably high before adaptation begins. Across all $19$ (target, seed)
-points (5 seeds for three targets, 4 for Arabic), source AUC and the resulting
-EER gain are positively correlated ($r{=}{+}0.57$, Fig.~\ref{fig:aucgain}, up
-from $r{=}{+}0.41$ at the earlier $n{=}12$); the one target where the
-method is EER-neutral
-(LibriSpeech-TTS) is also the one with the lowest source AUC ($0.72$, versus
-$\geq\!0.85$ on the other three). We read this as evidence \emph{for} the
+reasonably high before adaptation begins. Across all $40$ (target, seed)
+points (10 seeds per target), source AUC and the resulting EER gain are
+positively correlated ($r{=}{+}0.47$, $p{=}0.002$, Fig.~\ref{fig:aucgain});
+the one target where the method is EER-neutral
+(LibriSpeech-TTS) is also the one with the lowest source AUC ($0.73$, versus
+$\geq\!0.84$ on the other three). We read this as evidence \emph{for} the
 mechanism we propose---the method fails exactly where its own precondition is
 weakest, not arbitrarily---but with only four targets this is a plausible
 relationship, not a validated predictive rule, and a from-scratch or
@@ -1007,16 +1011,19 @@ despite this variance, and Tent's own seed-to-seed instability
 variance itself. Reducing this variance (e.g.\ a tuned learning-rate schedule,
 or a larger seed count than our compute budget allowed) is future work.
 
-\item \textbf{Statistical power is limited by scale.} Four targets and five
-seeds (four for Arabic) establish sign consistency and a plausible mechanism,
-not a rigorous statistical test. Extending from three seeds to five
-strengthened rather than weakened the paper's central claims---the
-LibriSpeech-TTS null result held (consistency helped in $0/5$ seeds, not just
-$1/3$ before), the AUC-gain correlation strengthened ($r{=}{+}0.41\to{+}0.57$),
-and it surfaced a finding three seeds could not have: Tent's ASVspoof2019
-result is not merely noisy but includes a full single-seed collapse invisible
-at smaller $n$ (Sec.~\ref{sec:main-results})---but the underlying limitation is
-the same in kind, only quantitatively smaller. We still cannot determine
+\item \textbf{Statistical power is limited by scale.} Four targets and ten
+seeds support a per-target significance test, which five could not: the
+combinatorial floor of the Wilcoxon signed-rank statistic at $n{=}5$ is
+$0.0625$, so no per-target claim was attainable at any effect size. Extending
+from three seeds to ten did \emph{not} uniformly strengthen the paper's claims,
+and we report both directions. It confirmed the LibriSpeech-TTS null
+(consistency helps in only $2/10$ seeds) and showed Tent's ASVspoof2019
+collapse to be routine rather than a single unlucky run ($4/10$ seeds at or near
+chance). It also shrank two claims: the AUC-gain correlation fell from
+$r{=}{+}0.57$ at $n{=}19$ to $r{=}{+}0.47$ at $n{=}40$ (now with $p{=}0.002$),
+and our margin over the train-time DG baselines went from a three-of-four sweep
+to a pooled result with two clear per-target wins
+(Sec.~\ref{sec:dann}). We still cannot determine
 whether the LibriSpeech-TTS null result would replicate under a different
 source-pool composition, a different random split of that corpus, or a fifth
 target with similarly low source AUC, and a single-seed collapse like Tent's
