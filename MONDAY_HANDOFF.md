@@ -4,8 +4,7 @@ Self-contained runbook for a fresh session on a cloud box with **no data and no
 repo**. Everything needed is either in this repo or listed under Uploads.
 
 Paste the block in §0 as the opening message of a new session, then work through
-§2–§7. `cloud_monday.ipynb` is the same sequence as a notebook if you prefer
-cells; this file is the shell version.
+§2–§7.
 
 ---
 

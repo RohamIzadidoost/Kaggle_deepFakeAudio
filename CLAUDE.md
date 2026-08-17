@@ -72,8 +72,7 @@ real-anchor losses — validated as harmful, kept for the ablation), `sampler.py
 ### Adaptive q/E (Phase 4, pre-GPU validated, not yet run at scale)
 
 For a cloud box with no data, `MONDAY_HANDOFF.md` is the end-to-end runbook
-(uploads, downloads, gates, what to report); `cloud_monday.ipynb` is the same
-sequence as notebook cells.
+(uploads, downloads, gates, what to report).
 
 ```bash
 python test_adaptive_tta.py          # 36 CPU checks, no GPU needed

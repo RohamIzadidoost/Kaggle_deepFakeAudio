@@ -193,7 +193,6 @@ ASDG_SEEDS=3,4 python asdg_pipeline.py   # extend seed coverage the same way as 
 <div class="step">
 <pre><code>TUESDAY_BUDGET_H=23 nohup python tuesday_runner.py > logs/tuesday.out 2>&1 &</code></pre>
 <p>Works a fixed priority queue (ext seed 4 → ext seed 5 → asdg 3,4 → dann 3,4 → ext 6–9) against the budget, skipping any job that no longer fits the remaining time. Hard-gates every job on a complete MLAAD download (154+ <code>meta.csv</code> files) before running anything, since every remaining job trains source models and a partial/missing MLAAD would silently train on a non-comparable source composition rather than error. Refuses to start a second instance (PID-file lock at <code>tuesday_runner.lock</code>) — if you need to take over from a dead process: <code>pkill -f tuesday_runner && rm tuesday_runner.lock</code>.</p>
-<p>Or via the notebook front-end (same launch, plus environment/repo setup cells): open <code>cloud_tuesday.ipynb</code>, Run All Cells, then close the browser — the last cell detaches the supervisor so it survives the kernel and the connection dropping.</p>
 <pre><code>tail -f run_log_tuesday.txt          # live progress
 cat tuesday_state.json               # which jobs have completed</code></pre>
 <div class="callout ok"><strong>Fully resumable by design.</strong> Every underlying pipeline (<code>extended_pipeline.py</code>, <code>asdg_pipeline.py</code>, <code>analysis_pipeline.py</code>) appends to its CSV per fold with its own <code>(seed, target)</code> resume guard, and the supervisor keeps <code>tuesday_state.json</code> on top of that. Killing and re-launching <code>tuesday_runner.py</code> at any point repeats no completed GPU work. The one exception is DANN, which has no resume guard of its own — the supervisor passes it explicit <code>DANN_SEEDS=3,4</code> so it can't duplicate seeds 0–2, and merges (not copies) its output back to the root <code>results_dann.csv</code>.</div>
@@ -217,7 +216,7 @@ python verify_reduction.py       # MUST pass before trusting any adaptive-vs-fix
 
 <div class="step"><h4><span class="stepnum">3</span>Real run (needs a GPU box with no local data — see MONDAY_HANDOFF.md)</h4>
 <pre><code>ADAPTIVE_SMOKE=0 python adaptive_pipeline.py    # 4 targets x seeds 0-2</code></pre>
-<p><code>MONDAY_HANDOFF.md</code> / <code>cloud_monday.ipynb</code> is the full runbook for a fresh cloud session: required uploads (<code>ckpt_ext/</code> source checkpoints, <code>kaggle.json</code>, the Protocol A RawBoost checkpoint, and its results CSV) to avoid a ~3h retrain and a 57GB MLAAD download that this path never actually needs. Time budget: ~40min setup, ~5min <code>verify_reduction.py</code> gate, ~6h for the grid, ~1h for Protocol A's adaptive arm.</p>
+<p><code>MONDAY_HANDOFF.md</code> is the full runbook for a fresh cloud session: required uploads (<code>ckpt_ext/</code> source checkpoints, <code>kaggle.json</code>, the Protocol A RawBoost checkpoint, and its results CSV) to avoid a ~3h retrain and a 57GB MLAAD download that this path never actually needs. Time budget: ~40min setup, ~5min <code>verify_reduction.py</code> gate, ~6h for the grid, ~1h for Protocol A's adaptive arm.</p>
 </div>
 
 <!-- ============================================================ -->
