@@ -87,7 +87,7 @@
 <div class="wrap">
 
 <h1>Code Walkthrough — Audio Deepfake Detection Codebase</h1>
-<p class="subtitle">Function-by-function tour of every script, cross-referenced against <code>main.tex</code> / <code>main_icassp.tex</code> / <code>PROJECT_LOG.md</code>, prepared for a code-review session with a PhD student. Generated 2026-08-09, updated 2026-08-10 (adaptive-q/E line, commits <code>2ba4a16</code>…<code>c1efb55</code>), updated again 2026-08-11 after the Tuesday-supervisor session (commits <code>30bd723</code>…<code>1e5e90e</code>).</p>
+<p class="subtitle">Function-by-function tour of every script, cross-referenced against <code>main.tex</code> / <code>main_icassp.tex</code> / <code>PROJECT_LOG.md</code>, prepared for a code-review session with a PhD student. Generated 2026-08-09, updated 2026-08-10 (adaptive-q/E line, commits <code>2ba4a16</code>…<code>c1efb55</code>), updated again 2026-08-11 after the Tuesday-supervisor session (commits <code>30bd723</code>…<code>1e5e90e</code>), updated again 2026-08-17 after a cleanup pass: <code>cloud_monday.py</code>/<code>.ipynb</code>, <code>cloud_pipeline.py</code>/<code>.ipynb</code>, and <code>sweep2_pipeline.py</code> were removed as superseded (entries below marked "Removed"); root-level debug logs moved to <code>logs/</code>; <code>README.md</code> was rewritten as the authoritative step-by-step reproduction path for every paper table and figure — see there first for "how do I reproduce X".</p>
 
 <div class="callout">
 <strong>What changed in this update (2026-08-11).</strong> Monday's session (Phase 4, adaptive q/E) was found to be off the ICASSP critical path — <code>ICASSP_PLAN.md</code> §P3 lists adaptive q/E and Protocol A as <strong>deliberately excluded</strong> from this paper. Tuesday's session pivoted to P1 (the significance-testing / seed-count compute package) and added an unattended, resumable job supervisor: <code>tuesday_runner.py</code>, <code>cloud_tuesday.py</code>/<code>.ipynb</code>, and <code>stats_tests.py</code> (which did not exist yet at the last update — the "no <code>stats_tests.py</code> exists" warning below is now stale and corrected). See the new <a href="#phase5">Phase 5</a> section. The session itself surfaced and fixed three of its own bugs in three follow-up commits — a dead-branch env var that made six seed jobs silently no-op, a supervisor that logged those no-ops as success, and a publish step that would have overwritten 12 rows of DANN results with 8 — all narrated in Phase 5 below, since they're a good illustration of how "the script exited 0" is not evidence of anything.
@@ -588,11 +588,10 @@ document.addEventListener('DOMContentLoaded', function(){
 </div>
 </details>
 
-<details class="file" id="f-cloud_monday" data-name="cloud_monday.py / cloud_monday.ipynb" data-badge="badge-sup" data-badge-text="Support — the pending GPU run driver">
-<summary><div class="summary-left"><h3 class="file-title">cloud_monday.py / cloud_monday.ipynb</h3><span class="file-purpose">the actual cloud session that will produce Phase 4's first real numbers — not yet run</span></div><span class="badge badge-sup">Support</span></summary>
+<details class="file" id="f-cloud_monday" data-name="cloud_monday.py / cloud_monday.ipynb" data-badge="badge-no" data-badge-text="Removed">
+<summary><div class="summary-left"><h3 class="file-title">cloud_monday.py / cloud_monday.ipynb</h3><span class="file-purpose">removed in the 2026-08-17 cleanup pass — see README.md</span></div><span class="badge badge-no">Removed</span></summary>
 <div class="file-body">
-<p>Jupytext notebook for a fresh cloud box with no data (~35GB GPU target). Box-checks GPU/disk, clones the repo (finds the upload directory by <em>searching</em> for the uploaded files rather than guessing a path — a JupyterLab breadcrumb "/work" turned out to be relative to the notebook server root on a real box, not an absolute path, so a hardcoded guess silently failed there once), copies uploaded checkpoints into place, runs <code>verify_reduction.py</code> as a hard gate, then runs the 4-target×3-seed adaptive grid (<code>adaptive_pipeline.py</code>'s <code>run_grid()</code>) followed by Protocol A's adaptive arm. Expects four uploads: <code>ckpt_ext/</code> (12 checkpoints, 2.3GB — skips ~3h of source training and a 57GB MLAAD download entirely), <code>kaggle.json</code>, <code>ckpt_protocol_a_rawboost.pt</code> (193MB, skips 16 epochs of Protocol A source training), and <code>results_protocol_a.csv</code> (so only the new adaptive arm runs there, ~1h instead of ~5h). Stated time budget: ~40min setup, ~5min verify_reduction gate, ~6h grid, ~1h Protocol A.</p>
-<div class="trace-box sup"><span class="label">Support role</span>This is the literal script that, once run, would generate the numbers Phase 4 currently lacks. Nothing to trace against the paper yet — it hasn't executed.</div>
+<p>Removed: this was the Monday cloud-session driver for the adaptive q/E grid and Protocol A's adaptive arm, both of which ICASSP_PLAN.md §3 (P3) marks as deliberately excluded from the paper. Superseded by tuesday_runner.py / wednesday_runner.py, which drove the paper's actual 10-seed results.</p>
 </div>
 </details>
 
@@ -769,28 +768,17 @@ document.addEventListener('DOMContentLoaded', function(){
 </div>
 </details>
 
-<details class="file" id="f-cloud_pipeline" data-name="cloud_pipeline.py" data-badge="badge-ind" data-badge-text="Indirect — superseded precursor">
-<summary><div class="summary-left"><h3 class="file-title">cloud_pipeline.py</h3><span class="file-purpose">earlier 3-target cloud TTA notebook, precursor to extended_pipeline.py</span></div><span class="badge badge-ind">Indirect</span></summary>
+<details class="file" id="f-cloud_pipeline" data-name="cloud_pipeline.py / cloud_pipeline.ipynb" data-badge="badge-no" data-badge-text="Removed">
+<summary><div class="summary-left"><h3 class="file-title">cloud_pipeline.py / cloud_pipeline.ipynb</h3><span class="file-purpose">removed in the 2026-08-17 cleanup pass — see README.md</span></div><span class="badge badge-no">Removed</span></summary>
 <div class="file-body">
-<p>Paired with <code>cloud_pipeline.ipynb</code> (both git-modified per the repo status — presumably still actively maintained/kept in sync, even if superseded as a results source). Implements the full TTA pipeline end-to-end for 3 targets (In-the-Wild, ASVspoof2021-DF, Arabic — no MLAAD, no dataset2), using a standard PyTorch <code>DataLoader</code>/<code>Dataset</code> rather than the GPU-resident cache used by later scripts.</p>
-<ul class="fnlist">
-<li><code class="sig">fetch_arabic(out)</code>, <code class="sig">_asvspoof2021_rows(root)</code>, <code class="sig">build_manifest()</code>, <code class="sig">balanced(df,n,seed)</code>, <code class="sig">load_audio(path)</code>, <code class="sig">class AudioDS(Dataset)</code>, <code class="sig">loader(df,bs,shuffle)</code> — standard DataLoader-based data plumbing (the pre-GPU-cache era of this pipeline family).</li>
-<li><code class="sig">class XLSRDetector</code>, <code class="sig">fit</code>, <code class="sig">set_tta_params</code>, <code class="sig">tta(...)</code>, <code class="sig">tent(...)</code> — the same method family, DataLoader-based version.</li>
-</ul>
-<p>Module-level (not function-wrapped) experiment loop: 3 seeds × 3 targets, saves <code>cloud_results_per_seed.csv</code>, <code>cloud_results.csv</code>, an ablation section (<code>cloud_ablation.csv</code>), an inductive-check section (<code>cloud_inductive.csv</code>), and an insight-figure section (<code>fig_score_dist.png</code>).</p>
-<div class="trace-box ind"><span class="label">Paper trace</span>Its own docstring says "outputs ready for main.tex Table 1," but its target set doesn't match the paper's final 4-target grid — <code>main.tex</code>'s intro explicitly calls out an "earlier two-target pilot… numbers should not be compared directly," which this (or <code>overnight_pipeline.py</code>) is. Superseded by <code>extended_pipeline.py</code> as the results source, but not itself unreferenced — the paper acknowledges its existence as a superseded precursor.</div>
+<p>Removed: the earliest 3-target cloud TTA driver (no MLAAD, no dataset2), fully superseded by extended_pipeline.py's 4-target grid and the tuesday_runner.py / wednesday_runner.py supervisors that produced the paper's results.</p>
 </div>
 </details>
 
-<details class="file" id="f-sweep2_pipeline" data-name="sweep2_pipeline.py" data-badge="badge-no" data-badge-text="Not incorporated">
-<summary><div class="summary-left"><h3 class="file-title">sweep2_pipeline.py</h3><span class="file-purpose">adaptation-only follow-up sweep (λ and epoch-count) reusing extended_pipeline's source checkpoints</span></div><span class="badge badge-no">Not incorporated</span></summary>
+<details class="file" id="f-sweep2_pipeline" data-name="sweep2_pipeline.py" data-badge="badge-no" data-badge-text="Removed">
+<summary><div class="summary-left"><h3 class="file-title">sweep2_pipeline.py</h3><span class="file-purpose">removed in the 2026-08-17 cleanup pass — see README.md</span></div><span class="badge badge-no">Removed</span></summary>
 <div class="file-body">
-<p>Never retrains sources (comment: "never train anything in this script") — read-only over <code>ckpt_ext/</code>. Part A: consistency-weight λ sweep on 2 targets (dataset2 = low-source-AUC case, arabic = high-AUC). Part B: adaptation-epoch sweep (E=8 vs. default E=4) across all 4 targets.</p>
-<ul class="fnlist">
-<li>Hardcoded <code>EXPECT_LANGS = ["mt","sl","hu","hr","fi","lt"]</code> assertion — aborts with <code>SystemExit(1)</code> if the held-out MLAAD language set doesn't match <code>extended_pipeline.py</code>'s, since results wouldn't be comparable otherwise.</li>
-<li>Checkpoint-EER verification: reloads and rescores each checkpoint, skips a fold if the EER mismatches the recorded source EER by &gt;0.5 points ("checkpoint or data pool differs, results would not be comparable").</li>
-</ul>
-<div class="trace-box no"><span class="label">No trace in paper</span><code>ICASSP_PLAN.md</code> §P3 explicitly lists "Re-running the hyperparameter sweep… leave it" as a deliberately-not-done item. <code>main.tex</code>'s <code>tab:sweep</code> is stated to be "a two-target seed-0 artifact" predating the 4-target extension — this script's finer-grained λ-grid output (<code>results_sweep2.csv</code>) is not what <code>tab:sweep</code> reports.</div>
+<p>Removed: an adaptation-only follow-up sweep (λ and epoch-count) that was never incorporated into the paper. sweep_reseeded.py → sweep_reseeded.csv — the script that actually produced the still-cited hyperparameter-sweep table (main.tex Table 4/tab:sweep) — was kept; only this unused follow-up was removed.</p>
 </div>
 </details>
 
