@@ -1,0 +1,496 @@
+<title>Public Checkpoint TTA</title>
+<style>
+  /* ---- tokens: complete light palette on bare :root ---- */
+  :root {
+    --ground:   #FAFBFB;
+    --surface:  #F1F4F4;
+    --sunken:   #E8EDED;
+    --ink:      #12181A;
+    --ink-2:    #55646A;
+    --ink-3:    #7C8B90;
+    --rule:     #DBE3E3;
+    --rule-2:   #C4D0D0;
+    --accent:   #0D9488;   /* our method / improvement  (validated) */
+    --source:   #B8862B;   /* source baseline           (validated) */
+    --bad:      #B0442C;   /* degradation / collapse    (validated) */
+    --accent-wash: #E3F1EF;
+    --bad-wash:    #F7E7E2;
+
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", "Times New Roman", serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:   #0F1416;
+      --surface:  #161D1F;
+      --sunken:   #1C2426;
+      --ink:      #E4EBEB;
+      --ink-2:    #94A4A6;
+      --ink-3:    #74868A;
+      --rule:     #243031;
+      --rule-2:   #33403F;
+      --accent:   #11A896;
+      --source:   #AF8A2A;
+      --bad:      #D66450;
+      --accent-wash: #10312F;
+      --bad-wash:    #33201B;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:   #0F1416;
+    --surface:  #161D1F;
+    --sunken:   #1C2426;
+    --ink:      #E4EBEB;
+    --ink-2:    #94A4A6;
+    --ink-3:    #74868A;
+    --rule:     #243031;
+    --rule-2:   #33403F;
+    --accent:   #11A896;
+    --source:   #AF8A2A;
+    --bad:      #D66450;
+    --accent-wash: #10312F;
+    --bad-wash:    #33201B;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16.5px;
+    line-height: 1.62;
+    margin: 0;
+    padding: 0 24px 96px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1000px; margin: 0 auto; }
+  .col  { max-width: 660px; }
+
+  /* ---- header ---- */
+  header { padding: 64px 0 34px; border-bottom: 2px solid var(--ink); margin-bottom: 40px; }
+  h1 {
+    font-family: var(--serif); font-weight: 600;
+    font-size: clamp(2.1rem, 5.4vw, 3.1rem); line-height: 1.08;
+    letter-spacing: -0.015em; margin: 0 0 16px; text-wrap: balance;
+  }
+  .thesis { font-size: 1.16rem; color: var(--ink-2); max-width: 640px; margin: 0 0 30px; text-wrap: pretty; }
+  .meta { display: flex; flex-wrap: wrap; gap: 10px 30px; font-family: var(--mono); font-size: 0.76rem; color: var(--ink-3); }
+  .meta b { color: var(--ink-2); font-weight: 600; }
+
+  /* ---- sections ---- */
+  section { margin: 0 0 60px; }
+  .eyebrow {
+    display: inline-block; font-family: var(--mono); font-size: 0.68rem;
+    text-transform: uppercase; letter-spacing: 0.13em; font-weight: 600;
+    padding: 3px 9px; border-radius: 3px; margin-bottom: 14px;
+    background: var(--sunken); color: var(--ink-2); border: 1px solid var(--rule);
+  }
+  .eyebrow.correction { background: var(--bad-wash); color: var(--bad); border-color: transparent; }
+  .eyebrow.result     { background: var(--accent-wash); color: var(--accent); border-color: transparent; }
+  h2 {
+    font-family: var(--serif); font-weight: 600; font-size: 1.72rem;
+    line-height: 1.2; margin: 0 0 14px; letter-spacing: -0.01em; text-wrap: balance;
+  }
+  h3 {
+    font-family: var(--sans); font-weight: 650; font-size: 1rem;
+    margin: 30px 0 8px; letter-spacing: 0.005em;
+  }
+  p { margin: 0 0 16px; text-wrap: pretty; }
+  a { color: var(--accent); }
+
+  /* ---- hero stats ---- */
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(178px, 1fr)); gap: 1px;
+           background: var(--rule); border: 1px solid var(--rule); margin: 30px 0 8px; }
+  .stat { background: var(--surface); padding: 18px 20px; }
+  .stat .n { font-family: var(--mono); font-size: 1.72rem; font-weight: 600; letter-spacing: -0.02em;
+             font-variant-numeric: tabular-nums; display: block; line-height: 1.15; }
+  .stat .k { font-size: 0.78rem; color: var(--ink-2); margin-top: 5px; display: block; }
+  .stat .n.good { color: var(--accent); }
+
+  /* ---- tables ---- */
+  .scroll { overflow-x: auto; margin: 22px 0; border: 1px solid var(--rule); }
+  table { border-collapse: collapse; width: 100%; font-size: 0.87rem; min-width: 560px; }
+  th, td { padding: 9px 14px; text-align: right; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; }
+  thead th {
+    background: var(--sunken); font-family: var(--mono); font-weight: 600;
+    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--ink-2);
+    border-bottom: 1px solid var(--rule-2);
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr.hi td { background: var(--surface); font-weight: 600; }
+  td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  td.good { color: var(--accent); font-weight: 600; }
+  td.bad  { color: var(--bad); font-weight: 600; }
+  caption { caption-side: bottom; text-align: left; padding: 10px 14px; font-size: 0.78rem;
+            color: var(--ink-3); border-top: 1px solid var(--rule); }
+
+  /* ---- figures ---- */
+  figure { margin: 26px 0; }
+  figcaption { font-size: 0.8rem; color: var(--ink-3); margin-top: 10px; max-width: 660px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 18px; font-size: 0.79rem; color: var(--ink-2); margin-bottom: 12px; }
+  .legend span { display: inline-flex; align-items: center; gap: 7px; }
+  .swatch { width: 11px; height: 11px; border-radius: 2px; display: inline-block; }
+  /* charts scroll on narrow viewports rather than shrinking their labels to nothing */
+  .chartwrap { overflow-x: auto; }
+  svg { width: 100%; height: auto; display: block; min-width: 640px; }
+  .ax   { font-family: var(--mono); font-size: 10.5px; fill: var(--ink-3); }
+  .lbl  { font-family: var(--sans); font-size: 12.5px; fill: var(--ink); }
+  .val  { font-family: var(--mono); font-size: 11.5px; font-weight: 600; }
+
+  /* ---- callout ---- */
+  .callout { border-left: 3px solid var(--bad); background: var(--surface); padding: 16px 20px; margin: 22px 0; }
+  .callout.ok { border-left-color: var(--accent); }
+  .callout p:last-child { margin-bottom: 0; }
+  .callout .h { font-weight: 650; margin-bottom: 6px; }
+
+  code { font-family: var(--mono); font-size: 0.87em; background: var(--sunken);
+         padding: 1.5px 5px; border-radius: 3px; }
+  ul { margin: 0 0 16px; padding-left: 20px; }
+  li { margin-bottom: 7px; }
+  hr { border: none; border-top: 1px solid var(--rule); margin: 52px 0; }
+  .foot { font-size: 0.83rem; color: var(--ink-3); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="wrap">
+<header>
+  <h1>Adapting Public Detectors, Without Labels</h1>
+  <p class="thesis">Our test-time adaptation was applied to four independently released audio-deepfake
+  detectors on the In-the-Wild benchmark. Every one improved. Two of our own prior claims did not survive
+  the wider test, and those corrections are the most useful part of this report.</p>
+  <div class="meta">
+    <span><b>18 Aug 2026</b></span>
+    <span>14 runs &middot; <b>4 checkpoints</b></span>
+    <span><b>31,779</b> clips per run</span>
+    <span>~10 h on one RTX 3080</span>
+    <span><b>16,706</b> trainable params (0.005%)</span>
+  </div>
+</header>
+
+<section class="col">
+  <span class="eyebrow result">Result</span>
+  <h2>What this answers</h2>
+  <p>Until now every number in the paper compared our source model against our baselines on our protocol.
+  The predictable reviewer objection is <em>&ldquo;no comparison to state of the art.&rdquo;</em> Building a
+  better detector is the expensive answer. The cheap one is to show our adaptation improves
+  <em>somebody else&rsquo;s published detector</em>, on a standard benchmark, using their released weights.</p>
+  <p>Because the method needs no training and no labels, this is plumbing plus adaptation runs &mdash;
+  not a new model.</p>
+</section>
+
+<div class="stats">
+  <div class="stat"><span class="n good">4 / 4</span><span class="k">public checkpoints improved</span></div>
+  <div class="stat"><span class="n">5.04 &rarr; <span style="color:var(--accent)">4.08</span></span><span class="k">headline EER %, best-known checkpoint</span></div>
+  <div class="stat"><span class="n good">&minus;38.5%</span><span class="k">largest relative EER reduction</span></div>
+  <div class="stat"><span class="n">0.02</span><span class="k">EER gap, seen vs unseen clips</span></div>
+</div>
+
+<section>
+  <span class="eyebrow result">Result</span>
+  <h2>Every checkpoint improved</h2>
+  <div class="col">
+  <p>Two independent training corpora, four checkpoints, no labels used for adaptation at any point
+  &mdash; labels enter only when scoring.</p>
+  </div>
+
+  <div class="scroll">
+  <table>
+    <thead><tr>
+      <th>Checkpoint</th><th>Trained on</th><th>Source EER</th><th>Adapted EER</th><th>&Delta;</th><th>Relative</th><th>AUC</th>
+    </tr></thead>
+    <tbody>
+      <tr class="hi">
+        <td>ash56 SSL-AASIST</td><td>WaveFake / HiFiGAN</td>
+        <td class="num">5.04</td><td class="num">4.08 &plusmn; 0.02</td>
+        <td class="num good">&minus;0.96</td><td class="num good">&minus;19.1%</td>
+        <td class="num">.9856 &rarr; .9901</td>
+      </tr>
+      <tr>
+        <td>DeepFense seed 2</td><td>ASVspoof2019 LA</td>
+        <td class="num">9.60</td><td class="num">9.06</td>
+        <td class="num good">&minus;0.53</td><td class="num good">&minus;5.5%</td>
+        <td class="num">.9661 &rarr; .9696</td>
+      </tr>
+      <tr>
+        <td>DeepFense seed 240</td><td>ASVspoof2019 LA</td>
+        <td class="num">8.41</td><td class="num">7.88</td>
+        <td class="num good">&minus;0.52</td><td class="num good">&minus;6.2%</td>
+        <td class="num">.9697 &rarr; .9735</td>
+      </tr>
+      <tr class="hi">
+        <td>DeepFense seed 42</td><td>ASVspoof2019 LA</td>
+        <td class="num">16.41</td><td class="num">10.10</td>
+        <td class="num good">&minus;6.31</td><td class="num good">&minus;38.5%</td>
+        <td class="num">.9178 &rarr; .9611</td>
+      </tr>
+    </tbody>
+    <caption>In-the-Wild, all 31,779 clips. ash56 is the mean of 3 adaptation seeds; the rest are seed 0.
+    &plusmn; is adaptation stochasticity only &mdash; see Limitations.</caption>
+  </table>
+  </div>
+
+  <figure>
+    <div class="legend">
+      <span><i class="swatch" style="background:var(--source)"></i> Source (released weights)</span>
+      <span><i class="swatch" style="background:var(--accent)"></i> After our adaptation</span>
+    </div>
+    <div class="chartwrap">
+    <svg viewBox="0 0 900 262" role="img" aria-label="Equal error rate before and after adaptation for four checkpoints">
+      <!-- grid -->
+      <g class="ax" text-anchor="middle">
+        <line x1="210" y1="212" x2="870" y2="212" stroke="var(--rule-2)" stroke-width="1"/>
+        <line x1="210" y1="34" x2="210" y2="212" stroke="var(--rule)" stroke-width="1"/>
+        <line x1="393" y1="34" x2="393" y2="212" stroke="var(--rule)" stroke-width="1"/>
+        <line x1="577" y1="34" x2="577" y2="212" stroke="var(--rule)" stroke-width="1"/>
+        <line x1="760" y1="34" x2="760" y2="212" stroke="var(--rule)" stroke-width="1"/>
+        <text x="210" y="230">0</text><text x="393" y="230">5</text>
+        <text x="577" y="230">10</text><text x="760" y="230">15</text>
+        <text x="540" y="252" fill="var(--ink-2)">Equal error rate (%) &mdash; lower is better</text>
+      </g>
+      <!-- rows: x(v) = 210 + v*36.67 -->
+      <g>
+        <!-- ash56: 5.04 -> 394.8 ; 4.08 -> 359.6 -->
+        <text class="lbl" x="196" y="62" text-anchor="end">ash56 SSL-AASIST</text>
+        <line x1="359.6" y1="57" x2="394.8" y2="57" stroke="var(--rule-2)" stroke-width="2"/>
+        <circle cx="394.8" cy="57" r="6" fill="var(--source)"><title>Source 5.04%</title></circle>
+        <circle cx="359.6" cy="57" r="6" fill="var(--accent)"><title>Adapted 4.08%</title></circle>
+        <text class="val" x="345" y="61" text-anchor="end" fill="var(--accent)">4.08</text>
+
+        <!-- s2: 9.60 -> 562.0 ; 9.06 -> 542.2 -->
+        <text class="lbl" x="196" y="105" text-anchor="end">DeepFense seed 2</text>
+        <line x1="542.2" y1="100" x2="562.0" y2="100" stroke="var(--rule-2)" stroke-width="2"/>
+        <circle cx="562.0" cy="100" r="6" fill="var(--source)"><title>Source 9.60%</title></circle>
+        <circle cx="542.2" cy="100" r="6" fill="var(--accent)"><title>Adapted 9.06%</title></circle>
+        <text class="val" x="528" y="104" text-anchor="end" fill="var(--accent)">9.06</text>
+
+        <!-- s240: 8.41 -> 518.4 ; 7.88 -> 499.0 -->
+        <text class="lbl" x="196" y="148" text-anchor="end">DeepFense seed 240</text>
+        <line x1="499.0" y1="143" x2="518.4" y2="143" stroke="var(--rule-2)" stroke-width="2"/>
+        <circle cx="518.4" cy="143" r="6" fill="var(--source)"><title>Source 8.41%</title></circle>
+        <circle cx="499.0" cy="143" r="6" fill="var(--accent)"><title>Adapted 7.88%</title></circle>
+        <text class="val" x="485" y="147" text-anchor="end" fill="var(--accent)">7.88</text>
+
+        <!-- s42: 16.41 -> 811.8 ; 10.10 -> 580.3 -->
+        <text class="lbl" x="196" y="191" text-anchor="end">DeepFense seed 42</text>
+        <line x1="580.3" y1="186" x2="811.8" y2="186" stroke="var(--accent)" stroke-width="2" opacity="0.4"/>
+        <circle cx="811.8" cy="186" r="6" fill="var(--source)"><title>Source 16.41%</title></circle>
+        <circle cx="580.3" cy="186" r="6" fill="var(--accent)"><title>Adapted 10.10%</title></circle>
+        <text class="val" x="566" y="190" text-anchor="end" fill="var(--accent)">10.10</text>
+        <text class="val" x="826" y="190" fill="var(--source)">16.41</text>
+      </g>
+    </svg>
+    </div>
+    <figcaption>The three ASVspoof2019 checkpoints differ only by training seed, yet their In-the-Wild
+    error spans 8.4&ndash;16.4%. Cross-corpus generalisation of these detectors is highly seed-dependent,
+    which means any published single-checkpoint cross-corpus figure carries a large hidden error bar.</figcaption>
+  </figure>
+</section>
+
+<section class="col">
+  <span class="eyebrow result">Result</span>
+  <h2>It is adaptation, not memorisation</h2>
+  <p>The obvious objection to transductive test-time adaptation is that the model simply memorises the
+  pool it adapted on. We tested this by adapting on one half of the corpus and evaluating on the
+  disjoint half.</p>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>Checkpoint</th><th>Adapted &mdash; clips seen</th><th>Adapted &mdash; clips unseen</th><th>Gap</th></tr></thead>
+    <tbody>
+      <tr><td>ash56 SSL-AASIST</td><td class="num">4.056</td><td class="num">4.079</td><td class="num">0.023</td></tr>
+      <tr><td>DeepFense seed 42</td><td class="num">10.098</td><td class="num">10.208</td><td class="num">0.111</td></tr>
+    </tbody>
+    <caption>EER %. The correct comparison is adapted-vs-adapted; comparing the two &Delta; values instead
+    would be misleading, because the two evaluation halves have slightly different baselines.</caption>
+  </table>
+  </div>
+  <p>The adapted model performs the same on clips it never saw during adaptation. Whatever it learns is a
+  property of the <em>corpus</em>, not of individual recordings.</p>
+</section>
+
+<hr>
+
+<section>
+  <span class="eyebrow correction">Correction</span>
+  <h2>The ablation inverts across models</h2>
+  <div class="col">
+  <p>Our working claim has been that the consistency term does most of the work. On the first checkpoint
+  that looked right. Running the full ablation on a second checkpoint reversed it.</p>
+  </div>
+
+  <figure>
+    <div class="legend">
+      <span><i class="swatch" style="background:var(--accent)"></i> Improves EER</span>
+      <span><i class="swatch" style="background:var(--bad)"></i> Worsens EER</span>
+    </div>
+    <div class="chartwrap">
+    <svg viewBox="0 0 900 330" role="img" aria-label="Change in equal error rate for each component on two checkpoints, showing sign inversion">
+      <!-- label gutter 10..160 ; plot 170..870 ; zero at 436.7 ; 33.33 px per EER point -->
+      <g class="ax" text-anchor="middle">
+        <line x1="170" y1="284" x2="870" y2="284" stroke="var(--rule)" stroke-width="1"/>
+        <text x="270" y="302">&minus;5</text>
+        <text x="436.7" y="302">0</text>
+        <text x="603.4" y="302">+5</text>
+        <text x="770" y="302">+10</text>
+        <text x="520" y="322" fill="var(--ink-2)">Change in EER (percentage points) &mdash; left of zero is better</text>
+      </g>
+      <line x1="436.7" y1="34" x2="436.7" y2="284" stroke="var(--ink-2)" stroke-width="1.5"/>
+
+      <!-- group 1: ash56 -->
+      <text class="lbl" x="10" y="44" font-weight="650">ash56 &middot; source EER 5.04%</text>
+      <g>
+        <text class="lbl" x="20" y="71" fill="var(--ink-2)">self-training only</text>
+        <rect x="433.4" y="56" width="3.3" height="20" rx="2" fill="var(--accent)"><title>self-training only: -0.10</title></rect>
+        <text class="val" x="425" y="71" text-anchor="end" fill="var(--ink-2)">&minus;0.10</text>
+
+        <text class="lbl" x="20" y="97" fill="var(--ink-2)">consistency only</text>
+        <rect x="414.0" y="82" width="22.7" height="20" rx="2" fill="var(--accent)"><title>consistency only: -0.68</title></rect>
+        <text class="val" x="406" y="97" text-anchor="end" fill="var(--ink-2)">&minus;0.68</text>
+
+        <text class="lbl" x="20" y="123" font-weight="650">both (ours)</text>
+        <rect x="404.7" y="108" width="32.0" height="20" rx="2" fill="var(--accent)"><title>both (ours): -0.96</title></rect>
+        <text class="val" x="396" y="123" text-anchor="end" fill="var(--accent)">&minus;0.96</text>
+      </g>
+
+      <line x1="10" y1="150" x2="870" y2="150" stroke="var(--rule)" stroke-width="1"/>
+
+      <!-- group 2: s42 -->
+      <text class="lbl" x="10" y="176" font-weight="650">DeepFense seed 42 &middot; source EER 16.41%</text>
+      <g>
+        <text class="lbl" x="20" y="199" fill="var(--ink-2)">self-training only</text>
+        <rect x="289.4" y="184" width="147.3" height="20" rx="2" fill="var(--accent)"><title>self-training only: -4.42</title></rect>
+        <text class="val" x="281" y="199" text-anchor="end" fill="var(--ink-2)">&minus;4.42</text>
+
+        <text class="lbl" x="20" y="225" fill="var(--ink-2)">consistency only</text>
+        <rect x="436.7" y="210" width="408.0" height="20" rx="2" fill="var(--bad)"><title>consistency only: +12.24 (destructive)</title></rect>
+        <text class="val" x="852" y="225" fill="var(--bad)">+12.24</text>
+
+        <text class="lbl" x="20" y="251" font-weight="650">both (ours)</text>
+        <rect x="226.4" y="236" width="210.3" height="20" rx="2" fill="var(--accent)"><title>both (ours): -6.31</title></rect>
+        <text class="val" x="218" y="251" text-anchor="end" fill="var(--accent)">&minus;6.31</text>
+      </g>
+    </svg>
+    </div>
+    <figcaption>Bars left of zero are improvements. On ash56 consistency carries the gain; on DeepFense the
+    same term is <em>destructive on its own</em> (AUC collapses 0.918 &rarr; 0.794), while self-training
+    carries it. On both models the pair beats either component alone.</figcaption>
+  </figure>
+
+  <div class="col">
+  <div class="callout ok">
+    <p class="h">What this changes</p>
+    <p>&ldquo;The consistency term carries ~89% of the gain&rdquo; was a single-checkpoint inference and
+    should not be published. The supported claim is stronger: <strong>neither component is sufficient, and
+    the pairing is necessary.</strong> Self-training&rsquo;s pseudo-labels anchor the objective; without
+    that anchor the consistency term drifts to a degenerate solution. On ash56 the pair even beats the sum
+    of its parts (&minus;0.96 vs &minus;0.78).</p>
+  </div>
+  <p>This is better evidence for the two-component design than either component being dominant. It also
+  carries a methodological warning: <em>any single-checkpoint ablation of this method should be assumed
+  non-transferable until repeated on a second model</em> &mdash; including the ablations already in the paper.</p>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow correction">Correction</span>
+  <h2>Tent&rsquo;s collapse is real, but model-dependent</h2>
+  <div class="col">
+  <p>Our log records that naive entropy minimisation (Tent) collapses to ~49% EER. On the first public
+  checkpoint it did not collapse at all, which briefly looked like a falsification. The second checkpoint
+  settled it.</p>
+  </div>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>Checkpoint</th><th>Source EER</th><th>Tent EER</th><th>Source AUC</th><th>Tent AUC</th><th>Verdict</th></tr></thead>
+    <tbody>
+      <tr><td>ash56 SSL-AASIST</td><td class="num">5.04</td><td class="num">4.52</td>
+          <td class="num">0.9856</td><td class="num bad">0.9790</td><td>helps EER, degrades ranking</td></tr>
+      <tr class="hi"><td>DeepFense seed 42</td><td class="num">16.41</td><td class="num bad">49.80</td>
+          <td class="num">0.9178</td><td class="num bad">0.5020</td><td>total collapse to chance</td></tr>
+    </tbody>
+    <caption>AUC 0.502 is indistinguishable from random ranking.</caption>
+  </table>
+  </div>
+  <div class="col">
+  <p>So the ~49% figure <strong>reproduces on a third-party model</strong> &mdash; it is simply not universal.
+  The invariant is not EER but <strong>AUC: Tent degraded the ranking on both models</strong>, mildly on one
+  (where a recalibration gain masks it and EER appears to improve) and totally on the other. Our method
+  improved AUC on both.</p>
+  <div class="callout">
+    <p class="h">Recommended wording change in the paper</p>
+    <p>Replace the blanket &ldquo;Tent collapses&rdquo; with the mechanism: <em>entropy minimisation degrades
+    the representation; whether that surfaces as a modest EER gain or a total collapse depends on the model.</em>
+    That survives the counterexample a reader will otherwise find themselves.</p>
+  </div>
+  </div>
+</section>
+
+<hr>
+
+<section class="col">
+  <span class="eyebrow">Method</span>
+  <h2>How we know the port is faithful</h2>
+  <p>Both checkpoints build their XLS-R front-end through <code>fairseq</code>, which will not co-install
+  against our pinned torch. We remapped the weights onto <code>torchaudio</code> instead, using
+  torchaudio&rsquo;s own fairseq key mapping &mdash; a pure state-dict function that needs no fairseq present.
+  A silently broken port would make every adapted number meaningless, so it was gated before any GPU time:</p>
+  <ul>
+    <li><strong>Strict load.</strong> 429 fairseq keys &rarr; 421 tensors (the 8 dropped are pretraining-only),
+    loaded with <code>strict=True</code>; back-end 245 keys with zero missing and zero unexpected, on all four checkpoints.</li>
+    <li><strong>Not silently the stock model.</strong> All 421 front-end tensors differ from a fresh XLS-R init.</li>
+    <li><strong>Score polarity.</strong> Public repos use <code>[spoof=0, bonafide=1]</code> &mdash; the opposite
+    of ours. Measured: correct column gives 4.50% EER, flipped gives 95.50%. The flip raises no error, it just
+    returns <code>100&nbsp;&minus;&nbsp;x</code>.</li>
+    <li><strong>Non-empty trainable set.</strong> Our parameter selector hardcodes our own module path and would
+    have selected <em>nothing</em> on a foreign tree &mdash; a silent no-op that reads as &ldquo;adaptation didn&rsquo;t
+    help.&rdquo; Replaced with a generic search; asserts non-zero; finds 24 blocks, selects 18 tensors.</li>
+  </ul>
+  <p>Independent corroboration: our measured source EER for ash56 is <strong>5.04%</strong> on the full
+  benchmark, against the <strong>5.70%</strong> its authors report for an <em>ensemble</em>. A mis-ported model
+  could not land there by accident.</p>
+
+  <div class="callout">
+    <p class="h">A bug worth recording</p>
+    <p>A quoting error in our download script fetched the same checkpoint into two directories. It surfaced
+    only because two supposedly different models reported byte-identical error rates &mdash; <strong>every
+    affected run exited zero.</strong> An exit-code-only pipeline would have put a mislabelled checkpoint into
+    the paper. The harness now verifies each checkpoint&rsquo;s identity against its upstream config before loading.</p>
+  </div>
+</section>
+
+<section class="col">
+  <span class="eyebrow">Limitation</span>
+  <h2>What cannot be claimed</h2>
+  <ul>
+    <li><strong>Not a reproduction of a published number.</strong> Neither checkpoint has a published
+    <em>single-model</em> In-the-Wild EER. Our 5.04% should be described as <em>consistent with</em> the
+    authors&rsquo; reported ensemble result, never as reproducing it.</li>
+    <li><strong>The &plusmn;0.02 is not a confidence interval.</strong> It measures adaptation stochasticity
+    only &mdash; batch order and augmentation noise &mdash; because the checkpoint, corpus and evaluation set
+    are all fixed. The genuine generalisation evidence is the four independent checkpoints, which is a much
+    smaller <em>n</em> but the right kind of evidence.</li>
+    <li><strong>The gain size is not predictable.</strong> It is positive on 4/4 but not monotone in source
+    EER, accuracy or AUC &mdash; seed 2 sits between the others on every source metric yet gains least.
+    This independently reproduces what our own earlier work found: no proxy reliably predicts the per-target gain.</li>
+    <li><strong>One target corpus.</strong> Everything here is In-the-Wild. Whether this transfers to other
+    target corpora is untested.</li>
+  </ul>
+</section>
+
+<section class="col">
+  <span class="eyebrow">Decisions</span>
+  <h2>What needs your call</h2>
+  <p>Both items require editing existing claims rather than adding results, so neither was actioned:</p>
+  <ul>
+    <li><strong>The Tent framing</strong> in the paper &mdash; adopt the mechanism-based wording above, or keep
+    the stronger claim scoped explicitly to our own source model.</li>
+    <li><strong>The ablation section</strong> &mdash; whether to rebuild it around component complementarity,
+    and whether to re-run the existing single-checkpoint ablations now that one of them has been shown to
+    invert on a second model.</li>
+  </ul>
+  <p class="foot">All results in <code>results_public_ckpt.csv</code> (14 runs).
+  <code>python summarize_public_ckpt.py --latex</code> emits the paper table.
+  Method, gates and deviations are documented in <code>PUBLIC_CKPT_NOTES.md</code>. Nothing committed yet.</p>
+</section>
+</div>
