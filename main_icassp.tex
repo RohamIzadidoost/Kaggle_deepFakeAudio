@@ -58,7 +58,12 @@ multilingual Arabic set), ten seeds each, this delivers EER gains where
 source AUC is $\geq\!0.84$ (In-the-Wild $12.78\!\to\!11.33\%$, Arabic
 $22.50\!\to\!20.99\%$, ASVspoof2019 $5.03\!\to\!3.47\%$, each significant by a
 \emph{per-target} Wilcoxon test, $p{\leq}0.03$) and is EER-neutral on the one
-target below that threshold (LibriSpeech-TTS, source AUC $0.73$).
+target below that threshold (LibriSpeech-TTS, source AUC $0.73$). The method is
+not tied to our own detector: applied unmodified to four \emph{publicly
+released} checkpoints we did not train---one WaveFake-trained, three
+ASVspoof2019-trained---it improves In-the-Wild EER on all four, from
+$16.41\!\to\!10.10\%$ on the weakest to $5.04\!\to\!4.08\%$ on the strongest,
+adapting $16{,}706$ parameters ($0.005\%$) with no labels and no retraining.
 Entropy-minimisation TTA (Tent) is unpredictably catastrophic---four of ten
 ASVspoof2019 seeds at or near chance, with no advance warning and a standard
 deviation as large as its mean; a non-SSL backbone collapses on all four
@@ -101,7 +106,10 @@ recalibration, self-training-only, a non-SSL backbone, DANN, and an
 ASDG-style aggregation-separation baseline), including the
 one target where the method does not help; (iv) a mechanistic analysis---proxy
 $\mathcal{A}$-distance before/after adaptation---showing the gain does
-\emph{not} come from erasing domain identity.
+\emph{not} come from erasing domain identity; and (v) evidence that the method
+acts as a \emph{label-free wrapper for third-party detectors}, improving four
+publicly released checkpoints spanning two independent training corpora without
+retraining them.
 
 \textbf{Related work.} Frozen or fine-tuned SSL front-ends with AASIST or
 attentive back-ends dominate recent benchmarks~\cite{wav2vec2aug,xlsrsls,aasist,rawnet2};

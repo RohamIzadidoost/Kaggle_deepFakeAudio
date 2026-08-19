@@ -65,7 +65,14 @@ $12.78\!\rightarrow\!11.33\%$, Arabic $22.50\!\rightarrow\!20.99\%$, ASVspoof201
 $5.03\!\rightarrow\!3.47\%$, each significant by a per-target Wilcoxon test at
 $p\!\leq\!0.03$) and is EER-neutral, not harmful, on the fourth
 (LibriSpeech-TTS, $33.54\!\rightarrow\!33.74\%$), where the domain gap is
-apparently not one our confidence-based mechanism can exploit. Entropy-minimisation
+apparently not one our confidence-based mechanism can exploit. Critically, the
+method is not a property of our own detector: applied unmodified to four
+\emph{publicly released} models we did not train---one WaveFake-trained and
+three ASVspoof2019-trained wav2vec2/XLS-R+AASIST checkpoints---it improves
+In-the-Wild EER on all four, from $16.41\!\rightarrow\!10.10\%$ on the weakest to
+$5.04\!\rightarrow\!4.08\%$ on the strongest, adapting $16{,}706$ parameters
+($0.005\%$) with no labels and no retraining; it therefore functions as a
+label-free wrapper for detectors trained by others. Entropy-minimisation
 TTA (Tent) collapses to chance on Arabic in every seed and is highly volatile on
 In-the-Wild, including an unpredictable full collapse on an otherwise-easy target
 (ASVspoof2019: four of ten seeds at or near chance); a
@@ -116,7 +123,13 @@ turns out \emph{not} to help), a 38-language auxiliary corpus folded into every
 source pool to test genuine multilingual robustness, a non-SSL backbone
 ablation, a train-time domain-adversarial baseline trained to convergence rather
 than only piloted, and a direct measurement of whether adaptation changes
-domain separability in the embedding space. We view the negative result on one
+domain separability in the embedding space. It also asks a question the earlier
+version could not: whether the method depends on the detector it was developed
+against. Applying it unmodified to four publicly released checkpoints trained by
+other groups---on training corpora we did not choose, with weights we did not
+fit---separates the contribution from our own source model, and reframes the
+method as a wrapper that improves existing detectors rather than a component of
+one particular system. We view the negative result on one
 target as important evidence about the \emph{scope} of the method, not
 something to omit: it clarifies that confidence-based TTA exploits a specific
 property of the source$\to$target shift (calibration drift under a preserved
@@ -134,6 +147,12 @@ Tent, BatchNorm-only recalibration, self-training-only, a non-SSL backbone,
 DANN, and an ASDG-style aggregation-separation baseline) and an oracle upper
 bound, reported honestly including the one target where the method does not
 help.
+\item A demonstration that the method is a \emph{label-free wrapper for
+third-party detectors} rather than a property of the model it was developed on:
+applied unmodified to four publicly released checkpoints spanning two
+independent training corpora, it improves In-the-Wild EER on all four while
+adapting $0.005\%$ of their parameters, with an inductive check confirming the
+gain is not memorisation of the adaptation pool.
 \item A mechanistic analysis---proxy $\mathcal{A}$-distance and a domain-origin
 probe before/after adaptation---showing the gain does \emph{not} come from
 erasing domain identity, consistent with our ranking-calibration account.
@@ -1149,7 +1168,13 @@ consistent with limitation~2 above---a backbone with no reliable ranking gives
 confident-tail pseudo-labelling nothing to exploit---but it also means our
 contribution should be read as \emph{a lightweight adaptation layer on top of
 an already-transferable SSL representation}, not as a general-purpose recipe
-for cross-corpus robustness independent of backbone choice. The original
+for cross-corpus robustness independent of backbone choice. This scopes the
+third-party result of Sec.~\ref{sec:publicckpt} as well: all four released
+checkpoints we improve are wav2vec2/XLS-R front-ends with AASIST back-ends, so
+the ``wrapper for detectors trained by others'' claim is demonstrated for
+\emph{SSL-based} detectors and should not be read as extending to arbitrary
+architectures---the RawNet2Lite result above is the direct evidence that it
+would not. The original
 ablation trained RawNet2Lite from scratch for only eight epochs, raising the
 question of whether this was genuine evidence of SSL-necessity or simply an
 undertrained baseline. We resolved this directly: retraining RawNet2Lite for
