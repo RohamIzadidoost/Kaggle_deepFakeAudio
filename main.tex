@@ -1088,8 +1088,9 @@ artefacts rather than of undertraining. We therefore treat SSL pretraining
 as a necessary precondition for our method in this setting, not an
 artefact of an undertrained comparison baseline.
 
-\item \textbf{The method does not (yet) help in the single-source,
-official-protocol regime.} Every result above uses a \emph{multi-source}
+\item \textbf{The method does not (yet) help in the official-protocol regime,
+and the binding constraint is target-pool class skew rather than single-source
+training.} Every result above uses a \emph{multi-source}
 source pool (the other three EER-capable corpora plus MLAAD) for each
 held-out target. We separately tested the harder, single-source regime that
 matches the official ASVspoof2021-DF evaluation protocol: fine-tune on
@@ -1147,13 +1148,33 @@ the consequence is that none of the three label-free corrections we have tried
 recovers the loss, and all three remain worse than not adapting at all
 ($26.52\%$).
 
+\textbf{Single-source training is not what breaks the method; target-pool skew
+is.} The public-checkpoint experiment of Sec.~\ref{sec:main-results} separates
+two variables this subsection originally conflated. Both third-party
+checkpoints we adapt are trained on a \emph{single} corpus---one on
+ASVspoof2019-LA alone, precisely the recipe used above, the other on
+WaveFake/LJSpeech with a single vocoder---and our TTA improves both on
+In-the-Wild ($16.41\!\to\!10.10\%$ and $5.04\!\to\!4.06\%$) under the same
+unmodified configuration. What differs is the composition of the unlabeled
+target pool: In-the-Wild is $62.8\%$ bonafide / $37.2\%$ spoof, where a
+symmetric $q$ is approximately correct, against DF eval's $2.5\%$/$97.5\%$,
+where it is maximally wrong. Nor does the ranking precondition of
+limitation~2 account for the difference: source AUC on DF eval is $.870$,
+comfortably above the $.727$ of LibriSpeech-TTS, where the method is merely
+neutral rather than actively harmful. We therefore read the binding constraint
+as the class balance of the target pool, not the diversity of the source pool.
+This is suggestive rather than controlled---the two settings also differ in
+back-end architecture and in codec variation---but it narrows the open problem
+to the component we have already identified as fragile above: a prevalence
+estimator that degrades gracefully rather than silently.
+
 This is a scope boundary rather than a retraction of the paper's
 central claims, which are about the multi-source, class-balanced
-leave-one-corpus-out protocol throughout: our method targets adaptation across
-corpora that are individually reasonably represented in the source pool, and
-extending it to single-source training against a wholly disjoint attack-and-codec
-distribution---the regime the official DF protocol tests---is open work, not
-something this paper solves.
+leave-one-corpus-out protocol throughout: our method targets adaptation on
+unlabeled target pools that are not severely class-skewed, and extending it to
+pools as imbalanced as the official DF protocol's---where the confident-tail
+budget must be allocated from an estimated prior rather than split evenly
+between tails---is open work, not something this paper solves.
 \end{enumerate}
 
 \textbf{Broader impact.} Improving cross-corpus deepfake detection is
