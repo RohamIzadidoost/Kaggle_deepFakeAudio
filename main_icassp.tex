@@ -238,7 +238,13 @@ resolve the behaviour into a stable average, it revealed the collapse to be
 routine rather than a single unlucky run. On Arabic it is a \emph{consistent}
 failure instead ($47.35{\pm}5.03\%$, chance-level in $9/10$ seeds). Our method
 shows no comparable collapse on any target (largest std $2.01$, on the one
-target it does not help).
+target it does not help). The failure is not specific to our source model, and
+is a ranking failure first: run unmodified on two public single-corpus-trained
+checkpoints evaluated on In-the-Wild, Tent collapses to chance on one
+($16.41\!\to\!49.80\%$ EER, AUC $.918\!\to\!.502$)~\cite{deepfensehf} and leaves
+EER near-unchanged on the other ($5.04\!\to\!4.52\%$) while still degrading AUC
+($.986\!\to\!.979$)~\cite{shiftyspeech}---an EER collapse appears only where the
+model had AUC headroom to lose. Ours improves both ($4.06\%$, $10.10\%$).
 
 \textbf{Backbone and prior DG baselines.} RawNet2Lite (no SSL pretraining)
 stays near chance on every target (AUC $0.40$--$0.65$), confirming
@@ -426,6 +432,14 @@ domains,'' \emph{Machine Learning}, vol.\ 79, no.\ 1--2, pp.\ 151--175, 2010.
 \bibitem{itw} N.~M\"uller, P.~Czempin, F.~Diekmann, A.~Froghyar, and
 K.~B\"ottinger, ``Does audio deepfake detection generalize?,'' in \emph{Proc.\
 Interspeech}, 2022.
+\bibitem{shiftyspeech} A.~Garg, Z.~Cai, L.~Zhang, H.~L.~Xinyuan,
+L.~P.~Garc\'ia-Perera, K.~Duh, S.~Khudanpur, M.~Wiesner, and N.~Andrews,
+``ShiftySpeech: A large-scale synthetic speech dataset with distribution
+shifts,'' \emph{arXiv:2502.05674}, 2025. Checkpoint:
+\texttt{huggingface.co/ash56/ssl-aasist}.
+\bibitem{deepfensehf} DeepFense, ``ASV19\_Wav2Vec2\_AASIST\_NoAug\_Seed\{2,42,240\},''
+HuggingFace model repository, \texttt{huggingface.co/DeepFense}. Released
+weights, no accompanying publication or model card.
 \end{thebibliography}}
 
 \end{document}
