@@ -101,7 +101,7 @@
 </div>
 
 <div class="callout">
-<strong>How to read this document.</strong> Phase&nbsp;1 (baseline reproduction + AttentiveSpecCNN), Phase&nbsp;2/3 core modules (DA-RAD — failed — and TTA — the working method) plus the <code>models/</code> package, Phase&nbsp;4 (adaptive q/E — validated mechanism, since scoped out of the paper), Phase&nbsp;5 (the Tuesday P1 job supervisor that produced the significance numbers), and the miscellaneous/exploratory scripts + shell wrappers. Each file gets a purpose line, every function/class it defines, and a trace verdict against the paper. Files with <span class="badge badge-no">No trace</span> are flagged explicitly, per your request, so nothing gets glossed over in review. For step-by-step commands to reproduce any of these results yourself, see <a href="REPRODUCE.html">REPRODUCE.html</a>.
+<strong>How to read this document.</strong> Phase&nbsp;1 (baseline reproduction + AttentiveSpecCNN), Phase&nbsp;2/3 core modules (DA-RAD — failed — and TTA — the working method) plus the <code>models/</code> package, Phase&nbsp;4 (adaptive q/E — validated mechanism, since scoped out of the paper), Phase&nbsp;5 (the Tuesday P1 job supervisor that produced the significance numbers), and the miscellaneous/exploratory scripts + shell wrappers. Each file gets a purpose line, every function/class it defines, and a trace verdict against the paper. Files with <span class="badge badge-no">No trace</span> are flagged explicitly, per your request, so nothing gets glossed over in review. For step-by-step commands to reproduce any of these results yourself, see <a href="REPRODUCE.html">REPRODUCE.html</a>. To jump directly to which script produced which paper number, see the <a href="#trail">Results Thread</a> below.
 </div>
 
 <div class="toc">
@@ -125,6 +125,114 @@ document.addEventListener('DOMContentLoaded', function(){
   });
 });
 </script>
+
+<!-- ======================================================= -->
+<h2 id="trail">Paper Results Thread — trace each number to its code</h2>
+<p style="font-size:.9rem;color:var(--muted)">One row per citable artifact (table row, figure, or statistic in <code>main.tex</code>/<code>main_icassp.tex</code>). <strong>Script chain</strong> = the minimal execution order needed to produce that number. Click any filename to jump to its detailed entry. Arrow (→) = feeds into; plus (+) = required alongside.</p>
+
+<div class="top-summary">
+<table>
+<thead>
+<tr><th style="width:28%">Paper location</th><th style="width:48%">Script chain (execution order)</th><th style="width:24%">Disk output</th></tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Table I</strong> — dataset composition (19,251 real / 595,513 fake)</td>
+  <td><a href="#f-build_manifest"><code>build_manifest.py</code></a> → <a href="#f-build_balanced_subset"><code>build_balanced_subset.py</code></a></td>
+  <td><code>manifest_balanced.csv</code></td>
+</tr>
+<tr>
+  <td><strong>Table II</strong> — classical baseline rows (GNB/NMF/RF/kNN/LogReg EER)</td>
+  <td><a href="#f-build_manifest"><code>build_manifest.py</code></a> → <a href="#f-build_balanced_subset"><code>build_balanced_subset.py</code></a> → <a href="#f-split_manifest"><code>split_manifest.py</code></a> → <a href="#f-paper_baseline"><code>paper_baseline.py</code></a></td>
+  <td><code>baseline_results.csv</code></td>
+</tr>
+<tr>
+  <td><strong>Table II</strong> — AttentiveSpecCNN <strong>4.81% EER</strong></td>
+  <td><a href="#f-split_manifest"><code>split_manifest.py</code></a> → <a href="#f-deepfake_dataset"><code>deepfake_dataset.py</code></a> + <a href="#f-model"><code>model.py</code></a> + <a href="#f-metrics"><code>metrics.py</code></a> → <a href="#f-train"><code>train.py</code></a></td>
+  <td><code>results.csv</code>, <code>attentive_spec_cnn.pt</code></td>
+</tr>
+<tr>
+  <td><strong>Table III / fig:cross</strong> — cross-corpus AUC collapse (0.42–0.56)</td>
+  <td><a href="#f-split_manifest"><code>split_manifest.py</code></a> → <a href="#f-cross_dataset"><code>cross_dataset.py</code></a></td>
+  <td><code>cross_dataset_results.csv</code></td>
+</tr>
+<tr>
+  <td><strong>fig:explain</strong> — Grad-CAM + temporal attention</td>
+  <td><a href="#f-train"><code>train.py</code></a> [checkpoint] → <a href="#f-explain"><code>explain.py</code></a></td>
+  <td><code>explanations/real_DF_E_*.png</code></td>
+</tr>
+<tr>
+  <td><strong>tab:main</strong> — 4-target TTA grid (main result table, all methods, 10 seeds)</td>
+  <td><a href="#f-extended_pipeline"><code>extended_pipeline.py</code></a> [10 seeds × 4 targets × 6 methods] → <a href="#f-summarize_ext"><code>summarize_ext.py</code></a></td>
+  <td><code>results_ext.csv</code> → LaTeX via <code>--latex</code></td>
+</tr>
+<tr>
+  <td><strong>tab:dann</strong> — DANN baseline column</td>
+  <td><a href="#f-analysis_pipeline"><code>analysis_pipeline.py</code></a> Part B → <a href="#f-tuesday_runner"><code>tuesday_runner.py</code></a> <code>publish_dann()</code> → <a href="#f-stats_tests"><code>stats_tests.py</code></a></td>
+  <td><code>analysis_res/results_dann.csv</code> → <code>results_dann.csv</code></td>
+</tr>
+<tr>
+  <td><strong>tab:dann</strong> — ASDG baseline column</td>
+  <td><a href="#f-asdg_pipeline"><code>asdg_pipeline.py</code></a> → <a href="#f-stats_tests"><code>stats_tests.py</code></a></td>
+  <td><code>results_asdg.csv</code></td>
+</tr>
+<tr>
+  <td><strong>tab:backbone</strong> — RawNet2Lite vs XLS-R comparison</td>
+  <td><a href="#f-extended_pipeline"><code>extended_pipeline.py</code></a> [RawNet2Lite arm] + <a href="#f-improve_rawnet2lite"><code>improve_rawnet2lite.py</code></a> [40-epoch retrain] → <a href="#f-summarize_ext"><code>summarize_ext.py</code></a></td>
+  <td><code>results_ext.csv</code> → LaTeX via <code>--latex</code></td>
+</tr>
+<tr>
+  <td><strong>tab:sweep</strong> — hyperparameter sweep (q / λ / epochs), one-at-a-time</td>
+  <td><a href="#f-sweep_reseeded"><code>sweep_reseeded.py</code></a> [re-seeded per config]</td>
+  <td><code>sweep_reseeded.csv</code></td>
+</tr>
+<tr>
+  <td><strong>tab:divergence</strong> — proxy 𝒜-distance before/after adaptation</td>
+  <td><a href="#f-extended_pipeline"><code>extended_pipeline.py</code></a> [checkpoints] → <a href="#f-analysis_pipeline"><code>analysis_pipeline.py</code></a> Part A</td>
+  <td><code>results_divergence.csv</code></td>
+</tr>
+<tr>
+  <td><strong>Limitation §6</strong> — Protocol A EER (26.33% source / 42.45% naive / 32.58% prior-aware)</td>
+  <td><a href="#f-rawboost_gpu"><code>rawboost_gpu.py</code></a> → <a href="#f-protocol_a"><code>protocol_a.py</code></a></td>
+  <td><code>results_protoA.csv</code></td>
+</tr>
+<tr>
+  <td><strong>Limitation §1</strong> — λ-selector Pearson r=+0.74 (p=0.006)</td>
+  <td><a href="#f-extended_pipeline"><code>extended_pipeline.py</code></a> [checkpoints + <code>results_ext.csv</code>] → <a href="#f-lambda_selector"><code>lambda_selector.py</code></a></td>
+  <td><code>lambda_selector_proxy.csv</code>, <code>_validation.csv</code></td>
+</tr>
+<tr>
+  <td><strong>fig:scores</strong> — real/fake score histograms before/after TTA</td>
+  <td><a href="#f-overnight_pipeline"><code>overnight_pipeline.py</code></a> §9 [saves <code>.npz</code>] → <a href="#f-make_figure"><code>make_figure.py</code></a></td>
+  <td><code>fig_score_dist.npz</code> → <code>fig_score_dist.png</code></td>
+</tr>
+<tr>
+  <td><strong>fig:aucgain</strong> — source AUC vs EER gain scatter (r=+0.47, p=0.002, n=40)</td>
+  <td><a href="#f-extended_pipeline"><code>extended_pipeline.py</code></a> → <a href="#f-make_auc_gain_scatter"><code>make_auc_gain_scatter.py</code></a></td>
+  <td><code>fig_auc_gain.png</code></td>
+</tr>
+<tr>
+  <td><strong>fig:perlang</strong> — MLAAD fake-recall by language (<code>main.tex</code> only, dropped from ICASSP)</td>
+  <td><a href="#f-analysis_pipeline"><code>analysis_pipeline.py</code></a> Part C → <a href="#f-make_perlang_figure"><code>make_perlang_figure.py</code></a></td>
+  <td><code>results_perlang.csv</code> → <code>fig_perlang.png</code></td>
+</tr>
+<tr>
+  <td><strong>fig:embed</strong> — t-SNE embedding geometry before/after adaptation</td>
+  <td><a href="#f-extended_pipeline"><code>extended_pipeline.py</code></a> [embeddings cached] → <a href="#f-analysis_pipeline"><code>analysis_pipeline.py</code></a> Part D</td>
+  <td><code>fig_tsne_multitarget.png</code></td>
+</tr>
+<tr>
+  <td><strong>Wilcoxon p&lt;0.05</strong> — significance claim (n=10 per target)</td>
+  <td><a href="#f-tuesday_runner"><code>tuesday_runner.py</code></a> [seed queue, seeds 4–9] → <a href="#f-extended_pipeline"><code>extended_pipeline.py</code></a> [seeds 4–9] → <a href="#f-stats_tests"><code>stats_tests.py</code></a></td>
+  <td><code>stats_results.csv</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<div class="callout" style="margin-top:14px; font-size:.88rem">
+<strong>Reading the chain.</strong> Each row is the <em>minimal</em> path — scripts listed without links in between still depend on the output of everything before the arrow. If a file in the chain is missing or stale, every artifact after it in the row may be wrong. The <strong>two most commonly forgotten dependencies</strong>: (1) <code>split_manifest.py</code> must run before <code>train.py</code> or <code>paper_baseline.py</code> — Phase 1 splits are not committed to the repo; (2) <code>extended_pipeline.py</code> must fully complete (all 10 seeds) before <code>stats_tests.py</code>'s Wilcoxon is valid — checking <code>results_ext.csv</code> seed coverage first with <code>python summarize_ext.py</code> takes seconds and is worth it.
+</div>
 
 <!-- ======================================================= -->
 <h2 id="phase1">Phase 1 — Baseline Reproduction &amp; AttentiveSpecCNN <span class="badge badge-yes tag">core, all traced</span></h2>
