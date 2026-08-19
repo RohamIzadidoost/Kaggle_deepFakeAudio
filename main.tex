@@ -488,6 +488,21 @@ $2.01$, on LibriSpeech-TTS, the one target where it does not help). The
 unsupervised methods are anywhere near saturating what the architecture can
 achieve on these corpora.
 
+\textbf{The failure replicates on third-party models, and it is a ranking
+failure first.} Running Tent unmodified on two independently trained public
+checkpoints---a WaveFake-trained and an ASVspoof2019-trained wav2vec2/XLS-R+AASIST
+detector, neither of which saw In-the-Wild during training---reproduces both
+failure modes without any change to our method. On the ASVspoof2019-trained
+checkpoint, Tent collapses to chance on In-the-Wild ($16.41\!\to\!49.80\%$,
+AUC $0.918\!\to\!0.502$), the same chance-level pattern as Arabic above. On the
+WaveFake-trained checkpoint EER alone looks almost benign
+($5.04\!\to\!4.52\%$), but AUC still drops ($0.986\!\to\!0.979$): Tent degrades
+ranking on every model we have tried it on, and whether that shows up as an
+EER collapse depends on how much AUC headroom the source model had to lose.
+Our method improves AUC on both third-party checkpoints
+($0.986\!\to\!0.990$ and $0.918\!\to\!0.961$) with the same unmodified
+configuration used throughout this paper.
+
 \begin{table*}[t]
 \centering
 \caption{Cross-corpus EER\,\%\,/\,AUC, mean over 5 seeds (4 for Arabic;
@@ -555,6 +570,22 @@ Arabic & 22.50 & $-0.30$ & $-1.20$ \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+\textbf{The complementarity replicates on independently trained models, not
+just across our four targets.} The same decomposition on In-the-Wild, run
+against two public third-party checkpoints neither of which saw this corpus
+during training, confirms neither component is sufficient alone---though which
+one carries the gain flips. On a WaveFake-trained checkpoint, consistency
+alone already recovers most of the improvement ($5.04\!\to\!4.35\%$ EER,
+vs.\ self-training alone at $4.93\%$). On an ASVspoof2019-trained checkpoint
+the pattern inverts: consistency alone is actively destructive
+($16.41\!\to\!28.65\%$, AUC $0.918\!\to\!0.794$), while self-training alone
+recovers most of the gain ($16.41\!\to\!11.99\%$). On both checkpoints,
+combining the two beats either alone ($4.06\%$ and $10.10\%$ respectively).
+This is evidence, on models we did not train, for the same conclusion this
+section draws from our own four targets: the two-component structure is
+load-bearing, and an ablation run on a single checkpoint should not be read
+as characterising either component in isolation.
 
 \subsection{Does the backbone matter? A non-SSL comparison}
 \label{sec:backbone}
