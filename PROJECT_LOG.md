@@ -207,8 +207,8 @@ discussion/limitations, broader-impact paragraph). Source data:
 `results_perlang.csv` at repo root; full bundle incl. checkpoints was unzipped
 from `results_bundle.zip` (not committed — `ckpt_ext/` is large). New
 citations added to `main.tex` for DANN, AdaBN, Ben-David 𝒜-distance theory, and
-the In-the-Wild dataset paper — **unverified against the original sources,
-flagged for a citation check before submission**.
+the In-the-Wild dataset paper — ~~unverified against the original sources~~
+**VERIFIED 2026-08-18, see §12**.
 
 ---
 
@@ -292,3 +292,62 @@ the smoke validates mechanism, not results.
 killed at 1.4 GB). `adaptive_pipeline.py` asserts corpora are present instead,
 and omits MLAAD entirely — it only ever fed source training, which that file
 does not do, and dropping it leaves the target pools bit-identical.
+
+## 12. Citation verification (2026-08-18) — closes R6
+
+`ICASSP_PLAN.md` R6 listed unverified citations as the one **Blocker**
+("a fabricated reference is the one failure mode that ends a paper regardless of
+merit"). All 11 `\bibitem` entries in `main_icassp.tex` were checked against
+DBLP / ACL Anthology / ISCA Archive / IEEE Xplore / PMLR / arXiv.
+
+> **Correction (same day).** The first pass asserted `main.tex` carried an
+> *identical* bibliography. It does not — that was assumed, not checked, and
+> `main.tex` had three defects `main_icassp.tex` did not: `xlsrsls` missing its
+> venue, `crossdomain` **missing its entire author list** (exactly the defect R6
+> named), and `itw` misspelling Diekmann as "Dieckmann". All three are now fixed.
+> Verify each file's bibliography separately; they drift.
+
+**Result: no fabricated references, no wrong author lists, no wrong venues or
+years. Zero corrections required.** Specifically confirmed:
+
+| key | verified against | status |
+|---|---|---|
+| `wav2vec2aug` | ISCA Odyssey 2022 archive; arXiv:2202.12233 | ok |
+| `xlsrsls` | ACM MM 2024, DOI 10.1145/3664647.3681345 | ok (Qishan Zhang, Shuangbing Wen, Tao Hu) |
+| `aasist` | ICASSP 2022 | ok (Jung, Heo, Tak, Shim, Chung, Lee, Yu, Evans) |
+| `rawnet2` | ICASSP 2021, pp. 6369–6373 | ok (Tak, Patino, Todisco, Nautsch, Evans, Larcher) |
+| `asdg` | IEEE TIFS **vol. 19, pp. 344–358**, 2024 | ok (Xie, Cheng, Wang, Ye) |
+| `crossdomain` | EMNLP 2024, `2024.emnlp-main.286` | ok — all 7 authors correct |
+| `tent` | ICLR 2021 | ok (D. Wang, Shelhamer, Liu, Olshausen, Darrell) |
+| `dann` | ICML 2015, PMLR v37, pp. 1180–1189 | ok |
+| `adabn` | arXiv:1603.04779 | ok (Yanghao Li, Naiyan Wang, Jianping Shi, Jiaying Liu, Xiaodi Hou) |
+| `bendavid` | *Machine Learning* **79(1–2):151–175**, 2010 | ok — the `no. 1--2` is right |
+| `itw` | Interspeech 2022, pp. 2783–2787 | ok — all 5 authors correct |
+
+Two notes, neither an error:
+
+* `crossdomain` previously had no author list (the reason R6 called it out); it
+  now carries all seven and they are correct.
+* `asdg` is cited as 2024, which is the **issue** year (TIFS vol. 19). Its DOI
+  carries 2023 because it was published online-first in October 2023. Citing 2024
+  is standard and matches DBLP.
+
+Optional polish, not required for correctness: `asdg` could gain
+`vol.~19, pp.~344--358` and `rawnet2`/`itw` their page ranges. Several entries use
+"et al." — fine under the ICASSP page budget.
+
+**Addendum — two citations added later the same day** (commits `9ed54fe`,
+`e9032ab`, from a parallel session) were verified after the fact:
+
+* `shiftyspeech` — **correct**. arXiv:2502.05674 is titled *"ShiftySpeech: A
+  Large-Scale Synthetic Speech Dataset with Distribution Shifts"* with **nine**
+  authors including Lin Zhang. Note the `ash56/ssl-aasist` model card still shows
+  the paper's **older** title ("Less is More for Synthetic Speech Detection in
+  the Wild") and an eight-author list omitting Lin Zhang — the card is stale, the
+  bibitem is right. Cite arXiv, not the card.
+* `deepfensehf` — **correct and appropriately scoped**: the DeepFense repos ship
+  released weights with no paper and no model card, which the entry states
+  outright rather than inventing a reference.
+
+Lesson for the next citation pass: R6 is not a one-time gate. Any new `\bibitem`
+added after a verification sweep is unverified again by definition.

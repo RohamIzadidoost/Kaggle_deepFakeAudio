@@ -826,6 +826,78 @@ Arabic & 22.31 & \textbf{21.47} \\
 \end{tabular}
 \end{table}
 
+\subsection{Transfer to third-party detectors}
+\label{sec:publicckpt}
+Every result so far adapts \emph{our} source model, so the method cannot be
+separated from the model it was developed on. We therefore apply the published
+configuration, unmodified, to four \emph{publicly released} detectors we did not
+train: one wav2vec2/XLS-R+AASIST model trained on WaveFake/LJSpeech with a single
+vocoder~\cite{shiftyspeech}, and three trained on ASVspoof2019-LA that differ
+only in training seed~\cite{deepfensehf}. None saw In-the-Wild during training.
+Adaptation remains label-free; labels are used only to score. The sole change is
+the crop length, matched to each checkpoint's own training length, and adaptation
+touches $16{,}706$ parameters---the LayerNorm affine terms of the top four
+transformer blocks plus the classifier, $0.005\%$ of a $316$\,M-parameter model.
+
+\textbf{EER improves on all four checkpoints} (Table~\ref{tab:publicckpt}), on
+the full $31{,}779$-clip benchmark, and AUC improves on all four as well. The
+honest reading of the effect sizes is that three of the four gains are modest
+($0.52$--$0.96$ EER) and the fourth is large ($6.31$); the large gain belongs to
+the checkpoint that arrives most badly calibrated (accuracy $39.0\%$ at threshold
+$0.5$ despite AUC $0.918$, i.e.\ it labels almost everything spoof), which is
+exactly the regime Sec.~\ref{sec:rankcal} predicts the method exploits. We do not
+claim the gain is predictable from source-side statistics: it is not monotone in
+source EER, accuracy or AUC---seed~2 sits between the other two ASVspoof2019
+checkpoints on every source metric yet gains least---which independently
+reproduces the negative result of Sec.~\ref{sec:sweep} on a set of models we did
+not build.
+
+\textbf{The three ASVspoof2019 checkpoints also quantify how unstable
+cross-corpus generalisation is.} They share architecture, training corpus and
+hyperparameters, differing only in training seed, yet their In-the-Wild EER
+spans $8.41$--$16.41\%$---nearly a factor of two. Any single-checkpoint
+cross-corpus number in this literature, ours included, therefore carries a large
+and usually unreported error bar.
+
+\textbf{The gain is not memorisation of the adaptation pool.} Repeating the
+protocol of Sec.~\ref{sec:inductive} on the two checkpoints where we ran the full
+grid, the adapted model scores $4.08\%$ on clips it never saw during adaptation
+versus $4.06\%$ on clips it did (WaveFake-trained), and $10.21\%$ versus
+$10.10\%$ (ASVspoof2019-trained, seed~42). The correct comparison here is
+adapted-against-adapted rather than the two $\Delta$ values, because the disjoint
+halves have slightly different baselines; on that comparison the gap is $0.02$
+and $0.11$ EER, so what adaptation learns is a property of the corpus rather than
+of the individual recordings.
+
+Two caveats bound what this experiment shows. Neither checkpoint has a published
+\emph{single-model} In-the-Wild EER, so our reproduced source figure of $5.04\%$
+can only be described as consistent with the $5.70\%$ its authors report for an
+\emph{ensemble}~\cite{shiftyspeech}, not as reproducing a published number; and
+all four checkpoints are evaluated on a single target corpus, so this establishes
+that the method transfers across \emph{detectors}, not across targets.
+
+\begin{table}[t]
+\centering
+\caption{Transfer to publicly released detectors, In-the-Wild (all $31{,}779$
+clips), unmodified published configuration. The WaveFake-trained row is a mean
+over 3 adaptation seeds ($\pm$ is adaptation stochasticity, not a confidence
+interval: the checkpoint, corpus and evaluation set are fixed); the
+ASVspoof2019-trained rows are single checkpoints differing only in training seed.}
+\label{tab:publicckpt}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+& \multicolumn{2}{c}{EER\,\%} & \multicolumn{2}{c}{AUC} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+Released checkpoint & Source & Ours & Source & Ours \\
+\midrule
+WaveFake~\cite{shiftyspeech}        & 5.04  & \textbf{4.08}\,$\pm$\,0.02 & .986 & \textbf{.990} \\
+ASVspoof2019, seed 2~\cite{deepfensehf}   & 9.59  & \textbf{9.06}  & .966 & \textbf{.970} \\
+ASVspoof2019, seed 240~\cite{deepfensehf} & 8.41  & \textbf{7.88}  & .970 & \textbf{.973} \\
+ASVspoof2019, seed 42~\cite{deepfensehf}  & 16.41 & \textbf{10.10} & .918 & \textbf{.961} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 \subsection{Does adaptation reduce domain divergence?}
 \label{sec:divergence}
 A natural hypothesis is that adaptation works the way adversarial DG methods
@@ -1304,16 +1376,18 @@ validated on.
 \bibitem{wav2vec2aug} H.~Tak \emph{et al.}, ``Automatic speaker verification
 spoofing and deepfake detection using wav2vec 2.0 and data augmentation,'' in
 \emph{Proc.\ Odyssey}, 2022.
-\bibitem{xlsrsls} Q.~Zhang \emph{et al.}, ``Audio deepfake detection with
-self-supervised XLS-R and SLS classifier,'' 2024.
+\bibitem{xlsrsls} Q.~Zhang, S.~Wen, and T.~Hu, ``Audio deepfake detection with
+self-supervised XLS-R and SLS classifier,'' in \emph{Proc.\ ACM Multimedia},
+2024.
 \bibitem{aasist} J.~Jung \emph{et al.}, ``AASIST: Audio anti-spoofing using
 integrated spectro-temporal graph attention networks,'' in \emph{ICASSP}, 2022.
 \bibitem{rawnet2} H.~Tak \emph{et al.}, ``End-to-end anti-spoofing with RawNet2,''
 in \emph{ICASSP}, 2021.
 \bibitem{asdg} Y.~Xie \emph{et al.}, ``Domain generalization via aggregation and
 separation for audio deepfake detection,'' \emph{IEEE TIFS}, 2024.
-\bibitem{crossdomain} ``Cross-domain audio deepfake detection: dataset and
-analysis,'' 2024.
+\bibitem{crossdomain} Y.~Li, M.~Zhang, M.~Ren, X.~Qiao, M.~Ma, D.~Wei, and
+H.~Yang, ``Cross-domain audio deepfake detection: dataset and analysis,'' in
+\emph{Proc.\ EMNLP}, 2024.
 \bibitem{tent} D.~Wang \emph{et al.}, ``Tent: Fully test-time adaptation by
 entropy minimization,'' in \emph{ICLR}, 2021.
 \bibitem{dann} Y.~Ganin and V.~Lempitsky, ``Unsupervised domain adaptation by
@@ -1323,7 +1397,7 @@ normalization for practical domain adaptation,'' \emph{arXiv:1603.04779}, 2016.
 \bibitem{bendavid} S.~Ben-David, J.~Blitzer, K.~Crammer, A.~Kulesza,
 F.~Pereira, and J.~W.~Vaughan, ``A theory of learning from different
 domains,'' \emph{Machine Learning}, vol.\ 79, no.\ 1--2, pp.\ 151--175, 2010.
-\bibitem{itw} N.~M.~M\"uller, P.~Czempin, F.~Dieckmann, A.~Froghyar, and
+\bibitem{itw} N.~M.~M\"uller, P.~Czempin, F.~Diekmann, A.~Froghyar, and
 K.~B\"ottinger, ``Does audio deepfake detection generalize?,'' in \emph{Proc.\
 Interspeech}, 2022.
 \bibitem{shiftyspeech} A.~Garg, Z.~Cai, L.~Zhang, H.~L.~Xinyuan,
