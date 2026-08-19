@@ -254,6 +254,42 @@ EER near-unchanged on the other ($5.04\!\to\!4.52\%$) while still degrading AUC
 ($.986\!\to\!.979$)~\cite{shiftyspeech}---an EER collapse appears only where the
 model had AUC headroom to lose. Ours improves both ($4.06\%$, $10.10\%$).
 
+\textbf{Transfer to third-party detectors.} Every result above adapts our own
+source model. We therefore apply the published configuration unmodified to four
+publicly released detectors we did not train: one WaveFake-trained~\cite{shiftyspeech}
+and three ASVspoof2019-trained~\cite{deepfensehf} XLS-R+AASIST checkpoints, none
+of which saw In-the-Wild. EER and AUC improve on all four
+(Table~\ref{tab:publicckpt}) while adapting $16{,}706$ parameters ($0.005\%$). Three of the four gains are modest ($0.52$--$0.96$ EER) and the
+large one ($6.31$) belongs to the checkpoint arriving worst-calibrated
+(accuracy $39.0\%$ at threshold $0.5$ despite AUC $.918$)---the regime the
+precondition predicts. The gain is not memorisation of the adaptation pool:
+adapting on half of In-the-Wild and evaluating on the disjoint half gives
+$4.08\%$ versus $4.06\%$ transductive, and $10.21\%$ versus $10.10\%$. The three
+ASVspoof2019 checkpoints, identical but for training seed, span
+$8.41$--$16.41\%$ source EER---single-checkpoint cross-corpus figures, ours
+included, carry a large and usually unreported error bar. As all four are SSL
+front-ends, this is a wrapper for \emph{SSL-based} detectors, not arbitrary
+architectures.
+
+\begin{table}[t]
+\centering
+\caption{Transfer to publicly released detectors: In-the-Wild EER\,\%\,/\,AUC,
+all $31{,}779$ clips, unmodified configuration. WaveFake row is a mean over 3
+adaptation seeds; the rest are single checkpoints differing only in training seed.}
+\label{tab:publicckpt}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{@{}lcc@{}}
+\toprule
+Released checkpoint & Source & Ours \\
+\midrule
+WaveFake-trained~\cite{shiftyspeech}          & 5.04 / .986  & \textbf{4.08} / \textbf{.990} \\
+ASVspoof2019, seed 2~\cite{deepfensehf}       & 9.59 / .966  & \textbf{9.06} / \textbf{.970} \\
+ASVspoof2019, seed 240~\cite{deepfensehf}     & 8.41 / .970  & \textbf{7.88} / \textbf{.973} \\
+ASVspoof2019, seed 42~\cite{deepfensehf}      & 16.41 / .918 & \textbf{10.10} / \textbf{.961} \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
 \textbf{Backbone and prior DG baselines.} RawNet2Lite (no SSL pretraining)
 stays near chance on every target (AUC $0.40$--$0.65$), confirming
 cross-corpus viability starts from SSL pretraining, not the TTA step; retraining
@@ -409,7 +445,9 @@ catastrophic, a non-SSL backbone collapses outright, and two independent
 train-time domain-generalisation baselines underperform ours despite
 privileged data access and $3\times$ the compute. A proxy divergence
 analysis shows the mechanism is re-calibration of an already class-organised
-representation, not domain-invariance.
+representation, not domain-invariance. Needing neither labels nor retraining, it
+also improves four publicly released SSL detectors on In-the-Wild---a wrapper,
+not a system.
 
 {\small
 \begin{thebibliography}{1}
