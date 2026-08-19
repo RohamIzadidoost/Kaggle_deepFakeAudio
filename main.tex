@@ -228,6 +228,7 @@ therefore not an arbitrary design choice but the minimal mechanism capable of
 adapting this specific normalisation layer at all.
 
 \subsection{The ranking--calibration gap}
+\label{sec:rankcal}
 For a threshold $\tau$ the decision is $\hat y_\tau(x)=\mathbf{1}[s_\theta(x)\ge\tau]$,
 whose accuracy depends on $\tau$. Ranking quality, by contrast, is threshold-free:
 \begin{equation}
@@ -1093,92 +1094,47 @@ artefact of an undertrained comparison baseline.
 
 \item \textbf{The method does not (yet) help in the official-protocol regime,
 and the binding constraint is target-pool class skew rather than single-source
-training.} Every result above uses a \emph{multi-source}
-source pool (the other three EER-capable corpora plus MLAAD) for each
-held-out target. We separately tested the harder, single-source regime that
-matches the official ASVspoof2021-DF evaluation protocol: fine-tune on
-ASVspoof2019-LA train alone, evaluate on the official DF eval partition
-(458{,}871 of 611{,}829 trials present locally; the shortfall is a uniform
-75\%/25\% sample across codec, label, and phase, verified directly, so pooled
-EER over what remains is unbiased). Source-only reaches $26.33\%$ EER / $.870$
-AUC---far from published results on this protocol
-(SSL-plus-AASIST-backend systems in the $8$--$9\%$ range and specialised
-AASIST-class systems at $2$--$3\%$, per recent published comparisons on this
-protocol), consistent with the absence of a specialised anti-spoofing
-back-end (Sec.~\ref{sec:backbone}) and single-corpus training data.
-
-Applying our TTA unmodified here does not help, it actively harms:
-$42.45\%$ EER / $.686$ AUC. The cause is a real, previously only
-theorised failure mode of confident-tail pseudo-labelling: DF eval is
-$97.5\%$ spoof / $2.5\%$ bonafide, and $q{=}0.3$ pseudo-labels the bottom
-$30\%$ of the pool as ``confident real'' regardless of the pool's true class
-balance, so that bucket is mechanically dominated by mislabelled spoof
-clips---self-training then teaches the model that much of the fake class is
-real. We built a label-free fix: a 2-component Gaussian-mixture estimate of
-class prevalence from the score histogram (not the mean score, since that
-assumes calibration, which Sec.~III-C's own thesis says does not survive the
-shift), which reallocates the confident-label budget by estimated prevalence
-instead of splitting it evenly between tails. Validated against withheld
-labels, the estimator is accurate on the source model above (true bonafide
-prevalence $2.47\%$, estimated $2.63\%$) and recovers most, not all, of the
-damage ($32.58\%$ EER / $.820$ AUC)---still worse than doing nothing. A second,
-independent cause accounts for the remainder: the source model itself is
-overfit (training loss on 2019-LA reaches $0.0001$), and retraining it with
-our batched-GPU RawBoost reimplementation (verified against the reference
-implementation to within $5\times10^{-7}$ relative error) fixes the
-overfitting symptom---loss plateaus at $0.0031$ rather than continuing to
-collapse---without improving source EER ($26.52\%$) or rescuing TTA
-($42.49\%$ naive). Worse, the prevalence estimator itself \emph{fails} on this
-retrained model (estimated prevalence $0.458$ against a true $0.025$, an
-$18\times$ error), because its healthier, less saturated score distribution no
-longer separates into the clean two-component shape the estimator relies on;
-prior-aware TTA on the RawBoost model consequently reverts to
-near-naive-collapse ($42.46\%$). We read this as a second, independent
-limitation in its own right: prior-aware pseudo-labelling is sensitive to the
-source model's score-distribution shape, not only to class imbalance, and a
-deployable version needs a prevalence estimator that degrades gracefully
-rather than silently, which is not something we solve here.
-
-A third correction also fails. Adding a curriculum schedule over $q$---starting
-from a strict high-purity tail and widening to the published value, on the
-reasoning that early epochs are where confirmation bias is cheapest to
-acquire---leaves the result unchanged at $42.50\%$ EER / $.686$ AUC. The
-per-epoch trace shows why: the BIC guard we attach to the prevalence estimator
-declines to trust the two-component fit on this pool and falls back to a
-symmetric budget, so the schedule reduces to the fixed rule it was meant to
-replace. The guard behaves as designed---it refuses a prior it cannot verify---but
-the consequence is that none of the three label-free corrections we have tried
-recovers the loss, and all three remain worse than not adapting at all
-($26.52\%$).
-
-\textbf{Single-source training is not what breaks the method; target-pool skew
-is.} The public-checkpoint experiment of Sec.~\ref{sec:main-results} separates
-two variables this subsection originally conflated. Both third-party
-checkpoints we adapt are trained on a \emph{single} corpus---one on
-ASVspoof2019-LA alone~\cite{deepfensehf}, precisely the recipe used above, the
-other on WaveFake/LJSpeech with a single vocoder~\cite{shiftyspeech}---and our
-TTA improves both on
-In-the-Wild ($16.41\!\to\!10.10\%$ and $5.04\!\to\!4.06\%$) under the same
-unmodified configuration. What differs is the composition of the unlabeled
-target pool: In-the-Wild is $62.8\%$ bonafide / $37.2\%$ spoof, where a
-symmetric $q$ is approximately correct, against DF eval's $2.5\%$/$97.5\%$,
-where it is maximally wrong. Nor does the ranking precondition of
-limitation~2 account for the difference: source AUC on DF eval is $.870$,
-comfortably above the $.727$ of LibriSpeech-TTS, where the method is merely
-neutral rather than actively harmful. We therefore read the binding constraint
-as the class balance of the target pool, not the diversity of the source pool.
-This is suggestive rather than controlled---the two settings also differ in
-back-end architecture and in codec variation---but it narrows the open problem
-to the component we have already identified as fragile above: a prevalence
-estimator that degrades gracefully rather than silently.
-
-This is a scope boundary rather than a retraction of the paper's
-central claims, which are about the multi-source, class-balanced
-leave-one-corpus-out protocol throughout: our method targets adaptation on
-unlabeled target pools that are not severely class-skewed, and extending it to
-pools as imbalanced as the official DF protocol's---where the confident-tail
-budget must be allocated from an estimated prior rather than split evenly
-between tails---is open work, not something this paper solves.
+training.} Every target pool above is at worst moderately class-imbalanced. We
+separately ran the official ASVspoof2021-DF protocol---fine-tune on
+ASVspoof2019-LA train alone, evaluate on the official DF eval partition---where
+the unlabeled pool is $97.2\%$ spoof. Source-only reaches $26.33\%$ EER /
+$.870$ AUC, far from published results on this protocol (SSL-plus-AASIST
+systems at $8$--$9\%$, specialised AASIST-class systems at $2$--$3\%$),
+consistent with the absence of a specialised anti-spoofing back-end
+(Sec.~\ref{sec:backbone}). Applying our TTA unmodified does not merely fail to
+help, it harms: $42.45\%$ EER / $.686$ AUC. The cause is exactly the failure
+mode our scope statement anticipates (Sec.~\ref{sec:rankcal}): $q{=}0.3$
+pseudo-labels the bottom $30\%$ of the pool ``confident real'' regardless of
+its true class balance, so on a pool this skewed that bucket is mechanically
+dominated by mislabelled spoof clips and self-training teaches the model that
+much of the fake class is real. A label-free correction---estimating class
+prevalence from the score histogram with a two-component Gaussian mixture and
+reallocating the confident-label budget by that estimate instead of splitting
+it evenly between tails---recovers most but not all of the damage ($32.58\%$
+EER / $.820$ AUC), still worse than not adapting, and two further corrections
+(a RawBoost-retrained source model, a curriculum schedule on $q$) recover none
+of it. Appendix~\ref{app:protocola} reports all seven arms and the diagnosis:
+the prevalence estimator is not robust to the shape of the source model's score
+distribution, and the model-selection guard meant to catch that does not fire,
+because the failing fit is decisively two-component yet still badly wrong about
+the mixing proportion. That the binding constraint is target skew rather than
+single-source training is separable from the public-checkpoint experiment of
+Sec.~\ref{sec:main-results}: both third-party checkpoints are trained on a
+\emph{single} corpus---one on ASVspoof2019-LA alone~\cite{deepfensehf},
+precisely the recipe above, the other on WaveFake/LJSpeech with a single
+vocoder~\cite{shiftyspeech}---yet our unmodified TTA improves both on
+In-the-Wild ($16.41\!\to\!10.10\%$ and $5.04\!\to\!4.06\%$), a pool that is
+$62.8\%$ bonafide, where a symmetric $q$ is approximately correct. Nor does the
+ranking precondition of limitation~2 explain the gap: source AUC on DF eval is
+$.870$, comfortably above the $.727$ of LibriSpeech-TTS, where the method is
+merely neutral rather than harmful. The comparison is suggestive rather than
+controlled---the two settings also differ in back-end and codec variation---but
+it narrows the open problem to a single component. This is a scope boundary,
+not a retraction: the paper's claims are about the multi-source, moderately
+balanced leave-one-corpus-out protocol throughout, and extending confident-tail
+adaptation to pools as skewed as the official DF protocol's needs a prevalence
+estimator that degrades gracefully rather than silently---open work we do not
+solve here.
 \end{enumerate}
 
 \textbf{Broader impact.} Improving cross-corpus deepfake detection is
@@ -1212,6 +1168,137 @@ underperforms despite optimising exactly the quantity our analysis shows is
 not the bottleneck. A 38-language breakdown further shows the detector's
 multilingual robustness extends to languages genuinely unseen during source
 training, not just to languages it happened to see synthesis artefacts from.
+
+\appendices
+
+\section{The official ASVspoof2021-DF protocol}
+\label{app:protocola}
+This appendix expands limitation~6: the full arm-by-arm result on the official
+protocol, the three label-free corrections we tried, and why each fails. No
+claim in the body of the paper depends on these runs; they delimit where the
+method stops working.
+
+\subsection{Setup and trial coverage}
+The source model is fine-tuned on ASVspoof2019-LA train alone ($25{,}380$
+clips, $2{,}580$ bonafide / $22{,}800$ spoof) and evaluated on the official
+ASVspoof2021-DF \texttt{eval} partition using the released CM keys, so the
+number is directly comparable to published entries on this protocol. Two
+implementation differences from the leave-one-corpus-out pipeline are forced by
+scale. First, the DF eval set does not fit in the GPU-resident cache the
+leave-one-corpus-out target pools use, so scoring streams: CPU threads decode a
+chunk, the GPU scores it, the chunk is dropped. Second, adaptation cannot run
+multiple epochs of backprop over the full set, so we adapt on an unlabeled
+subsample of $20{,}000$ eval clips and then score the entire official trial
+list; no labels are used at any point in adaptation.
+
+Part 3 of the DF eval archive is absent from our local copy: $458{,}871$ of
+$611{,}829$ trials are present across all phases, and $400{,}435$ of the
+$533{,}928$ \texttt{eval}-phase trials ($75.0\%$) are scored. We verified the
+omission is a uniform $75/25$ sample within every codec $\times$ label $\times$
+phase stratum, so pooled EER over what remains is an unbiased estimate of the
+full-set number, but $n_{\text{missing}}$ is recorded with every row so the
+shortfall stays visible. The scored pool is $11{,}136$ bonafide / $389{,}299$
+spoof, i.e.\ $2.78\%$ bonafide; the $20{,}000$-clip adaptation subsample is
+$2.47\%$ bonafide.
+
+\begin{table}[t]
+\centering
+\caption{All arms on the official ASVspoof2021-DF \texttt{eval} partition
+($n{=}400{,}435$ scored, $133{,}493$ missing). ``Disjoint'' scores only trials
+outside the $20{,}000$-clip adaptation subsample ($n{=}380{,}435$); it is
+within $0.05$ points of the transductive number in every arm, so no result here
+is a memorisation artefact. Every adapted arm is worse than its own
+unadapted source model.}
+\label{tab:protocola}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+& \multicolumn{2}{c}{Transductive} & \multicolumn{2}{c}{Disjoint} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+Arm & EER\% & AUC & EER\% & AUC \\
+\midrule
+\multicolumn{5}{@{}l}{\emph{Baseline source recipe}}\\
+source                       & \textbf{26.33} & .870 & ---   & ---  \\
+\;+ TTA, symmetric $q{=}0.3$ & 42.45 & .686 & 42.44 & .686 \\
+\;+ TTA, prior-aware         & 32.58 & .820 & 32.57 & .820 \\
+\addlinespace
+\multicolumn{5}{@{}l}{\emph{RawBoost-retrained source recipe}}\\
+source                       & \textbf{26.52} & .859 & ---   & ---  \\
+\;+ TTA, symmetric $q{=}0.3$ & 42.49 & .685 & 42.49 & .686 \\
+\;+ TTA, prior-aware         & 42.46 & .688 & 42.48 & .688 \\
+\;+ TTA, adaptive $q$/$E$    & 42.50 & .686 & 42.46 & .686 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Correction 1: prior-aware budget allocation}
+The published rule splits the confident-label budget evenly between tails,
+labelling the top and bottom $q$ of the pool. On a $97.2\%$-spoof pool the
+bottom tail is mechanically dominated by spoof clips whatever the ranking
+quality, so we estimate the class prior without labels and allocate
+$2q\pi$ to the pseudo-real tail and $2q(1{-}\pi)$ to the pseudo-fake tail,
+preserving the total budget. We estimate $\pi$ as the mixture weight of the
+low-scoring component of a two-component Gaussian mixture fitted to the score
+histogram, rather than from $\overline{s_\theta}$, because the latter assumes
+calibration---the exact property Sec.~\ref{sec:rankcal} argues does not survive
+the shift.
+
+Checked against withheld labels on the baseline source model the estimator is
+accurate: true bonafide prevalence $2.47\%$, estimated $2.63\%$. It recovers
+most of the damage, $42.45\!\to\!32.58\%$ EER and $.686\!\to\!.820$ AUC, but
+does not reach the $26.33\%$ of not adapting at all.
+
+\subsection{Correction 2: fixing source overfitting}
+The residual gap suggested a second, independent cause: the baseline source
+model is heavily overfit, with training loss on 2019-LA reaching $0.0001$. We
+retrained it with a batched-GPU reimplementation of RawBoost, verified against
+the reference implementation to within $5\times10^{-7}$ relative error. This
+fixes the symptom---loss plateaus at $0.0031$ instead of continuing to
+collapse---but changes nothing downstream: source EER is $26.52\%$ (versus
+$26.33\%$) and naive TTA still collapses to $42.49\%$.
+
+Worse, the prevalence estimator \emph{fails} on this healthier model, returning
+$\hat\pi{=}0.458$ against a true $0.025$, an $18\times$ error, which places the
+budget split back at approximately symmetric and reverts prior-aware TTA to
+near-naive collapse ($42.46\%$). This is a limitation of the correction in its
+own right, and the more general of the two: prior-aware pseudo-labelling is
+sensitive to the \emph{shape} of the source model's score distribution, not
+only to the class balance of the target pool.
+
+\subsection{Correction 3: guarded, adaptive \texorpdfstring{$q$ and $E$}{q and E}}
+The third arm adds a curriculum ramp on $q$ (from a strict high-purity
+$q{=}0.1$ up to the published $0.3$, on the reasoning that early epochs are
+where confirmation bias is cheapest to acquire), extends the budget to $E{=}8$
+epochs with stopping on per-clip score movement, and guards the prevalence
+estimate by refusing the two-component split when it does not beat a
+one-component fit on BIC---falling back to $\pi{=}0.5$, i.e.\ exactly the
+published symmetric behaviour. It leaves the result unchanged at $42.50\%$ EER
+/ $.686$ AUC.
+
+The per-epoch trace shows the guard is the wrong test. On this pool BIC prefers
+two components overwhelmingly ($\Delta_{\text{BIC}}{=}7.1\times10^{4}$), so the
+guard does not shrink, and the estimator's $\hat\pi{=}0.460$ is passed through
+to a budget split of $0.276/0.324$---near-symmetric, hence a result
+indistinguishable from the naive arm. The guard tests whether the score
+distribution has two-component \emph{structure}, which it plainly does; the
+quantity that is wrong is the \emph{mixing proportion}, and BIC does not
+penalise that. Neither did the ramp or the extended budget rescue the arm: $q$
+climbed $0.1\!\to\!0.3$ as scheduled and score movement never triggered early
+stopping (all eight epochs ran).
+
+\subsection{What this bounds}
+Three label-free corrections, and all three land worse than not adapting.
+Together they bound the open problem fairly precisely: the difficulty is not
+detecting that a pool is skewed, and not the ranking signal (source AUC is
+$.870$ here, higher than on a leave-one-corpus-out target where our method is
+merely neutral). It is estimating a class prior from unlabeled scores
+\emph{reliably enough to allocate a label budget on}, and knowing when that
+estimate cannot be trusted. A guard keyed to distributional structure does not
+supply the second half. We report the negative result rather than omit the
+protocol, because the same estimator failure would silently degrade any
+deployment where the operating pool is more skewed than the pool the method was
+validated on.
 
 \begin{thebibliography}{1}
 \bibitem{wav2vec2aug} H.~Tak \emph{et al.}, ``Automatic speaker verification
