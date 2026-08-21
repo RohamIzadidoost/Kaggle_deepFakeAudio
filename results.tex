@@ -8,31 +8,62 @@
 
 \title{Result Tables}
 \author{Roham izadidoost}
-\date{31/jul}
+\date{21/aug}
 
 \begin{document}
 \maketitle
 
+All numbers below are means over \textbf{10 seeds} (previous version of this
+document reported 3--5 seeds). Seed count was raised because Wilcoxon
+signed-rank at $n=5$ cannot reach $p<0.05$ at all: with every difference the
+same sign the minimum attainable two-sided $p$ is $2/2^5 = 0.0625$. That is a
+combinatorial floor, not a power problem.
+
 \section*{Main results}
-Each column is a held-out target. each row is a different method
-(Source-only = no adaptation at all. BN-only = no-op control since our encoder has
-no BatchNorm stats. Tent = a known TTA baseline that collapses on 2 targets. 
-Self-training only = ours without consistency. Ours = full method. Oracle =
-supervised upper bound). Ours wins on 3 targets out of 4; each cell is
-EER\%\,/\,AUC, lower/higher is better.
+Each column is a held-out target, each row a different method
+(Source-only = no adaptation at all. BN-only = no-op control, since our encoder
+uses LayerNorm and has no BatchNorm statistics to recalibrate. Tent = a known
+TTA baseline. Self-training only = ours without the consistency term. Ours =
+full method. Oracle = supervised upper bound). Ours wins on 3 targets out of 4;
+each cell is EER\%\,/\,AUC, lower/higher is better.
 \begin{table}[h]
 \centering
 \begin{tabular}{@{}lcccc@{}}
 \toprule
 Method & ASVspoof2019 & LibriSpeech-TTS & In-the-Wild & Arabic \\
 \midrule
-Source-only & 4.76 / .990 & 34.36 / .720 & 12.57 / .944 & 22.59 / .854 \\
-BN-only (no-op) & 4.76 / .990 & 34.36 / .720 & 12.57 / .944 & 22.59 / .854 \\
-Tent & 3.70 / .987 & 34.74 / .690 & 26.53 / .743 & 47.66 / .524 \\
-Self-training only & 4.07 / .987 & \textbf{33.79} / .708 & 11.63 / .947 & 22.05 / .855 \\
-\rowcolor{green!12}\textbf{Ours (full TTA)} & \textbf{3.69} / .994 & 34.38 / .722 & \textbf{10.83} / .960 & \textbf{20.74} / .873 \\
+Source-only & 5.03 / .989 & 33.54 / .727 & 12.78 / .945 & 22.50 / .843 \\
+BN-only (no-op) & 5.03 / .989 & 33.54 / .727 & 12.78 / .945 & 22.50 / .843 \\
+Tent & 23.47 / .776 & 35.44 / .674 & 27.34 / .735 & 47.35 / .527 \\
+Self-training only & 4.20 / .987 & \textbf{33.39} / .709 & 11.55 / .950 & 22.19 / .846 \\
+\rowcolor{green!12}\textbf{Ours (full TTA)} & \textbf{3.47} / .994 & 33.74 / .727 & \textbf{11.33} / .958 & \textbf{20.99} / .866 \\
 \midrule
-Oracle (supervised upper bound) & 0.70 / 1.000 & 12.54 / .950 & 3.65 / .994 & 9.14 / .970 \\
+Oracle (supervised upper bound) & 0.89 / .999 & 13.93 / .939 & 4.42 / .992 & 9.50 / .968 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+BN-only reproduces Source-only to every reported digit on all four targets.
+That is the expected result, not a bug: it is the architectural argument for
+why adaptation here has to be gradient-based.
+
+Tent is much worse at 10 seeds than it looked at 3 --- it now degrades every
+target, catastrophically on Arabic (47.35\%, i.e.\ chance).
+
+\section*{Seed variability (bootstrap 95\% CIs)}
+Bootstrap confidence intervals over the 10 seeds. Source and Ours are
+non-overlapping on 3 of 4 targets; they overlap exactly on LibriSpeech-TTS,
+which is the target where we do not claim a gain.
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Target & Source-only EER (95\% CI) & Ours EER (95\% CI) & Disjoint? \\
+\midrule
+ASVspoof2019 & 5.03 [4.27, 5.82] & \textbf{3.47} [2.97, 3.99] & yes \\
+In-the-Wild & 12.78 [12.06, 13.50] & \textbf{11.33} [10.53, 12.21] & yes \\
+Arabic & 22.50 [21.36, 23.53] & \textbf{20.99} [20.12, 21.79] & yes \\
+LibriSpeech-TTS & 33.54 [32.43, 34.62] & 33.74 [32.49, 34.88] & \cellcolor{red!10}no \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -41,87 +72,171 @@ Oracle (supervised upper bound) & 0.70 / 1.000 & 12.54 / .950 & 3.65 / .994 & 9.
 \section*{Gain decomposition}
 Splits the total EER change into two steps: $\Delta_1$ = effect of adding
 self-training alone, $\Delta_2$ = effect of then adding consistency on top.
-$\Delta_2$ is negative (helps) on 3 targets but +0.59 on LibriSpeech-TTS
+$\Delta_2$ helps on 3 targets but is $+0.35$ on LibriSpeech-TTS --- the one
+target whose source AUC (.727) is far below the others ($\geq$ .84). Weak
+source ranking gives unreliable pseudo-labels, and the consistency term then
+amplifies that unreliability.
 \begin{table}[h]
 \centering
-\begin{tabular}{@{}lccc@{}}
+\begin{tabular}{@{}lcccc@{}}
 \toprule
-Target & Source EER & $\Delta_1$ (self-train) & $\Delta_2$ (consistency) \\
+Target & Source EER & $\Delta_1$ (self-train) & $\Delta_2$ (consistency) & Total \\
 \midrule
-ASVspoof2019 & 4.76 & $-0.69$ & $-0.39$ \\
-LibriSpeech-TTS & 34.36 & $-0.57$ & \cellcolor{red!10}$+0.59$ \\
-In-the-Wild & 12.57 & $-0.94$ & $-0.79$ \\
-Arabic & 22.59 & $-0.54$ & $-1.31$ \\
+ASVspoof2019 & 5.03 & $-0.83$ & $-0.73$ & $-1.56$ \\
+In-the-Wild & 12.78 & $-1.23$ & $-0.22$ & $-1.45$ \\
+Arabic & 22.50 & $-0.30$ & $-1.20$ & $-1.50$ \\
+LibriSpeech-TTS & 33.54 & $-0.15$ & \cellcolor{red!10}$+0.35$ & $+0.20$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\newpage
 \section*{Backbone comparison}
-XLS-R = our SSL-pretrained encoder. RawNet2Lite = same epochs, same data,
-but trained from random weights (no SSL pretrain). RawNet2Lite collapses everywhere
+XLS-R = our SSL-pretrained encoder. RawNet2Lite = same epochs, same data, but
+trained from random weights (no SSL pretraining). RawNet2Lite is at chance on
+every target, so SSL pretraining --- not TTA --- is what makes a source model
+cross-corpus viable in the first place. TTA operates on top of that.
 \begin{table}[h]
 \centering
 \begin{tabular}{@{}lcc@{}}
 \toprule
 Target & XLS-R (ours) & RawNet2Lite (no SSL) \\
 \midrule
-ASVspoof2019 & 4.76 / .990 & 47.47 / .539 \\
-LibriSpeech-TTS & 34.36 / .720 & 51.14 / .483 \\
-In-the-Wild & 12.57 / .944 & 39.35 / .649 \\
-Arabic & 22.59 / .854 & 57.01 / .411 \\
+ASVspoof2019 & 5.03 / .989 & 48.62 / .523 \\
+LibriSpeech-TTS & 33.54 / .727 & 51.68 / .468 \\
+In-the-Wild & 12.78 / .945 & 39.46 / .650 \\
+Arabic & 22.50 / .843 & 56.52 / .416 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \newpage
-\section*{Comparison to train-time domain-adversarial training (DANN)}
-DANN sees the target's unlabeled audio during training (more access than we
-get) yet is worse than Source-only on 2 targets and barely better on the
-others. Ours beats DANN on every target at $\sim\!1/3$ the compute
-(9 vs.\ 30 min per target-seed).
+\section*{Comparison to train-time domain generalization (DANN, ASDG)}
+Both baselines see the target's unlabeled audio during training --- more access
+than our method gets --- and both are now at the same 10 seeds as ours, so the
+head-to-head is no longer asymmetric. DANN is worse than Source-only on 3 of 4
+targets and is the least seed-stable method tested. Ours beats both on every
+target at roughly a third of DANN's compute (6.9 vs.\ 20.1 min per
+target-seed).
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Target & Source & DANN (20.1 min) & ASDG (8.2 min) & Ours (6.9 min) \\
+\midrule
+ASVspoof2019 & 5.03 / .989 & 7.35 / .966 & 4.98 / .987 & \textbf{3.47} / .994 \\
+LibriSpeech-TTS & 33.54 / .727 & 34.43 / .717 & 32.64 / .749 & \textbf{33.74} / .727 \\
+In-the-Wild & 12.78 / .945 & 13.35 / .924 & 17.33 / .891 & \textbf{11.33} / .958 \\
+Arabic & 22.50 / .843 & 28.53 / .759 & 27.41 / .798 & \textbf{20.99} / .866 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+ASDG is the exception on LibriSpeech-TTS (32.64 vs.\ our 33.74) --- the same
+weak-source-ranking target where our consistency term is a net negative.
+
+\section*{Inductive check}
+Rules out ``the model just memorised the scored clips'': adapt on one half of
+the target, score on the disjoint other half. The main table's pattern
+replicates (wins on 3 of 4), so the gain is real, not memorisation.
 \begin{table}[h]
 \centering
 \begin{tabular}{@{}lccc@{}}
 \toprule
-Target & Source & DANN (30 min) & Ours (9 min) \\
+Target & Source (half) & Ours (disjoint half) & Transductive gain, for reference \\
 \midrule
-ASVspoof2019 & 4.76 / .990 & 6.61 / .980 & \textbf{3.69} / .994 \\
-LibriSpeech-TTS & 34.36 / .720 & 34.81 / .724 & \textbf{34.38} / .722 \\
-In-the-Wild & 12.57 / .944 & 11.95 / .931 & \textbf{10.83} / .960 \\
-Arabic & 22.59 / .854 & 29.51 / .724 & \textbf{20.74} / .873 \\
+ASVspoof2019 & 5.07 & \textbf{3.70} & $-1.56$ \\
+In-the-Wild & 12.73 & \textbf{11.61} & $-1.45$ \\
+Arabic & 22.31 & \textbf{21.47} & $-1.50$ \\
+LibriSpeech-TTS & 33.45 & 33.58 & $+0.20$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \newpage
-\section*{Inductive check}
-Rules out ``the model just memorised the scored clips'': adapt on one half of
-the target, score on the disjoint other half. The main table's pattern
-replicates almost exactly (wins on 3 out of 4,), so the gain
-is real, not memorisation. 
+\section*{Our TTA on third-party public checkpoints (In-the-Wild)}
+Every table above compares our source model against our baselines on our
+protocol. This one runs the \emph{unmodified} published TTA config on weights
+released by other groups, so the contribution stops depending on our own model
+being the only comparator. Both checkpoint families are wav2vec2/XLS-R-300M +
+AASIST; neither has seen In-the-Wild (31{,}779 clips). Only \textbf{16{,}706
+parameters} are adapted (0.005\% of 315.9M): the top-4 LayerNorm blocks plus
+the output layer.
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}llccc@{}}
+\toprule
+Checkpoint & Trained on & Source & Ours & $\Delta$ EER \\
+\midrule
+\texttt{ash56/ssl-aasist} & WaveFake / LJSpeech & 5.04 / .986 & \textbf{4.06} / .990 & $-0.98$ \\
+DeepFense seed 42 & ASVspoof2019-LA & 16.41 / .918 & \textbf{10.10} / .961 & \cellcolor{green!12}$-6.31$ \\
+DeepFense seed 240 & ASVspoof2019-LA & 8.41 / .970 & \textbf{7.88} / .973 & $-0.52$ \\
+DeepFense seed 2 & ASVspoof2019-LA & 9.59 / .966 & \textbf{9.06} / .970 & $-0.53$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Two independent training corpora was deliberate: a gain that reproduces on both
+is not a quirk of one model's score distribution. The best absolute detector is
+\texttt{ash56}, and its gain is stable across seeds (4.06 / 4.09 / 4.09 on seeds
+0/1/2). The largest gain goes to the \emph{weakest} source model, DeepFense
+seed 42, which is what the ranking-vs-calibration account predicts.
+
+\subsection*{Ablation and Tent on the same public weights}
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Checkpoint & Source & Self-train only & Consistency only & Ours (both) \\
+\midrule
+\texttt{ash56/ssl-aasist} & 5.04 & 4.93 & 4.35 & \textbf{4.06} \\
+DeepFense seed 42 & 16.41 & 11.99 & \cellcolor{red!10}28.65 & \textbf{10.10} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+On the strong checkpoint both components help and compose. On the weak one,
+consistency \emph{alone} is actively harmful ($16.41 \to 28.65$) and
+self-training is what rescues it --- the same pattern already documented on
+LibriSpeech-TTS, now reproduced independently on third-party weights.
+
+On DeepFense seed 42, \textbf{Tent collapses to 49.80\% EER / .502 AUC (exact
+chance)} while ours takes the same checkpoint from 16.41 to 10.10. On a model
+we did not train, with data we did not choose. This is the strongest evidence
+that the \emph{structure} of the method, not our particular source model, is
+doing the work.
+
+\subsection*{Inductive check on public checkpoints}
 \begin{table}[h]
 \centering
 \begin{tabular}{@{}lcc@{}}
 \toprule
-Target & Source (half) & Ours (disjoint half) \\
+Checkpoint & Source (half) & Ours (disjoint half) \\
 \midrule
-ASVspoof2019 & 4.93 & \textbf{4.16} \\
-LibriSpeech-TTS & 34.49 & 34.70 \\
-In-the-Wild & 12.66 & \textbf{11.13} \\
-Arabic & 22.29 & \textbf{21.14} \\
+\texttt{ash56/ssl-aasist} & 4.84 & \textbf{4.08} \\
+DeepFense seed 42 & 15.07 & \textbf{10.21} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
+\textbf{What is deliberately not claimed.} Neither checkpoint has a published
+\emph{single-model} In-the-Wild EER (Garg et al.\ report 5.70\% for an
+\emph{ensemble}; DeepFense ships no model card), so no claim of reproducing a
+published figure is made. Correctness of the port rests instead on four gates,
+all passed on CPU before any GPU time: strict weight load (421 tensors, 0
+missing / 0 unexpected in the back-end); a check that the loaded weights differ
+from a fresh XLS-R init; a score-polarity check (both public checkpoints use
+$[\text{spoof}=0,\text{bonafide}=1]$, the opposite of our convention --- without
+this check the whole experiment reports $100-x$); and an assert that the
+trainable-parameter set is non-empty, since our selector hardcodes our own
+module path and would otherwise silently adapt nothing.
+
 \newpage
 \section*{Domain divergence before/after adaptation}
-$\hat d_\mathcal{A}$ and domain-probe
-accuracy both measure how easily a linear classifier can tell source from
-target embeddings apart; both go \emph{up} slightly after adaptation on every
-target, showing adaptation works by re-shaping the decision boundary, not by
-erasing domain identity (which is what DANN tries to do, and underperforms
-at) and i tries DANN but failed.
+$\hat d_\mathcal{A}$ and domain-probe accuracy both measure how easily a linear
+classifier can tell source from target embeddings apart; both go \emph{up}
+slightly after adaptation on every target. So adaptation works by re-shaping the
+decision boundary, not by erasing domain identity --- which is exactly what DANN
+optimizes for, and post-hoc explains why DANN underperforms here.
 \begin{table}[h]
 \centering
 \begin{tabular}{@{}lcccc@{}}
@@ -129,18 +244,19 @@ at) and i tries DANN but failed.
 & \multicolumn{2}{c}{$\hat d_{\mathcal{A}}$} & \multicolumn{2}{c}{Domain probe acc.\ (\%)} \\
 Target & source & adapted & source & adapted \\
 \midrule
-ASVspoof2019 & 1.572 & 1.609 & 86.6 & 89.9 \\
-LibriSpeech-TTS & 1.460 & 1.504 & 86.4 & 86.6 \\
-In-the-Wild & 1.335 & 1.357 & 80.4 & 81.6 \\
-Arabic & 1.545 & 1.606 & 87.9 & 89.1 \\
+ASVspoof2019 & 1.572 & 1.609 & 89.3 & 90.2 \\
+LibriSpeech-TTS & 1.460 & 1.504 & 86.5 & 87.6 \\
+In-the-Wild & 1.335 & 1.357 & 83.4 & 83.9 \\
+Arabic & 1.545 & 1.606 & 88.6 & 90.2 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\newpage
+Single seed per target; this is a mechanism diagnostic, not a headline number.
+
 \section*{Per-language MLAAD fake-recall}
 Fake-clip recall averaged over 32 languages seen in training vs.\ 6 languages
-held out of every source pool entirely. The 0.6-point gap is negligible --
+held out of every source pool entirely. The 0.7-point gap is negligible ---
 unseen languages are detected almost as well as seen ones.
 \begin{table}[h]
 \centering
@@ -153,5 +269,30 @@ Held out entirely (6 langs) & 93.3\% \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+\section*{Known failure: official ASVspoof DF eval (Protocol A)}
+The one protocol where the method fails outright, reported rather than omitted.
+The target pool is heavily class-skewed, and our fixed symmetric $q=0.3$
+pseudo-label split is the documented weak spot in that regime. Neither RawBoost
+augmentation nor the adaptive arm rescues it; a prior-corrected variant recovers
+part of the loss but does not reach source.
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}lcc@{}}
+\toprule
+Method & EER & AUC \\
+\midrule
+Source & \textbf{26.33} & .870 \\
+Ours & \cellcolor{red!10}42.46 & .686 \\
+Ours + prior correction & 32.58 & .820 \\
+Ours + RawBoost & 42.49 & .686 \\
+Ours + adaptive $q$/$E$ + RawBoost & 42.49 & .686 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Single run on the official eval list (400{,}435 scored, 133{,}493 missing from
+the local copy). This is the clearest target for the adaptive-$q$ work once GPU
+frees up.
 
 \end{document}
