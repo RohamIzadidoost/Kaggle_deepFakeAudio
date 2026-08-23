@@ -74,3 +74,6 @@ cpu_smoke.out
 followup.out
 seed2.out
 results_public_ckpt.csv.bak
+
+# shim-layout structure-check PDF for the JASMP manuscript (regenerable)
+main_jasmp_structurecheck.pdf

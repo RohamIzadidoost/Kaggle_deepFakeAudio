@@ -44,6 +44,7 @@
 \usepackage{amsthm}
 \usepackage{booktabs}
 \usepackage{textcomp}
+\usepackage[hyphens]{url}
 \usepackage{tikz}
 \usetikzlibrary{positioning,arrows.meta}
 \usepackage{algorithm}
@@ -56,6 +57,10 @@
     \fbox{\parbox[c][3cm][c]{\dimexpr#1-2\fboxsep-2\fboxrule\relax}{%
       \centering\small\ttfamily\detokenize{#2}\\[4pt]\normalfont(upload this figure)}}}%
 }
+
+% Long unhyphenatable compounds that otherwise force overfull lines.
+\hyphenation{At-ten-tive-Spec-CNN Libri-Speech spec-tro-gram spec-tro-grams
+  gen-er-a-li-sa-tion gen-er-a-tor gen-er-a-tors}
 
 \raggedbottom
 
@@ -391,12 +396,13 @@ We merge three public sources into a single labelled manifest
 fake, so a class-balanced subset (19{,}251 real / 19{,}251 fake) is drawn from it
 by the allocation of Algorithm~\ref{alg:waterfill}.}
 \label{tab:datasets}
+\small\setlength{\tabcolsep}{5pt}
 \begin{tabular}{@{}llrr@{}}
 \toprule
 Source & Description & Real & Fake \\
 \midrule
-ASVspoof 2021 (DF track) & Telephone / codec-degraded deepfakes & 16{,}977 & 441{,}894 \\
-LibriSpeech + TTS set    & LibriSpeech real speech + modern TTS fakes & 2{,}274 & 2{,}173 \\
+ASVspoof 2021 (DF)       & Telephone / codec-degraded deepfakes & 16{,}977 & 441{,}894 \\
+LibriSpeech + TTS        & LibriSpeech real + modern TTS fakes  & 2{,}274  & 2{,}173 \\
 MLAAD v5                 & Multilingual TTS, $\sim$90 generators (fake only) & 0 & 151{,}446 \\
 \midrule
 \textbf{Merged manifest} & Unified, labelled & \textbf{19{,}251} & \textbf{595{,}513} \\
@@ -489,20 +495,21 @@ any stage.
 
 \begin{figure}[t]
 \centering
+\resizebox{\textwidth}{!}{%
 \begin{tikzpicture}[
   node distance=4mm,
   box/.style={draw, rounded corners=2pt, align=center, inner sep=4pt,
-              font=\footnotesize, minimum height=8mm, text width=24mm},
-  src/.style={box, text width=21mm},
+              font=\footnotesize, minimum height=8mm, text width=26mm},
+  src/.style={box, text width=25mm},
   arr/.style={-{Latex[length=2mm]}, thick}
 ]
 \node[src] (a) {ASVspoof 2021 DF\\\scriptsize 16{,}977 R / 441{,}894 F};
-\node[src, below=of a] (b) {LibriSpeech+TTS\\\scriptsize 2{,}274 R / 2{,}173 F};
+\node[src, below=of a] (b) {Libri\-Speech+TTS\\\scriptsize 2{,}274 R / 2{,}173 F};
 \node[src, below=of b] (c) {MLAAD v5\\\scriptsize 0 R / 151{,}446 F};
 
 \node[box, right=9mm of b] (m) {merged manifest\\\scriptsize 19{,}251 R / 595{,}513 F\\\scriptsize ($\sim$97\% fake)};
 \node[box, right=7mm of m] (w) {water-filling\\\scriptsize balance + generator\\\scriptsize diversity};
-\node[box, right=7mm of w] (s) {speaker-disjoint\\\scriptsize StratifiedGroupKFold};
+\node[box, right=7mm of w] (s) {speaker-disjoint\\\scriptsize stratified group $k$-fold};
 
 \node[box, right=7mm of s, text width=17mm, yshift=9mm]  (tr) {train $\approx$80\%};
 \node[box, right=7mm of s, text width=17mm]              (va) {val $\approx$10\%};
@@ -511,7 +518,7 @@ any stage.
 \draw[arr] (a) -- (m); \draw[arr] (b) -- (m); \draw[arr] (c) -- (m);
 \draw[arr] (m) -- (w); \draw[arr] (w) -- (s);
 \draw[arr] (s) -- (tr); \draw[arr] (s) -- (va); \draw[arr] (s) -- (te);
-\end{tikzpicture}
+\end{tikzpicture}}
 \caption{Benchmark construction. Three public corpora are merged into one
 labelled manifest, reduced to a class-balanced and generator-diverse subset of
 19{,}251\,+\,19{,}251 clips by the water-filling allocation of
@@ -740,23 +747,25 @@ configurations on the same speaker-disjoint test partition.
 \begin{table}[t]
 \centering
 \caption{In-domain detection on the speaker-disjoint test partition; lower EER
-is better. The proposed model roughly halves the best classical configuration's
-EER, and the audited paper's headline configuration (Gaussian Naive Bayes over
-MFCCs) is the weakest of the nine.}
+is better. GNB+NMF denotes the audited paper's 18-dimensional ``transfer''
+representation (Sect.~\ref{sec:degenerate}); $\dagger$ marks its headline
+configuration. The proposed model roughly halves the best classical
+configuration's EER, and the audited headline is the weakest of the nine.}
 \label{tab:indomain}
+\small\setlength{\tabcolsep}{4.5pt}
 \begin{tabular}{@{}llrrrr@{}}
 \toprule
-Method & Features & EER (\%) & Bal.\ Acc.\ (\%) & F1$_{\text{fake}}$ (\%) & AUC \\
+Method & Features & EER (\%) & Bal.\ acc.\ (\%) & F1$_{\text{fake}}$ (\%) & AUC \\
 \midrule
-\textbf{AttentiveSpecCNN (ours)}      & log-mel           & \textbf{4.81}  & \textbf{93.84} & \textbf{93.49} & \textbf{0.99} \\
-Random Forest                         & MFCC              & 11.33 & 87.51 & 87.86 & 0.96 \\
-Random Forest                         & GNB+NMF transfer  & 11.89 & 87.60 & 87.83 & 0.95 \\
-$k$-Nearest Neighbours                & MFCC              & 13.15 & 85.46 & 86.13 & 0.92 \\
-Logistic Regression                   & GNB+NMF transfer  & 14.78 & 84.73 & 84.09 & 0.92 \\
-$k$-Nearest Neighbours                & GNB+NMF transfer  & 15.05 & 83.93 & 84.67 & 0.91 \\
-Logistic Regression                   & MFCC              & 15.52 & 84.33 & 84.17 & 0.91 \\
-Gaussian Naive Bayes                  & GNB+NMF transfer  & 23.93 & 76.72 & 75.77 & 0.87 \\
-Gaussian Naive Bayes \emph{(audited headline)} & MFCC     & 26.69 & 73.05 & 71.75 & 0.81 \\
+\textbf{AttentiveSpecCNN (ours)} & log-mel & \textbf{4.81}  & \textbf{93.84} & \textbf{93.49} & \textbf{0.99} \\
+Random Forest          & MFCC    & 11.33 & 87.51 & 87.86 & 0.96 \\
+Random Forest          & GNB+NMF & 11.89 & 87.60 & 87.83 & 0.95 \\
+$k$-Nearest Neighbours & MFCC    & 13.15 & 85.46 & 86.13 & 0.92 \\
+Logistic Regression    & GNB+NMF & 14.78 & 84.73 & 84.09 & 0.92 \\
+$k$-Nearest Neighbours & GNB+NMF & 15.05 & 83.93 & 84.67 & 0.91 \\
+Logistic Regression    & MFCC    & 15.52 & 84.33 & 84.17 & 0.91 \\
+Gaussian Naive Bayes   & GNB+NMF & 23.93 & 76.72 & 75.77 & 0.87 \\
+Gaussian Naive Bayes$^{\dagger}$ & MFCC & 26.69 & 73.05 & 71.75 & 0.81 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -827,7 +836,8 @@ time--frequency plane, and the temporal attention curve $\alpha_t$.
 \caption{Explanation for a correctly identified real clip. Top: input log-mel
 spectrogram. Middle: Grad-CAM over the final convolutional block, showing which
 time--frequency regions supported the predicted class. Bottom: the temporal
-attention weights $\alpha_t$ of Eq.~\eqref{eq:attn}, at 160\,ms resolution.}
+attention weights $\alpha_t$ of Eq.~\eqref{eq:attn}---25 values at 160\,ms
+spacing, linearly interpolated onto the input frame axis for display.}
 \label{fig:explain}
 \end{figure}
 
@@ -867,6 +877,7 @@ so when it is held out only the fake-detection rate on unseen generators is
 reportable. The in-domain row is the reference point from
 Table~\ref{tab:indomain}.}
 \label{tab:cross}
+\small\setlength{\tabcolsep}{5pt}
 \begin{tabular}{@{}lllr@{}}
 \toprule
 Held-out source & Trained on & Metric & Result \\
@@ -892,7 +903,7 @@ Performance collapses. A detector at 4.81\% EER and 0.99 AUC in-domain reaches
 generators---both indistinguishable from a coin flip. Whatever supports the
 in-domain result is largely not present in a new source.
 
-The LibriSpeech+TTS fold is more informative than the others, because 0.42 AUC
+The Libri\-Speech+TTS fold is more informative than the others, because 0.42 AUC
 is not merely chance---it is \emph{below} chance, which means the ranking is
 systematically inverted and therefore carries real, anti-correlated signal. The
 mechanism is visible in the training composition. That fold trains on ASVspoof
@@ -900,7 +911,7 @@ mechanism is visible in the training composition. That fold trains on ASVspoof
 (clean, wideband, entirely fake). Across those two sources, acoustic
 cleanliness is almost perfectly predictive of the label---clean implies
 fake---and it is a far easier cue than any synthesis artefact. The held-out
-LibriSpeech+TTS real speech is clean studio audiobook audio, so the learned rule
+Libri\-Speech+TTS real speech is clean studio audiobook audio, so the learned rule
 assigns it to ``fake'' with confidence. The detector did not fail to learn; it
 learned a corpus-polarity rule that happens to be exactly wrong on the held-out
 source. This is shortcut learning~\cite{shortcut} with an unusually clean
@@ -909,8 +920,8 @@ the in-domain 4.81\% figure leans on recording-domain signature.
 
 Two asymmetries qualify the numbers. The ASVspoof-holdout fold is real-starved:
 with ASVspoof removed, the only real speech available for training is the
-LibriSpeech+TTS set's $\sim$2.3k clips, so that row should be read as a lower
-bound rather than a clean measurement. And MLAAD's fake-only composition means
+$\sim$2.3k clips of the Libri\-Speech+TTS set, so that row should be read as a
+lower bound rather than a clean measurement. And MLAAD's fake-only composition means
 the MLAAD row measures generator generalisation alone, with no real-class
 component. Neither asymmetry changes the direction of the result, and both are
 properties of the available public data rather than of the protocol.
@@ -986,7 +997,7 @@ the same authors~\cite{companion}, under review elsewhere, addresses the remedy
 with unsupervised test-time adaptation of self-supervised detectors. The two
 works are disjoint in every experimental respect: they use different corpora
 (ASVspoof~2019~LA, In-the-Wild, and an Arabic set there; ASVspoof~2021~DF, the
-LibriSpeech+TTS set, and MLAAD here), different detector families
+Libri\-Speech+TTS set, and MLAAD here), different detector families
 (fine-tuned XLS-R there; classical MFCC pipelines and a 106k-parameter CNN
 here), and different claims. No table, figure, or reported number is shared. We
 declare the relationship here so that the scope of each is unambiguous to
@@ -1082,7 +1093,7 @@ LibriSpeech~\cite{librispeech}, and MLAAD~v5~\cite{mlaad}. The code that builds
 the merged manifest, draws the class-balanced subset, produces the
 speaker-disjoint splits, reproduces the classical baseline, and trains and
 explains AttentiveSpecCNN is released at
-\texttt{https://github.com/RohamIzadidoost/Kaggle\_deepFakeAudio},
+\url{https://github.com/RohamIzadidoost/Kaggle_deepFakeAudio},
 together with the manifest-construction scripts needed to regenerate the exact
 benchmark from the public sources.
 

@@ -43,8 +43,49 @@ problem.
 
 ## 2. Building it
 
-There is no LaTeX toolchain on this machine, so this has not been compiled —
-build it on Overleaf the way you build the other two.
+### Compile status
+
+Springer does not ship `sn-jnl.cls` to CTAN, so no local TeX bundle has it and
+the real class cannot be compiled here. What *was* compiled, with `tectonic`, is
+the full manuscript body under a throwaway `article`-class shim that emulates
+the sn-jnl interface (`\fnm`, `\sur`, `\affil`, `\abstract`, `\keywords`,
+`\bmhead`, `\backmatter`) at Springer's single-column text measure (375 pt).
+
+Result: **builds clean, 21 pages, BibTeX resolves, zero undefined references or
+citations.** Every table, the algorithm float, the TikZ pipeline figure, and all
+three PNG figures typeset correctly. Remaining warnings are five overfull hboxes
+of 0.2–8.3 pt, which are ordinary tight lines and measure-dependent — they will
+break differently under the real class.
+
+Fixes the compile check forced, all now in `main_jasmp.tex`:
+
+- the in-domain results table was **64 pt overfull** → `\small`, tighter
+  `\tabcolsep`, `GNB+NMF transfer` → `GNB+NMF`, and the audited headline row
+  marked with `$\dagger$` and glossed in the caption
+- the repo URL was an unbreakable 52-character `\texttt` token → `\url` with
+  `\usepackage[hyphens]{url}`
+- the TikZ pipeline figure was wider than the measure → wrapped in
+  `\resizebox{\textwidth}{!}{...}`, so it fits whatever the real measure is
+- `\botrule` and table `\footnotetext` (sn-jnl-only) → booktabs `\bottomrule`
+  plus caption notes, so the file is class-portable
+- `\hyphenation` hints for `AttentiveSpecCNN` / `LibriSpeech`, which were
+  forcing 14 pt overfulls
+- Fig. 3's caption claimed "160 ms resolution" for a curve that `explain.py`
+  interpolates onto the 401-frame input axis; corrected to say so
+
+Reproduce the check:
+
+```bash
+tectonic -k --keep-logs shimtest.tex
+```
+
+(the shim generator is in this session's scratchpad; `main_jasmp_structurecheck.pdf`
+at the repo root is its output — **shim layout, not Springer layout**, so read it
+for content and structure only, never for how the submission will look)
+
+### Real build
+
+Build on Overleaf the way you build the other two.
 
 1. Overleaf → **New Project → Templates** → search **"Springer Nature LaTeX
    Template"** → open as template. (This gives you `sn-jnl.cls` and the
