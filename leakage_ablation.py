@@ -38,7 +38,9 @@ Writes leakage_ablation_results.csv.
 
 import argparse
 import hashlib
+import importlib
 import os
+import sys
 
 import numpy as np
 import pandas as pd
@@ -48,11 +50,65 @@ from sklearn.model_selection import StratifiedGroupKFold, StratifiedKFold
 from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import StandardScaler
 
-from deepfake_dataset import LABEL_TO_IDX
-from metrics import compute_eer
-from paper_baseline import CACHE_DIR, TransferFeatures, _classifiers, _file_features
+from metrics import compute_eer  # numpy/sklearn only -- safe to import eagerly
 
-FAKE = LABEL_TO_IDX["fake"]
+FAKE = 1  # == LABEL_TO_IDX["fake"] in deepfake_dataset.py; asserted in preflight()
+
+
+# --------------------------------------------------------------------------- preflight
+# paper_baseline imports torch/torchaudio at module level and deepfake_dataset
+# imports librosa/soundfile, so a plain `from paper_baseline import ...` at the
+# top of this file dies with an ImportError several frames deep before anything
+# useful can be said. Defer it, and check every prerequisite up front instead.
+def preflight(manifest_csv):
+    """Report every missing prerequisite at once, then exit. No partial runs."""
+    problems = []
+
+    if not os.path.exists(manifest_csv):
+        problems.append(
+            f"manifest not found: {manifest_csv}\n"
+            "      It is gitignored (it embeds absolute paths). Regenerate with:\n"
+            "        python build_manifest.py --root data --out manifest.csv\n"
+            "        python build_balanced_subset.py --manifest manifest.csv "
+            "--out manifest_balanced.csv\n"
+            "      That needs all three corpora decompressed under data/ "
+            "(ASVspoof2021-DF, the LibriSpeech+TTS set, MLAAD v5).")
+
+    missing = []
+    for mod in ("torch", "torchaudio", "soundfile", "librosa"):
+        try:
+            importlib.import_module(mod)
+        except ImportError:
+            missing.append(mod)
+    if missing:
+        problems.append(
+            f"missing packages: {', '.join(missing)}\n"
+            "      Needed to decode audio and compute MFCCs. Install into the "
+            "environment\n      you are running this from (see requirements.txt "
+            "-- the pins matter).")
+
+    if not problems:
+        from deepfake_dataset import LABEL_TO_IDX
+        assert LABEL_TO_IDX["fake"] == FAKE, "label convention changed upstream"
+        return
+
+    print("Cannot run: prerequisites missing.\n", file=sys.stderr)
+    for i, p in enumerate(problems, 1):
+        print(f"  [{i}] {p}\n", file=sys.stderr)
+    print("This experiment is CPU-only but not data-free -- it needs the merged\n"
+          "corpora. Run it on the machine that holds them.", file=sys.stderr)
+    sys.exit(1)
+
+
+def load_backend():
+    """Import the shared feature extractor and classifiers from paper_baseline.
+
+    Deferred past preflight() so a missing torch reports as one clear line
+    rather than an ImportError traceback.
+    """
+    global CACHE_DIR, TransferFeatures, _classifiers, _file_features
+    from paper_baseline import (CACHE_DIR, TransferFeatures, _classifiers,
+                                _file_features)
 
 
 # --------------------------------------------------------------------------- features
@@ -185,6 +241,9 @@ def main():
                     help="fake:real ratio for the pre-split-SMOTE arm (P3)")
     ap.add_argument("--out", default="leakage_ablation_results.csv")
     args = ap.parse_args()
+
+    preflight(args.manifest)
+    load_backend()
 
     df, X, y = manifest_features(args.manifest)
     if "speaker" not in df.columns:

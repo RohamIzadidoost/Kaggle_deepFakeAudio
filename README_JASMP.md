@@ -175,12 +175,29 @@ pass — and it reuses `paper_baseline.py`'s feature extractor and classifiers s
 the arms are genuinely comparable.
 
 ```bash
-source env/bin/activate && python leakage_ablation.py --seeds 0 1 2 3 4
+python leakage_ablation.py --seeds 0 1 2 3 4
 ```
 
-Prerequisite: `manifest_balanced.csv` must exist (it's gitignored, so regenerate
-with `build_manifest.py` → `build_balanced_subset.py` if this is a fresh
-checkout).
+**It will not run on this laptop.** `CLAUDE.md` says a venv lives in `env/`, but
+there isn't one here; the conda `base` env has numpy/pandas/sklearn/joblib but
+not torch, torchaudio, soundfile, or librosa; `manifest_balanced.csv` and
+`features_cache/` don't exist; and the only corpus data present is
+`data/raw/asvspoof2021/avsspoof-2021.zip`, which is 5.0 GB of a 58 GB archive
+(`unzip -t` → "End-of-central-directory signature not found") — a download that
+died at ~8%. Datasets 2 and 3 aren't present at all.
+
+`leakage_ablation.py` now preflights all of that and prints every missing
+prerequisite at once instead of dying on an ImportError several frames deep.
+
+So run it on the machine that holds the corpora. It needs:
+
+- all three corpora decompressed under `data/`
+- `manifest.csv` → `manifest_balanced.csv` (both gitignored; regenerate with
+  `build_manifest.py` then `build_balanced_subset.py`)
+- torch, torchaudio, soundfile, librosa at the `requirements.txt` pins
+
+No GPU needed — the whole thing is sklearn over cached MFCCs. The expensive part
+is the one-off feature extraction over 38,502 clips, and it caches.
 
 Output: `leakage_ablation_results.csv`, plus a printed "best accuracy per
 protocol" line — which is the number a paper following each protocol *would have
