@@ -10,11 +10,17 @@ Files added by this branch:
 |---|---|
 | `main_jasmp.tex` | The manuscript (Springer Nature `sn-jnl` class) |
 | `refs_jasmp.bib` | Its bibliography — separate from the ICASSP paper's inline one |
-| `leakage_ablation.py` | Optional experiment that turns the protocol audit into a measurement |
+| `leakage_ablation.py` | The protocol-inflation ablation — run, results in §5 |
+| `make_leakage_table.py` | Generates `tab_leakage.tex` from the ablation CSV |
+| `leakage_ablation_results.csv` | Raw per-seed/fold/classifier ablation output |
+| `build_jasmp/sn-jnl.cls` | Structure-check compile shim (§2) |
 | `README_JASMP.md` | This file |
 
-Nothing existing was modified. `main.tex`, `main_icassp.tex`, `results.tex`,
-`report_tables.tex` and every result CSV are untouched.
+`main.tex`, `main_icassp.tex`, `results.tex`, `report_tables.tex`, and every
+result CSV belonging to the ICASSP paper are untouched. One shared file *was*
+touched: `deepfake_dataset.py`, to fix a dead decoder fallback the ablation run
+caught (§5) — that fix lands as its own commit, separate from the paper
+changes, since every other pipeline using that module benefits from it too.
 
 ---
 
@@ -46,16 +52,19 @@ problem.
 ### Compile status
 
 Springer does not ship `sn-jnl.cls` to CTAN, so no local TeX bundle has it and
-the real class cannot be compiled here. What *was* compiled, with `tectonic`, is
-the full manuscript body under a throwaway `article`-class shim that emulates
-the sn-jnl interface (`\fnm`, `\sur`, `\affil`, `\abstract`, `\keywords`,
-`\bmhead`, `\backmatter`) at Springer's single-column text measure (375 pt).
+the real class cannot be compiled here. What *is* compiled, with `pdflatex` +
+`bibtex`, is the full manuscript body under a throwaway `article`-class shim
+(`build_jasmp/sn-jnl.cls`, checked into the repo) that emulates the sn-jnl
+interface (`\fnm`, `\sur`, `\affil`, `\abstract`, `\keywords`, `\bmhead`,
+`\backmatter`, starred `\author*`) at Springer's single-column text measure
+(375 pt).
 
-Result: **builds clean, 21 pages, BibTeX resolves, zero undefined references or
-citations.** Every table, the algorithm float, the TikZ pipeline figure, and all
-three PNG figures typeset correctly. Remaining warnings are five overfull hboxes
-of 0.2–8.3 pt, which are ordinary tight lines and measure-dependent — they will
-break differently under the real class.
+Result: **builds clean, 23 pages, BibTeX resolves, zero undefined references or
+citations.** Every table (including the generated leakage-ablation table,
+§5), the algorithm float, the TikZ pipeline figure, and all three PNG figures
+typeset correctly. Remaining warnings are six overfull hboxes of 0.4–8.3 pt,
+ordinary tight lines and measure-dependent — they will break differently under
+the real class.
 
 Fixes the compile check forced, all now in `main_jasmp.tex`:
 
@@ -76,12 +85,16 @@ Fixes the compile check forced, all now in `main_jasmp.tex`:
 Reproduce the check:
 
 ```bash
-tectonic -k --keep-logs shimtest.tex
+BIBINPUTS=.. bash -c 'cd build_jasmp && bibtex main_jasmp'
+TEXINPUTS="./build_jasmp:" pdflatex -interaction=nonstopmode -output-directory=build_jasmp main_jasmp.tex
+TEXINPUTS="./build_jasmp:" pdflatex -interaction=nonstopmode -output-directory=build_jasmp main_jasmp.tex
 ```
 
-(the shim generator is in this session's scratchpad; `main_jasmp_structurecheck.pdf`
-at the repo root is its output — **shim layout, not Springer layout**, so read it
-for content and structure only, never for how the submission will look)
+`build_jasmp/main_jasmp.pdf` is the output — **shim layout, not Springer
+layout**, so read it for content and structure only, never for how the
+submission will look. `build_jasmp/` is gitignored except for `sn-jnl.cls`
+itself, which is checked in so the check is reproducible without regenerating
+the shim from scratch.
 
 ### Real build
 
@@ -142,76 +155,87 @@ Everything is traceable to a committed artefact — no number was invented.
 | Feature map 128×5×25, attention resolution 160 ms | Derived from `model.py` + the front-end settings |
 | Leave-one-source-out: 44.93/0.56, 57.50/0.42, 48.4% recall | `cross_dataset_results.csv` |
 | The GNB→NMF degeneracy argument | Structural; `paper_baseline.py`'s own docstring records the same finding |
-| The silent-decoder / "silence ⇒ real" shortcut | `deepfake_dataset.load_audio` docstring, `README.md` §Data-hygiene, `PROJECT_LOG.md` §3 |
+| The silent-decoder / "silence ⇒ real" shortcut, and the exact per-source/per-label failure counts | `deepfake_dataset.load_audio` docstring, `README.md` §Data-hygiene, `PROJECT_LOG.md` §3; exact counts in `decoder_audit.csv` |
+| Protocol-inflation table (P0–P3, 5-seed mean±s.d.) | `leakage_ablation_results.csv`, via `make_leakage_table.py` → `tab_leakage.tex` |
 
 ### What the paper deliberately does *not* claim
 
-The audit argues mechanisms **M1** (pre-split SMOTE) and **M2** (random k-fold
-over a speaker-recurrent corpus) structurally, and says so — it does not put a
-number on how much each one inflates a score, because that was never measured.
-The Limitations section states this outright.
+The audit argues mechanism **M1** (pre-split SMOTE) structurally, and its
+marginal contribution on top of M2 is **not** cleanly isolated by the ablation
+in §5 — P2 and P3 differ in pool composition as well as resampling, so the
+paper reports the confound rather than a clean number for M1 alone. M2's
+contribution *is* now measured (§5), which is new since the previous version
+of this README.
 
-The decoder-failure section says "roughly half of the ASVspoof audio" and gives
-qualitative evidence, because that is what was recorded. It does **not** report
-a pre-fix EER, because none exists.
+The decoder-failure section previously said "roughly half of the ASVspoof
+audio" from qualitative evidence; it now reports the exact cross-tabulation
+(§5 table, and Table "Clips libsndfile fails to decode" in the paper). It still
+does **not** report a pre-fix EER, because none exists — the fix was applied
+before any detector was trained on this benchmark.
 
 ---
 
-## 5. The one experiment worth running before submission
+## 5. The leakage ablation — run, and one real bug it caught
 
-`leakage_ablation.py` closes the gap above. It re-runs the *same* classical
-pipeline on the *same* features under four progressively leakier protocols and
-reports both accuracy and EER for each:
+`leakage_ablation.py` ran on the machine that holds the corpora, 5 seeds
+(0–4), all four protocols. Results: `leakage_ablation_results.csv` (raw,
+per-seed-per-fold-per-classifier) and `tab_leakage.tex` (the generated table,
+via `make_leakage_table.py` — regenerate rather than hand-edit if the CSV
+changes). Written up in §"Measuring the inflation mechanisms" in
+`main_jasmp.tex`, and reflected in the abstract and Limitations.
 
-```
-P0  speaker-disjoint holdout          honest — matches the paper's main table
-P1  random row holdout                M2 only
-P2  random 5-fold                     M2, exactly as the audited paper runs it
-P3  pre-split SMOTE + random 5-fold   M1 + M2, on a deliberately 4:1 pool
-```
+Headline: at a matched train fraction, letting speakers recur across the split
+(P0→P1) moves accuracy 84.21%→94.64% and EER 14.06%→3.71% (5-seed
+mean±s.d.), with nothing else changed — the paper's strongest evidence for M2,
+because it's a controlled measurement rather than a structural argument. It
+also changes which model wins (RF honest → KNC leaky) and makes the honest
+protocol look *noisier* across seeds than the leaky ones, which is itself
+worth knowing. M1's marginal contribution on top of M2 (P2→P3) came out
+**not** monotonic — P3 was slightly below P2 on both metrics — because P2 and
+P3 don't share a pool (P3 replaces 75% of its real class with SMOTE
+interpolants). The paper reports this plainly rather than smoothing it into a
+clean story; see the "M1 on top of M2 does not stack cleanly here" paragraph
+for the reasoning and what a clean isolation would need.
 
-It is **CPU-only** — no GPU, no torch training, features cached after the first
-pass — and it reuses `paper_baseline.py`'s feature extractor and classifiers so
-the arms are genuinely comparable.
+**Before trusting any of it, the run caught a real bug**, which is exactly why
+this was worth running rather than just writing up as planned. `leakage_ablation.py`'s
+preflight checked `import librosa` and passed — but an empty leftover
+`librosa/` directory in `env/`'s `site-packages` satisfies that import as a
+Python 3.14 namespace package without providing `librosa.load`. The decoder
+fallback in `deepfake_dataset.py` therefore raised `AttributeError` on every
+file `soundfile` couldn't decode, which a bare `except Exception:` swallowed,
+silently zero-filling **31% of the benchmark** (43.9% of real clips, 18.8% of
+fake — the exact "silence ⇒ real" shortcut §"Data hygiene" warns about). Fixed
+in `deepfake_dataset.py` by shelling out to FFmpeg directly instead of via
+librosa (kept out of `requirements.txt` deliberately — it drags in numba
+against the pinned numpy 1.26.4); preflight now checks for the `ffmpeg` binary
+instead of the hollow import. Verified 0/38,502 zero-feature clips post-fix.
+That fix is a **separate commit** from the paper changes, since it touches
+`deepfake_dataset.py`, which every other pipeline (`train.py` included) also
+uses.
+
+The exact pre-fix decoder failure count, cross-tabulated by source and label,
+is now in the paper too (Table "Clips libsndfile fails to decode", §"Data
+hygiene"), replacing the old "roughly half" estimate:
+
+| Source | real failed/total | fake failed/total |
+|---|---|---|
+| ASVspoof 2021 DF | 8,456/16,977 (49.8%) | 3,613/8,539 (42.3%) |
+| LibriSpeech+TTS | 0/2,274 | 0/2,173 |
+| MLAAD v5 | — | 0/8,539 |
+| **All** | **8,456/19,251 (43.9%)** | **3,613/19,251 (18.8%)** |
+
+To reproduce or extend:
 
 ```bash
-python leakage_ablation.py --seeds 0 1 2 3 4
+python leakage_ablation.py --seeds 0 1 2 3 4    # ~75 min, cache warm after seed 0
+python make_leakage_table.py                     # regenerate tab_leakage.tex from the CSV
 ```
 
-**It will not run on this laptop.** `CLAUDE.md` says a venv lives in `env/`, but
-there isn't one here; the conda `base` env has numpy/pandas/sklearn/joblib but
-not torch, torchaudio, soundfile, or librosa; `manifest_balanced.csv` and
-`features_cache/` don't exist; and the only corpus data present is
-`data/raw/asvspoof2021/avsspoof-2021.zip`, which is 5.0 GB of a 58 GB archive
-(`unzip -t` → "End-of-central-directory signature not found") — a download that
-died at ~8%. Datasets 2 and 3 aren't present at all.
-
-`leakage_ablation.py` now preflights all of that and prints every missing
-prerequisite at once instead of dying on an ImportError several frames deep.
-
-So run it on the machine that holds the corpora. It needs:
-
-- all three corpora decompressed under `data/`
-- `manifest.csv` → `manifest_balanced.csv` (both gitignored; regenerate with
-  `build_manifest.py` then `build_balanced_subset.py`)
-- torch, torchaudio, soundfile, librosa at the `requirements.txt` pins
-
-No GPU needed — the whole thing is sklearn over cached MFCCs. The expensive part
-is the one-off feature extraction over 38,502 clips, and it caches.
-
-Output: `leakage_ablation_results.csv`, plus a printed "best accuracy per
-protocol" line — which is the number a paper following each protocol *would have
-reported*.
-
-If you run it, send me the CSV and I'll write it up as a proper subsection with
-its own table. It converts the audit from "we argue these mechanisms inflate
-scores" to "we measured how much each one inflates them on our own data," which
-is a materially stronger paper and the first thing a reviewer will want.
-
-A second, much cheaper measurement worth having: the decoder-failure counts. A
-few lines over `manifest.csv` — try `soundfile.read` on each file, tally
-failures by `(dataset_source, label)` — would let §"Data hygiene" report an
-exact figure instead of "roughly half."
+A genuinely open extension, not done here: isolating M1's marginal
+contribution cleanly needs a fifth arm that holds the imbalanced-pool
+subsampling fixed and varies only whether SMOTE runs before or after the
+split (P2 and P3 currently differ in both the resampling *and* the pool).
 
 ---
 
@@ -224,4 +248,5 @@ exact figure instead of "roughly half."
       public, and that the branch with this work is merged or referenced
 - [ ] Decide whether to cite the ICASSP companion as arXiv (needs a preprint
       posted) or leave it as "manuscript under review" — currently the latter
-- [ ] Run `leakage_ablation.py` and add §5's table (recommended)
+- [x] Run `leakage_ablation.py` and add §5's table — done; see §5 above for
+      the headline numbers and the decoder bug the run caught

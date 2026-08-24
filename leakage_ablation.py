@@ -40,6 +40,7 @@ import argparse
 import hashlib
 import importlib
 import os
+import shutil
 import sys
 
 import numpy as np
@@ -52,7 +53,11 @@ from sklearn.preprocessing import StandardScaler
 
 from metrics import compute_eer  # numpy/sklearn only -- safe to import eagerly
 
-FAKE = 1  # == LABEL_TO_IDX["fake"] in deepfake_dataset.py; asserted in preflight()
+# Mirrors deepfake_dataset.LABEL_TO_IDX, as a literal so this module does not
+# import librosa just to learn the label convention. preflight() asserts the
+# two agree before anything runs.
+LABEL_TO_IDX = {"real": 0, "fake": 1}
+FAKE = LABEL_TO_IDX["fake"]
 
 
 # --------------------------------------------------------------------------- preflight
@@ -75,7 +80,7 @@ def preflight(manifest_csv):
             "(ASVspoof2021-DF, the LibriSpeech+TTS set, MLAAD v5).")
 
     missing = []
-    for mod in ("torch", "torchaudio", "soundfile", "librosa"):
+    for mod in ("torch", "torchaudio", "soundfile"):
         try:
             importlib.import_module(mod)
         except ImportError:
@@ -87,9 +92,22 @@ def preflight(manifest_csv):
             "environment\n      you are running this from (see requirements.txt "
             "-- the pins matter).")
 
+    # Not librosa: it is deliberately absent from requirements.txt (numba vs the
+    # pinned numpy 1.26.4), and an empty leftover librosa/ directory satisfies
+    # `import librosa` as a namespace package anyway, so importing it proves
+    # nothing. The decoder fallback in deepfake_dataset shells out to ffmpeg,
+    # and without ffmpeg roughly half the ASVspoof FLACs become silent zeros.
+    if shutil.which("ffmpeg") is None:
+        problems.append(
+            "ffmpeg not found on PATH\n"
+            "      libsndfile cannot decode a large fraction of the ASVspoof2021 "
+            "FLACs;\n      deepfake_dataset.load_audio falls back to ffmpeg for "
+            "those. Without it\n      they decode as silence and every arm of this "
+            "ablation is measuring\n      a decoder bug instead of protocol leakage.")
+
     if not problems:
-        from deepfake_dataset import LABEL_TO_IDX
-        assert LABEL_TO_IDX["fake"] == FAKE, "label convention changed upstream"
+        from deepfake_dataset import LABEL_TO_IDX as _UPSTREAM
+        assert _UPSTREAM == LABEL_TO_IDX, f"label convention changed upstream: {_UPSTREAM}"
         return
 
     print("Cannot run: prerequisites missing.\n", file=sys.stderr)

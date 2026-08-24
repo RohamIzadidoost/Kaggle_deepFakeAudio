@@ -75,5 +75,8 @@ followup.out
 seed2.out
 results_public_ckpt.csv.bak
 
-# shim-layout structure-check PDF for the JASMP manuscript (regenerable)
+# shim-layout structure-check build for the JASMP manuscript (regenerable;
+# sn-jnl.cls itself is checked in so the check doesn't need regenerating)
 main_jasmp_structurecheck.pdf
+build_jasmp/*
+!build_jasmp/sn-jnl.cls

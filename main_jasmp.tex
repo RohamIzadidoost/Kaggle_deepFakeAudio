@@ -94,10 +94,15 @@ independent inflation mechanisms: synthetic minority oversampling applied before
 the train/test split, random $k$-fold cross-validation over a corpus in which
 the same speakers recur across folds, raw accuracy as the headline metric on a
 task whose dominant failure mode is class collapse, and a single corpus that
-fixes the recording domain. Its advertised feature-refinement step is also
-structurally degenerate: non-negative matrix factorisation applied to a
-two-dimensional class-posterior vector cannot carry the claimed parts-based
-structure. We then build a benchmark on which the claim can be tested fairly.
+fixes the recording domain. We measure the speaker-recurrence mechanism directly
+on our own benchmark by re-running the same classical pipeline under
+progressively leakier protocols at a matched train fraction: letting speakers
+recur across the split, with nothing else changed, moves accuracy from 84.21\%
+to 94.64\% and EER from 14.06\% to 3.71\%, a 73.6\% relative reduction, over five
+seeds. Its advertised feature-refinement step is also structurally degenerate:
+non-negative matrix factorisation applied to a two-dimensional class-posterior
+vector cannot carry the claimed parts-based structure. We then build a
+benchmark on which the claim can be tested fairly.
 Three public corpora---ASVspoof~2021 (DF track), a
 LibriSpeech-plus-text-to-speech set, and MLAAD~v5---are merged into a manifest
 of 614{,}764 clips that is $\sim$97\% fake; a water-filling allocation draws a
@@ -378,6 +383,110 @@ is the strongest reading of ``enrich MFCCs with GNB-probabilistic features
 refined by NMF'', and it is the reading under which the step has any chance of
 helping. Sect.~\ref{sec:transfer} reports whether it does.
 
+\subsection{Measuring the inflation mechanisms}\label{sec:leakage}
+
+Sect.~\ref{sec:mechanisms} argues that M1 and M2 inflate a reported score; this
+subsection measures how much, using \texttt{leakage\_ablation.py}. The
+experiment holds everything except the protocol fixed---the same cached MFCC
+features, the same two feature sets, the same four classifiers, the same code
+path---and varies only how the data is split and whether it is resampled before
+splitting:
+
+\begin{description}
+\item[P0] speaker-disjoint holdout: the honest protocol, at the same train
+fraction as P1.
+\item[P1] random holdout at that same train fraction: adds M2 alone.
+\item[P2] random 5-fold cross-validation: M2 as the audited evaluation runs it.
+\item[P3] pre-split SMOTE on a deliberately imbalanced pool, then random 5-fold:
+M1 on top of M2.
+\end{description}
+
+P3 requires a deliberately imbalanced pool because SMOTE is a no-op on an
+already-balanced subset: we subsample the real class to a 4:1 fake:real ratio,
+oversample back to parity with SMOTE~\cite{smote} over the \emph{whole} pool,
+and only then split---mirroring the audited setup of an imbalanced corpus
+balanced before partitioning. At seed 0 this injects 14{,}438 synthetic real
+clips, so 75\% of the real class in that arm is interpolated rather than
+recorded.
+
+\paragraph{The splits behave as intended}
+Under P0, 0 of 2{,}198 speakers and 0.0\% of test clips cross the train/test
+boundary. Under P1---the same manifest, split randomly at an almost identical
+train fraction (34{,}651 against 34{,}691 clips)---187 speakers land on both
+sides and \textbf{94.6\%} of test clips share a speaker with training; under P2
+the figure is 94.8\%. Because the P0/P1 train sizes match to within 0.1\%,
+P0$\to$P1 is a clean, matched-pair isolation of M2 alone.
+
+\input{tab_leakage}
+
+\paragraph{M2 alone: a 10.4-point accuracy gain and a 74\% EER reduction, from
+splitting differently and changing nothing else}
+Table~\ref{tab:leakage} reports the best-accuracy configuration per protocol,
+mean $\pm$ s.d.\ over 5 seeds---the number each protocol would cause a paper to
+report. P0$\to$P1 moves accuracy from 84.21\% to 94.64\% (+10.43 points) and EER
+from 14.06\% to 3.71\% (a 73.6\% relative reduction), with the training set held
+to the same size and composition rule. No feature, classifier, or
+hyperparameter changed. The only thing that changed is that speakers---and,
+for the synthesised half of the corpus, synthesis voices---now recur across the
+split, so both metrics move together in the leakage-favourable direction. This
+is the strongest evidence in the paper for M2, because unlike the audit in
+Sect.~\ref{sec:mechanisms} it is a controlled measurement rather than a
+structural argument. P1 and P2 agree closely (94.64 vs.\ 94.66\% accuracy, 3.71
+vs.\ 3.94\% EER), so aggregating over $k$ folds does not materially change the
+picture: at this corpus size, the leakage effect dominates whatever
+fold-to-fold averaging contributes.
+
+\paragraph{Leakage also picks a different winner}
+The best-accuracy model changes between the honest and leaky protocols: random
+forest under P0, $k$-nearest neighbours under P1 and P2. This is consistent
+with the mechanism, not incidental to it---a nearest-neighbour classifier is
+precisely the one most able to exploit a test point whose nearest neighbours in
+feature space include recordings of the same speaker or the same synthesis
+voice, and is correspondingly the one whose apparent ranking benefits most from
+M2. A model-selection step run under a leaky protocol is therefore not just
+mis-scored; it is liable to promote the wrong model.
+
+\paragraph{The honest protocol is also the noisiest one}
+P0's standard deviation (2.97 accuracy points, 2.25 EER points) is an order of
+magnitude larger than P1/P2/P3's (0.05--0.25 points). This is a second, distinct
+cost of the leaky protocols: by averaging over many recurring speakers rather
+than depending on which speakers happen to fall in one held-out slice, they also
+look deceptively \emph{stable} run to run, which is a second way for a reader
+to over-trust a leaky number---not just its level, but its apparent
+reproducibility.
+
+\paragraph{M1 on top of M2 does not stack cleanly here, and we report that
+plainly}
+P3 (M1+M2) still sits far above the honest baseline (93.70\% accuracy against
+P0's 84.21\%), so the combined mechanism still inflates the reported number
+enormously relative to an honest evaluation. But P3 is not above P2: accuracy is
+0.96 points \emph{lower} and EER is 2.39 points \emph{higher} than M2 alone. We
+do not read this as evidence that pre-split oversampling fails to leak---the
+train/test interpolation argument in Sect.~\ref{sec:mechanisms} is a property of
+SMOTE's construction, independent of this measurement. Rather, P2 and P3 do not
+share a pool: P3's is built by subsampling real to 4:1 and then replacing 75\%
+of the resulting real class with SMOTE interpolants, so the P2$\to$P3 contrast
+confounds adding M1 with discarding most of the real class's recorded acoustic
+diversity. On this benchmark and this feature set, whatever M1 adds back through
+leakage is outweighed by what synthetic interpolation costs in diversity, so P3
+is not a clean isolation of M1's marginal contribution the way P1 is for M2.
+Separating the two effects would need a fifth arm---pre-split SMOTE on an
+already-balanced pool is a no-op by construction (Sect.~\ref{sec:mechanisms}),
+so isolating M1 cleanly requires holding the imbalanced-pool subsampling fixed
+across two arms that differ only in whether the resampling happens before or
+after the split. We leave that arm to future work rather than construct it
+post hoc to fit a monotonic narrative.
+
+\paragraph{Consistency with Table~\ref{tab:indomain}}
+P0's random-forest EER (14.06\,$\pm$\,2.25\%) is compatible with, though not
+identical to, the 11.33\% reported in Table~\ref{tab:indomain} for the same
+model and feature set: the two numbers come from different partitions (a single
+70/30-style speaker-disjoint holdout here, averaged over 5 seeds, against the
+paper's dedicated speaker-disjoint train/val/test split at a single seed), and
+11.33\% is well within one standard deviation of the ablation's P0 mean. The
+qualitative claim---P0 far below P1/P2/P3---is what this experiment measures,
+not an exact reproduction of Table~\ref{tab:indomain}'s figure.
+
 % =====================================================================
 \section{A leakage-free benchmark}\label{sec:benchmark}
 % =====================================================================
@@ -551,12 +660,51 @@ synchronisation error, even though the files are valid and decode correctly with
 FFmpeg. In our first pipeline the affected reads did not propagate as
 exceptions to the caller: they produced empty or zero-valued waveforms, which the
 fixed-length preprocessing step (Sect.~\ref{sec:preproc}) then padded to 4\,s of
-digital silence. Roughly half of the ASVspoof audio entered training as silence.
+digital silence.
+
+We quantify the failure exactly rather than estimating it. Re-running
+\texttt{libsndfile} alone over the 38{,}502-clip benchmark manifest and counting
+the clips that either raise or return all-zero audio gives
+Table~\ref{tab:decoder}. Almost half the ASVspoof real partition
+(8{,}456 of 16{,}977 clips, 49.8\%) and a comparable share of its fake partition
+(3{,}613 of 8{,}539, 42.3\%) fail; the LibriSpeech+TTS and MLAAD sources are
+unaffected at exactly zero failures. With the FFmpeg fallback in place the
+count over the same manifest is $0$ of $38{,}502$.
+
+\begin{table}[t]
+\centering
+\caption{Clips that \texttt{libsndfile} alone fails to decode, or decodes to
+all-zero audio, over the balanced benchmark manifest. The failure is confined to
+ASVspoof~2021~DF and is roughly class-neutral \emph{within} that corpus; the
+class asymmetry in the last two rows is induced at benchmark level, because
+ASVspoof supplies 88\% of the benchmark's real audio but only 44\% of its fake
+audio. With the FFmpeg fallback enabled every count in this table becomes zero.}
+\label{tab:decoder}
+\small\setlength{\tabcolsep}{5pt}
+\begin{tabular}{@{}llrrr@{}}
+\toprule
+Source & Class & Failed & Total & Rate (\%) \\
+\midrule
+ASVspoof~2021~DF   & real & 8{,}456 & 16{,}977 & 49.8 \\
+ASVspoof~2021~DF   & fake & 3{,}613 &  8{,}539 & 42.3 \\
+LibriSpeech+TTS    & real &       0 &  2{,}274 &  0.0 \\
+LibriSpeech+TTS    & fake &       0 &  2{,}173 &  0.0 \\
+MLAAD~v5           & fake &       0 &  8{,}539 &  0.0 \\
+\midrule
+\textbf{All}       & \textbf{real} & \textbf{8{,}456} & \textbf{19{,}251} & \textbf{43.9} \\
+\textbf{All}       & \textbf{fake} & \textbf{3{,}613} & \textbf{19{,}251} & \textbf{18.8} \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \paragraph{Why it is worse than random corruption}
-The corruption is not distributed uniformly over the benchmark. ASVspoof is the
-only source contributing a large quantity of \emph{real} speech, so the silent
-clips fall predominantly in the real class. A model presented with this data has
+The corruption is not distributed uniformly over the benchmark. Within ASVspoof
+the failure rate is similar for both classes (49.8\% real, 42.3\% fake), so the
+decoder itself is not class-selective. The asymmetry is a property of the
+\emph{merge}: ASVspoof is the only source contributing a large quantity of
+\emph{real} speech, so at benchmark level 43.9\% of real clips are silenced
+against 18.8\% of fake clips---a 2.3$\times$ imbalance---and the silent clips
+fall predominantly in the real class. A model presented with this data has
 an exact, trivially learnable rule available---all-zero input implies
 real---which is far easier than any spectral cue. It is a textbook
 shortcut~\cite{shortcut}: perfectly predictive on the corrupted training
@@ -579,9 +727,25 @@ the count of all-zero or near-zero clips against \texttt{label} and
 \texttt{dataset\_source}. A healthy corpus gives a small, class-independent
 count; a decoder failure gives a large count concentrated in one
 (source, label) cell. The fix is a fallback decoder: attempt
-\texttt{soundfile} first for speed, and on any exception fall back to librosa's
-FFmpeg-backed loader~\cite{librosa}, which reads the affected files correctly.
-Every number reported in this paper is post-fix.
+\texttt{soundfile} first for speed, and on any exception fall back to
+FFmpeg~\cite{ffmpeg}, which reads the affected files correctly. Every number
+reported in this paper is post-fix, and Table~\ref{tab:decoder} is the
+cross-tabulation the procedure produces.
+
+One implementation detail is worth recording, because it caused the bug to
+recur silently after it had once been fixed. Our fallback originally called
+librosa~\cite{librosa}, which wraps FFmpeg. librosa was later removed from the
+pinned environment for an unrelated dependency conflict, but an empty
+\texttt{librosa/} directory was left in \texttt{site-packages}; under Python's
+implicit-namespace-package rule this directory still satisfies
+\texttt{import librosa}. The import therefore succeeded, the attribute lookup on
+it failed at call time, and that failure was absorbed by the same
+zero-on-exception handler described below---reinstating the exact shortcut the
+fallback existed to prevent, with no error surfaced. The lesson generalises
+beyond this package: a fallback path that is only exercised on the failure
+branch of a \texttt{try} block is never exercised in normal testing, so its own
+availability must be asserted at start-up rather than assumed. We now resolve
+the FFmpeg binary explicitly at import and fail loudly if it is absent.
 
 A related subtlety affects the classical baseline. Its feature extractor
 returned an all-zero MFCC vector for any file it could not read, mirroring the
@@ -731,9 +895,12 @@ class is visible rather than hidden; ROC-AUC is included because it is the most
 robust of the four under the fixed-threshold, single-run conditions of the
 cross-dataset probe (Sect.~\ref{sec:loso}).
 
-Reported figures are single runs at a fixed seed (42). We state this plainly
-rather than implying more; Sect.~\ref{sec:limits} discusses what it does and
-does not license.
+Reported figures are single runs at a fixed seed (42), with one exception: the
+protocol-inflation ablation of Sect.~\ref{sec:leakage} runs five seeds and
+reports mean\,$\pm$\,s.d., because its entire claim is that a number
+\emph{moves} between protocols, and that movement must be separated from seed
+noise. We state the distinction plainly rather than implying more;
+Sect.~\ref{sec:limits} discusses what each does and does not license.
 
 % =====================================================================
 \section{Results}\label{sec:results}
@@ -981,7 +1148,9 @@ majority-class baseline can be computed by the reader.
 dominated by one generator measures one generator.
 \item \textbf{Audit the decoder.} Cross-tabulate near-zero-energy clip counts by
 label and source before training (Sect.~\ref{sec:hygiene}). Report the count of
-unreadable files rather than zero-filling silently.
+unreadable files rather than zero-filling silently, and assert at start-up that
+any fallback decoder is actually callable---a fallback is only exercised on the
+failure branch, so its own absence is invisible to normal testing.
 \item \textbf{Report at least one cross-corpus number.} An in-domain result
 without one bounds nothing about deployment.
 \item \textbf{Verify that a proposed component earns its place} by an ablation
@@ -1015,9 +1184,10 @@ rather than assumed. A benchmark with real audio from every source would be
 better and does not currently exist in the public multilingual TTS setting.
 
 \paragraph{Single-run results}
-All figures are single runs at seed 42. We therefore do not claim
-statistical significance for any comparison, and small differences in
-Table~\ref{tab:indomain}---notably the 0.74-point logistic-regression gain in
+All figures are single runs at seed 42, except the protocol-inflation ablation
+(Sect.~\ref{sec:leakage}), which is run over five seeds. We therefore do not claim
+statistical significance for any comparison in Table~\ref{tab:indomain}, and small
+differences there---notably the 0.74-point logistic-regression gain in
 Sect.~\ref{sec:transfer}---should be read as within the range that seed variation
 could plausibly produce. The two conclusions we do draw from that table are
 larger than any plausible seed effect: the 6.5-point gap between
@@ -1041,11 +1211,14 @@ explanation correctness is not.
 We reproduce the audited \emph{method} on our benchmark rather than re-running
 the audited \emph{evaluation} on its original corpus. The audit in
 Sect.~\ref{sec:audit} therefore rests on the protocol as described in that
-paper and on structural argument, not on a re-execution of it. Isolating the
-per-mechanism contribution of M1 and M2---by re-running our own benchmark under
-a random rather than speaker-disjoint split, with and without pre-split
-oversampling---would quantify each mechanism directly and is the natural next
-step.
+paper and on structural argument for the corpus it was run on, not on a
+re-execution of it there. Sect.~\ref{sec:leakage} instead re-runs our own
+benchmark under progressively leakier protocols and measures M2's contribution
+directly (a matched-pair, 5-seed +10.4-point accuracy / $-$10.4-point EER
+movement from splitting randomly instead of by speaker); M1's marginal
+contribution on top of M2 is not cleanly isolated by that design, for the
+reason given there, and is left to an arm that holds pool composition fixed
+across the resampling/no-resampling comparison.
 
 % =====================================================================
 \section{Conclusion}\label{sec:conclusion}
