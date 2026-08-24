@@ -19,9 +19,10 @@ Usage:
         ...
 """
 
-import warnings
+import io
+import shutil
+import subprocess
 
-import librosa
 import numpy as np
 import pandas as pd
 import soundfile as sf
@@ -32,25 +33,52 @@ from torch.utils.data import Dataset
 LABEL_TO_IDX = {"real": 0, "fake": 1}
 
 
+FFMPEG = shutil.which("ffmpeg")
+
+
+def _ffmpeg_decode(filepath: str):
+    """Decode via ffmpeg -> WAV on stdout -> soundfile. Returns (samples, ch), sr.
+
+    Raises on any failure; callers must not silently swallow it (see load_audio).
+    """
+    if FFMPEG is None:
+        raise RuntimeError(
+            "ffmpeg not found on PATH, and libsndfile cannot decode this file. "
+            "Install ffmpeg -- without it a large fraction of the ASVspoof2021 "
+            "FLACs decode as silence.")
+    proc = subprocess.run(
+        [FFMPEG, "-v", "quiet", "-i", filepath, "-f", "wav", "-c:a", "pcm_f32le", "-"],
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if proc.returncode != 0 or not proc.stdout:
+        raise RuntimeError(
+            f"ffmpeg failed to decode {filepath}: "
+            f"{proc.stderr.decode('utf-8', 'replace')[:200]}")
+    return sf.read(io.BytesIO(proc.stdout), dtype="float32", always_2d=True)
+
+
 def load_audio(filepath: str):
     """Load audio as (waveform[channels, samples] float32 tensor, sample_rate).
 
     Tries soundfile first (fast, native for .wav/.flac). libsndfile silently
-    fails to decode a large fraction of the ASVspoof2021 FLACs ("flac decoder
-    lost sync") even though the files are valid, so we fall back to librosa's
-    ffmpeg-based decoder, which reads them correctly. Without this fallback
-    ~half of ASVspoof loaded as pure silence and got zero-filled, poisoning
-    training with a "silence => real" shortcut.
+    fails to decode a large fraction of the ASVspoof2021 FLACs ("unknown error
+    in flac decoder") even though the files are valid, so we fall back to
+    ffmpeg, which reads them correctly. Without this fallback ~half of ASVspoof
+    loaded as pure silence and got zero-filled, poisoning training with a
+    "silence => real" shortcut.
+
+    The fallback shells out to ffmpeg directly rather than going through
+    librosa: librosa is deliberately absent from requirements.txt (it drags in
+    numba, which conflicts with the pinned numpy 1.26.4). An empty leftover
+    librosa/ directory in site-packages still satisfies `import librosa` as a
+    namespace package, so the previous librosa-based fallback raised
+    AttributeError, was swallowed by callers' bare excepts, and reinstated the
+    exact zero-fill bug this function exists to prevent.
     """
     try:
         data, sr = sf.read(filepath, dtype="float32", always_2d=True)  # (samples, ch)
-        wav = data.T
     except Exception:
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            y, sr = librosa.load(filepath, sr=None, mono=False)  # ffmpeg fallback
-        wav = np.atleast_2d(y)  # (samples,) -> (1, samples); stereo stays (ch, samples)
-    return torch.from_numpy(np.ascontiguousarray(wav)).float(), sr
+        data, sr = _ffmpeg_decode(filepath)
+    return torch.from_numpy(np.ascontiguousarray(data.T)).float(), sr
 
 
 class DeepfakeAudioDataset(Dataset):
