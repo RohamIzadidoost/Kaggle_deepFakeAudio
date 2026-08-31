@@ -63,10 +63,14 @@ set), ten seeds each, EER improves on three (ASVspoof2019 $5.03\!\to\!3.47\%$,
 In-the-Wild $12.78\!\to\!11.33\%$, Arabic $22.50\!\to\!20.99\%$; two survive
 Holm correction across four per-target Wilcoxon tests) and is neutral on the
 fourth, which is also the target with the weakest source ranking (AUC $0.73$).
-The method is not tied to our own detector: applied unmodified to four
-\emph{publicly released} checkpoints we did not train, it improves In-the-Wild
-EER on all four ($16.41\!\to\!10.10\%$ on the weakest, $5.04\!\to\!4.08\%$ on
-the strongest) by adapting $16{,}706$ parameters ($0.005\%$).
+The method is not tied to our own detector. Applied unmodified to nine
+\emph{publicly released} checkpoints we did not train---five architectures, one
+of them a spectrogram transformer---over six corpora and $196$ cells, it closes
+the gap between accuracy at the shipped threshold and the accuracy the model's
+own ranking already supports: $8.1\!\to\!0.4$ points, $152/196$ cells,
+$p{=}5{\times}10^{-20}$, adapting $16{,}706$ parameters ($0.005\%$). At that
+budget its effect on \emph{ranking} is not significant in either direction, so
+the mechanism is threshold repair rather than improved separability.
 Entropy-minimisation TTA (Tent) is instead unpredictably catastrophic (four of
 ten ASVspoof2019 seeds at or near chance, with a standard deviation as large as
 its mean), and a non-SSL backbone never reaches a ranking worth adapting. We
@@ -109,9 +113,9 @@ ASDG-style aggregation-separation baseline), including the
 one target where the method does not help; (iv) a mechanistic analysis---proxy
 $\mathcal{A}$-distance before/after adaptation---showing the gain does
 \emph{not} come from erasing domain identity; and (v) evidence that the method
-acts as a \emph{label-free wrapper for third-party detectors}, improving four
-publicly released checkpoints spanning two independent training corpora without
-retraining them.
+acts as a \emph{label-free wrapper for third-party detectors}, restoring the
+operating point of nine publicly released checkpoints across five architectures
+and six corpora without retraining them.
 
 \textbf{Related work.} Frozen or fine-tuned SSL front-ends with AASIST or
 attentive back-ends dominate recent benchmarks~\cite{wav2vec2aug,xlsrsls,aasist,rawnet2};
@@ -289,23 +293,40 @@ EER near-unchanged on the other ($5.04\!\to\!4.52\%$) while still degrading AUC
 model had AUC headroom to lose.
 
 \textbf{Transfer to third-party detectors.} Every result above adapts our own
-source model, so we apply the published configuration unmodified to four
-released detectors we did not train---one WaveFake-trained~\cite{shiftyspeech},
-three ASVspoof2019-trained~\cite{deepfensehf} XLS-R+AASIST checkpoints, none
-having seen In-the-Wild. EER and AUC improve on all four---$5.04\!\to\!4.08$,
-$9.59\!\to\!9.06$, $8.41\!\to\!7.88$ and $16.41\!\to\!10.10\%$ EER, with AUC
-$.986\!\to\!.990$, $.966\!\to\!.970$, $.970\!\to\!.973$ and
-$.918\!\to\!.961$, over all $31{,}779$ clips---while adapting $16{,}706$
-parameters ($0.005\%$).
-Three of the four gains are modest ($0.52$--$0.96$ EER); the large one ($6.31$)
-belongs to the checkpoint arriving worst-calibrated (accuracy $39.0\%$ at
-threshold $0.5$ despite AUC $.918$)---the regime the precondition predicts. It
-is not memorisation of the adaptation pool: adapting on half of In-the-Wild and
-evaluating on the disjoint half gives $4.08\%$ vs.\ $4.06\%$ transductive, and
-$10.21\%$ vs.\ $10.10\%$. The three ASVspoof2019 checkpoints, identical but for
-training seed, span $8.41$--$16.41\%$ source EER---single-checkpoint
-cross-corpus figures, ours included, carry a large and usually unreported error
-bar.
+source model, so we apply the published configuration unmodified to nine
+released detectors we did not train---XLS-R+AASIST checkpoints trained on
+WaveFake~\cite{shiftyspeech} and on ASVspoof2019~\cite{deepfensehf},
+wav2vec2 sequence classifiers, and an Audio Spectrogram
+Transformer~\cite{ast}---across six corpora, $196$ cells in all.
+
+The consistent effect is \emph{re-calibration}. Writing
+$\delta{=}(100{-}\mathrm{EER}){-}\mathrm{acc}@0.5$ for the accuracy a model's
+ranking supports but its shipped threshold does not deliver, adaptation drives
+$\delta$ from $8.06$ to $0.39$ points ($152/196$ cells, Wilcoxon
+$p{=}5.1{\times}10^{-20}$), and $\mathrm{corr}(\delta_{\text{before}},
+\delta_{\text{after}}){=}{+}0.22$: where it lands barely depends on where it
+started. It holds within single families at $p{<}10^{-4}$, at $35/35$ and $32/32$---the
+latter the spectrogram transformer, so our selection rule (top-4 blocks'
+LayerNorms and the head), designed against XLS-R, transfers to a different input
+modality unchanged.
+
+Ranking is a different matter. Pooled over the same cells the EER change is
+\emph{not} significant ($p{=}0.81$; AUC $p{=}0.22$). Per cell at ten seeds with
+Holm correction, $8/12$ are significant---but four of those are significant
+\emph{degradations}, the largest $38.13\!\to\!41.91\%$. Our earlier single-corpus result (In-the-Wild, four checkpoints, all improved,
+$16.41\!\to\!10.10\%$ on the weakest) reproduces but does not generalise. It is
+not memorisation: adapting on half of In-the-Wild and scoring the disjoint half
+gives $4.08\%$ vs.\ $4.06\%$ transductive.
+
+\textbf{The adaptation budget is a confound we introduced.} $E$ counts epochs,
+so the number of updates scales with pool size: $E{=}4$ over In-the-Wild's
+$31{,}779$ clips is $5.3\times$ the steps of $E{=}4$ over a $6{,}000$-clip
+pool. Re-running the four degradations at $E{=}32$ reverses three
+($-3.79\!\to\!{+}6.35$ EER on the largest); the exception is the cell whose
+source sits at chance (AUC $0.527$), where extra epochs only amplify noise.
+Three of four are therefore an artefact of an under-specified budget, not a
+limit of the method, and $E$ belongs in step counts. Correcting it would change
+every table here, so we report the defect and leave the budget to future work.
 
 \textbf{Backbone and prior DG baselines.} RawNet2Lite (no SSL pretraining)
 stays near chance on every target (AUC $0.40$--$0.65$), confirming
@@ -386,8 +407,8 @@ limitations below can be read against the evidence:
 much of that is SSL.} A from-scratch or low-AUC starting point is not a regime
 we can rescue (Fig.~\ref{fig:aucgain}). Our non-SSL backbone never reaches a
 ranking worth adapting (AUC $0.40$--$0.65$), so it fails the precondition
-before TTA becomes applicable and we did not run adaptation on it; all four
-third-party checkpoints the wrapper improves are themselves SSL front-ends.
+before TTA becomes applicable and we did not run adaptation on it; every
+third-party checkpoint we adapt is itself a pretrained transformer.
 \item \textbf{Class balance is a second precondition, alongside AUC.} On the
 official ASVspoof2021-DF protocol (train on 2019-LA alone; $97.2\%$-spoof eval
 pool, of which we score $75\%$), source-only reaches $26.33\%$ EER and TTA
@@ -423,16 +444,16 @@ Cross-corpus audio deepfake detection fails not because ranking is lost but
 because the operating point is mis-calibrated. A simple unsupervised test-time
 adaptation exploiting this improves generalisation on three of four
 leave-one-corpus-out targets---two surviving Holm correction---and is neutral
-on the fourth, the one with the weakest source ranking. Whether source AUC
-predicts the gain is suggested by our four corpora but not established by them
-($r{=}{+}0.86$, $n{=}4$, $p{=}0.14$); settling it needs more corpora, not more
-seeds. Entropy-minimisation TTA is unpredictably catastrophic, a non-SSL
+on the fourth, the one with the weakest source ranking. Source AUC does \emph{not} predict the
+gain: the $r{=}{+}0.86$ over our four corpora ($n{=}4$, $p{=}0.14$) becomes
+$-0.20$ over $43$ third-party cells and $+0.10$ over $196$, changing sign under
+resampling of models and corpora, so we retire it rather than restate it. Entropy-minimisation TTA is unpredictably catastrophic, a non-SSL
 backbone never reaches an adaptable ranking, and two train-time DG baselines
 are beaten pooled over all 40 pairs---one despite seeing unlabeled target audio
 during training, at $3\times$ our cost. A proxy divergence analysis puts the
 mechanism at re-calibration, not domain-invariance; needing neither labels nor
-retraining, the method also improves four released SSL detectors---a wrapper,
-not a system.
+retraining, it restores the operating point of nine released detectors across
+five architectures---a wrapper, not a system.
 
 {\small
 \begin{thebibliography}{1}
@@ -460,6 +481,9 @@ normalization for practical domain adaptation,'' \emph{arXiv:1603.04779}, 2016.
 \bibitem{bendavid} S.~Ben-David, J.~Blitzer, K.~Crammer, A.~Kulesza,
 F.~Pereira, and J.~W.~Vaughan, ``A theory of learning from different
 domains,'' \emph{Machine Learning}, vol.\ 79, no.\ 1--2, pp.\ 151--175, 2010.
+\bibitem{ast} Y.~Gong, Y.-A. Chung, and J.~Glass, ``AST: Audio spectrogram
+transformer,'' in \emph{Proc. Interspeech}, 2021, pp. 571--575.
+
 \bibitem{itw} N.~M\"uller, P.~Czempin, F.~Diekmann, A.~Froghyar, and
 K.~B\"ottinger, ``Does audio deepfake detection generalize?,'' in \emph{Proc.\
 Interspeech}, 2022.
@@ -471,7 +495,8 @@ T.~M\"uller, P.~Syga, P.~Sperl, and K.~B\"ottinger, ``MLAAD: The multi-language
 audio anti-spoofing dataset,'' in \emph{Proc.\ IJCNN}, 2024.
 \bibitem{arad} DeepFake-Audio-Rangers, ``Arabic Audio Deepfake dataset,''
 HuggingFace datasets repository,
-\texttt{huggingface.co/datasets/DeepFake-Audio-Rangers/Arabic\_Audio\_Deepfake}.
+\texttt{huggingface.co/\allowbreak datasets/\allowbreak
+DeepFake-Audio-Rangers/\allowbreak Arabic\_Audio\_Deepfake}.
 \bibitem{shiftyspeech} A.~Garg, Z.~Cai, L.~Zhang, H.~L.~Xinyuan,
 L.~P.~Garc\'ia-Perera, K.~Duh, S.~Khudanpur, M.~Wiesner, and N.~Andrews,
 ``ShiftySpeech: A large-scale synthetic speech dataset with distribution
