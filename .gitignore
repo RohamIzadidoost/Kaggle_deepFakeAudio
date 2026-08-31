@@ -74,3 +74,13 @@ cpu_smoke.out
 followup.out
 seed2.out
 results_public_ckpt.csv.bak
+# --- autonomous run 2026-08-27..31 ---
+# Target pools: path-bearing and regenerable via make_target_manifests.py, which
+# size-gates every pool against results_ext.csv. Same reasoning as manifest.csv
+# and manifest_itw.csv above (39 MB across 71 files).
+manifest_tgt_*.csv
+# Run state and per-job logs for the orchestrator; the digest is queue_master.log
+# (covered by *.log) and the results CSVs.
+queue_state.json
+queue_log.txt
+run_log_*.txt
