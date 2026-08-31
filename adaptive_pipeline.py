@@ -123,6 +123,12 @@ else:
     SEEDS, TARGETS = [0, 1, 2], EER_TARGETS
     TARGET_PER_CLASS, MAX_PER_CORPUS_CLASS = 3000, 6000
     ABLATION_SEEDS = [0]          # single-knob arms only on seed 0 (compute)
+    # OUR_SEEDS / OUR_TARGETS let the orchestrator slice the grid without editing
+    # this file, so a long sweep can be run seed-by-seed and resumed.
+    if os.environ.get("OUR_SEEDS"):
+        SEEDS = [int(x) for x in os.environ["OUR_SEEDS"].split(",")]
+    if os.environ.get("OUR_TARGETS"):
+        TARGETS = os.environ["OUR_TARGETS"].split(",")
 
 SOURCE_EPOCHS, TTA_EPOCHS = 8, 4  # TTA_EPOCHS = the fixed-E control; adaptive E uses AT.E_MAX
 SOURCE_PER_CLASS = 5000
@@ -279,12 +285,28 @@ def build_cache(df):
             L = min(len(w), CACHE_LEN)
             buf[i, :L] = w[:L]
             vlen[i] = max(L, 1)
-    return (torch.from_numpy(buf).to(DEVICE), torch.from_numpy(vlen).to(DEVICE),
+    # CACHE_ON_CPU keeps the waveform cache in pinned host memory and moves only
+    # the current batch to the GPU. Numerically identical -- same tensors, same
+    # gather, same order -- it only changes where they live.
+    #
+    # Needed because this file was written for a 35 GB cloud slice. The whole pool
+    # is 33,597 clips x 64,000 samples x fp16 = 4.30 GB resident, which on a 10 GB
+    # card leaves no room for XLS-R plus the deepcopy that every adapt() arm makes:
+    # the `source` (eval-only) arm ran fine and every adaptation arm died with
+    # OOM. public_ckpt_tta.build_cache already solved this the same way, and says
+    # so in its docstring.
+    cache_dev = "cpu" if os.environ.get("CACHE_ON_CPU") == "1" else DEVICE
+    buf_t = torch.from_numpy(buf)
+    if cache_dev == "cpu":
+        buf_t = buf_t.pin_memory()
+    else:
+        buf_t = buf_t.to(DEVICE)
+    return (buf_t, torch.from_numpy(vlen).to(DEVICE),
             torch.tensor(df.label.map(LBL).values, dtype=torch.long, device=DEVICE))
 
 t0 = time.time()
 BUF, VLEN, Y = build_cache(pool)
-log(f"cache ready: {tuple(BUF.shape)} fp16 = {BUF.numel()*2/1e9:.2f} GB on GPU ({time.time()-t0:.0f}s)")
+log(f"cache ready: {tuple(BUF.shape)} fp16 = {BUF.numel()*2/1e9:.2f} GB on {BUF.device} ({time.time()-t0:.0f}s)")
 
 _AR = torch.arange(CROP_LEN, device=DEVICE)
 
@@ -292,7 +314,8 @@ def get_batch(idx, train):
     span = (VLEN[idx] - CROP_LEN).clamp(min=0)
     start = (torch.rand(len(idx), device=DEVICE) * (span + 1).float()).long() if train else span // 2
     gidx = (start.unsqueeze(1) + _AR.unsqueeze(0)).clamp(max=CACHE_LEN - 1)
-    return torch.gather(BUF[idx], 1, gidx).float(), Y[idx]
+    rows = BUF[idx] if BUF.is_cuda else BUF[idx.cpu()].to(DEVICE, non_blocking=True)
+    return torch.gather(rows, 1, gidx).float(), Y[idx]
 
 def augment(x):
     return x * torch.empty(x.size(0), 1, device=DEVICE).uniform_(0.7, 1.3) + 0.005 * torch.randn_like(x)
@@ -711,7 +734,24 @@ def run_grid():
                 "ours_fixed":    lambda m, i, **k: adapt(m, i),
                 "ours_adaptive": lambda m, i, **k: adapt_adaptive(m, i, True, True, **k),
             }
-            if seed in ABLATION_SEEDS:
+            # OUR_E_SWEEP="8,16,32" replaces the arms above with published-adapt()
+            # runs at those epoch counts, to map the shape of the E curve on OUR
+            # source model. Motivation: E is an *epoch* count, so the update budget
+            # is a function of pool size; four epochs over In-the-Wild's full
+            # 31,779 clips is 5.3x the steps of four over a 6,000-clip pool, and
+            # matching the steps on third-party checkpoints beat the full-pool
+            # result. The note at the top of this file already records
+            # "E=4->8 is worth 1.2-1.6 EER in the existing sweep" -- this maps
+            # the rest of the curve, and specifically whether it plateaus
+            # (safe: pick a big budget, no labels needed) or peaks and declines
+            # (unusable: locating the peak would need target labels).
+            if os.environ.get("OUR_E_SWEEP"):
+                _es = [int(x) for x in os.environ["OUR_E_SWEEP"].split(",")]
+                methods = {"source": None}
+                for _e in _es:
+                    # bind e per-iteration; a bare closure would capture the last value
+                    methods[f"ours_E{_e}"] = (lambda ee: (lambda m, i, **k: adapt(m, i, epochs=ee)))(_e)
+            if seed in ABLATION_SEEDS and not os.environ.get("OUR_E_SWEEP"):
                 methods["ours_aq"] = lambda m, i, **k: adapt_adaptive(m, i, True, False, **k)
                 methods["ours_ae"] = lambda m, i, **k: adapt_adaptive(m, i, False, True, **k)
 
@@ -735,8 +775,10 @@ def run_grid():
                 except Exception as e:
                     log(f"  !! {name} failed: {type(e).__name__}: {e}")
 
-            # inductive check: adapt on one half, evaluate on the disjoint half
-            if not done(seed, target, "ours_adaptive", "inductive"):
+            # inductive check: adapt on one half, evaluate on the disjoint half.
+            # Skipped during an E sweep -- it exercises adapt_adaptive(), which is
+            # a different arm from the fixed-E adapt() the sweep is measuring.
+            if not os.environ.get("OUR_E_SWEEP") and not done(seed, target, "ours_adaptive", "inductive"):
                 try:
                     torch.manual_seed(seed); np.random.seed(seed)
                     half = len(tgt_idx) // 2
