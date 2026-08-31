@@ -99,12 +99,13 @@ if has_stage 4; then
 fi
 
 # --- Stage 5: Phase-1 detector re-run on the repaired decoder ----------------
-# Closes the question flagged this session: the JASMP paper reports 4.81% EER
-# for AttentiveSpecCNN, trained 2026-07-22, and the librosa fallback went hollow
-# on 2026-08-17. The timestamps say the training pre-dates the breakage, but that
-# is inference from a directory mtime, not a measurement. This is a 106k-param
-# CNN -- minutes on this card -- and it either confirms the published number or
-# finds that a headline result was trained on 31% silence.
+# Not part of the ICASSP work: this belongs to the companion dataset study, and
+# ran here only because the card was free. It closes a question the decoder
+# repair opened -- the Phase-1 detector's published 4.81% EER was trained
+# 2026-07-22, and the librosa fallback went hollow 2026-08-17; the timestamps say
+# the training pre-dates the breakage, but that is inference from a directory
+# mtime. A 106k-param CNN, minutes on this card. Results live on the
+# dataset-study branch, not here.
 if has_stage 5; then
   say "stage 5: retrain AttentiveSpecCNN on the repaired decoder"
   python train.py --epochs 15 --out attentive_spec_cnn_postfix.pt 2>&1 \

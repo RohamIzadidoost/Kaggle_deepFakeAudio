@@ -195,8 +195,8 @@ def _ffmpeg_decode(path):
     Same route as `deepfake_dataset._ffmpeg_decode`. Deliberately not routed
     through librosa: an empty leftover `librosa/` directory in site-packages
     satisfies `import librosa` as a namespace package without providing
-    `librosa.load`, which is exactly how the previous fallback died silently
-    (README_JASMP.md S5).
+    `librosa.load`, which is exactly how a previous fallback in this repo died
+    silently -- an AttributeError swallowed by a bare `except`.
     """
     if FFMPEG is None:
         raise RuntimeError(
@@ -224,10 +224,9 @@ def load_clip(path, crop):
     numbers; dataset2 is mostly 24 kHz and needs it.
 
     Decode failures never become silence. `extended_pipeline.decode()` swallows
-    them into a zero-filled clip, which is the "silence => real" shortcut
-    documented in README_JASMP.md S5; here libsndfile failures fall back to
-    FFmpeg (as `deepfake_dataset.load_audio` does since its repair), and if that
-    also fails the exception propagates. ASVspoof2021-DF makes this mandatory
+    them into a zero-filled clip, which teaches the model "silence => real";
+    here libsndfile failures fall back to FFmpeg, and if that also fails the
+    exception propagates. ASVspoof2021-DF makes this mandatory
     rather than defensive: libsndfile cannot decode 49.8% of its real clips, so
     without the fallback that target would be half silence and would score as a
     spectacular, entirely artefactual result.

@@ -16,11 +16,10 @@ modified since the grid ran, which is why the size gate is an assert, not a
 warning.
 
 Also audits decodability, because `extended_pipeline.decode()` swallows every
-decoder failure into a zero-filled clip -- the exact silent failure mode that
-`deepfake_dataset.load_audio` was repaired for (see README_JASMP.md S5). If a
-target pool contains clips libsndfile cannot read, both this arm *and* the
-corresponding rows of `results_ext.csv` were computed on silence, and we need
-to know that before adding points to a plot.
+decoder failure into a zero-filled clip -- a silent failure mode this repo has
+been bitten by before. If a target pool contains clips libsndfile cannot read,
+both this arm *and* the corresponding rows of `results_ext.csv` were computed on
+silence, and we need to know that before adding points to a plot.
 
 Usage:
     python make_target_manifests.py                    # all targets, seed 0
