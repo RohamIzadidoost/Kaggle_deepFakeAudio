@@ -321,12 +321,13 @@ gives $4.08\%$ vs.\ $4.06\%$ transductive.
 \textbf{The adaptation budget is a confound we introduced.} $E$ counts epochs,
 so the number of updates scales with pool size: $E{=}4$ over In-the-Wild's
 $31{,}779$ clips is $5.3\times$ the steps of $E{=}4$ over a $6{,}000$-clip
-pool. Re-running the four degradations at $E{=}32$ reverses three
-($-3.79\!\to\!{+}6.35$ EER on the largest); the exception is the cell whose
-source sits at chance (AUC $0.527$), where extra epochs only amplify noise.
-Three of four are therefore an artefact of an under-specified budget, not a
-limit of the method, and $E$ belongs in step counts. Correcting it would change
-every table here, so we report the defect and leave the budget to future work.
+pool. On our own model at ten seeds, $E{=}32$ lifts the Arabic gain from $+1.41$ to
+$+3.65$ EER on $10/10$ seeds ($p{=}0.002$), while on LibriSpeech-TTS---the
+weakest source ranking---it does not help ($2/10$). It also reverses three of the
+four significant third-party degradations ($-3.79\!\to\!{+}6.35$ on the largest),
+the exception being the chance-AUC cell. $E$ belongs in step counts, not epochs;
+but more steps is not a free win, so we report the defect rather than re-tabulate
+around a budget validated on two targets.
 
 \textbf{Backbone and prior DG baselines.} RawNet2Lite (no SSL pretraining)
 stays near chance on every target (AUC $0.40$--$0.65$), confirming
@@ -427,16 +428,17 @@ against our $26.33\%$ source-only. The claim here is the \emph{relative} gain
 from adaptation on a fixed backbone under an identical protocol, not a
 competitive absolute result; the mechanism would have to be re-verified on a
 stronger source model.
-\item \textbf{Fixed hyperparameters.} $q,\lambda,E$ are chosen without target
+\item \textbf{Fixed hyperparameters.} $q$ and $\lambda$ are chosen without target
 labels and are not per-target optimal; a label-free schedule for $\lambda$ is
 predictable from tail separation but pays nothing at our scale (fixed $\lambda$
-is within $0.24$ EER of a per-point oracle), so $\lambda$ stays constant.
+is within $0.24$ EER of a per-point oracle), so $\lambda$ stays constant. $E$ is
+not a hyperparameter here but a mis-specified budget, as above.
 \item \textbf{Scale.} Four targets, ten seeds. Going from three to ten seeds
 made the per-target tests possible and confirmed Tent's collapse as routine,
 but shrank our DG margin to two per-target wins against DANN and three against
-ASDG. Seeds do not buy corpora: the AUC ordering rests on four points
-($n{=}4$, $p{=}0.14$), so the precondition is a hypothesis our data are
-consistent with, not one they test.
+ASDG. Seeds do not buy corpora, which is why the source-AUC ordering was put to
+nine third-party detectors over six corpora rather than to more seeds---where it
+did not survive.
 \end{itemize}
 
 \section{Conclusion}
