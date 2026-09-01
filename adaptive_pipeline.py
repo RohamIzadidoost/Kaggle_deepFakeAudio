@@ -234,6 +234,27 @@ def build_manifest():
     # target pools: `pool[pool.corpus == target]` holds the same rows in the
     # same order either way, since the per-corpus caps are applied by groupby
     # and MLAAD rows are concatenated after them.
+    #
+    # INCLUDE_MLAAD=1 puts it back, for the one caller that DOES train
+    # (train_source_local.py). Leaving it out while training silently drops a
+    # whole corpus from the source pool: the first local seed-0 run without it
+    # missed the cloud checkpoint by +7.3 EER on Arabic and -8.1 on dataset2,
+    # far outside seed noise. Off by default so every result already recorded
+    # against this file stays bit-reproducible.
+    if os.environ.get("INCLUDE_MLAAD") == "1":
+        # MLAAD ships to different roots on different machines -- the Kaggle
+        # download lands in data/mlaad, this box has it under data/dataset_3.
+        # Search both rather than assume, and say which one was found.
+        metas = (glob.glob("data/mlaad/**/meta.csv", recursive=True)
+                 or glob.glob("data/dataset_3/**/meta.csv", recursive=True))
+        for meta in metas:
+            model_dir = os.path.dirname(meta)
+            lang = os.path.basename(os.path.dirname(model_dir))
+            gen = os.path.basename(model_dir)
+            for w in glob.glob(f"{model_dir}/*.wav"):
+                rows.append((w, "fake", "mlaad", gen, lang))
+        log(f"MLAAD: {len(metas)} model dirs found for source training")
+
     return pd.DataFrame(rows, columns=["path", "label", "corpus", "generator", "language"])
 
 manifest = build_manifest()
@@ -241,7 +262,13 @@ log("manifest:\n" + manifest.groupby(["corpus", "label"]).size().to_string())
 # No MLAAD in this run (see build_manifest), so no held-out-language split and
 # no source-diversity pool. Kept as empty frames so the copied section-3 pool
 # construction below stays character-identical to extended_pipeline.py.
-HELDOUT_LANGS = []
+if os.environ.get("INCLUDE_MLAAD") == "1" and (manifest.corpus == "mlaad").any():
+    _langs = sorted(manifest[manifest.corpus == "mlaad"].language.unique())
+    HELDOUT_LANGS = list(np.random.RandomState(0).choice(
+        _langs, size=min(N_HELDOUT_LANGS, len(_langs)), replace=False))
+    log(f"MLAAD held-out languages (never in source training): {HELDOUT_LANGS}")
+else:
+    HELDOUT_LANGS = []
 
 # %% [markdown]
 # ## 3. GPU-resident audio cache

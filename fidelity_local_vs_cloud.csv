@@ -1,0 +1,5 @@
+target,cloud_eer,local_eer,cloud_auc,local_auc,minutes,peak_gib
+asvspoof2019,4.69,6.9,0.9908,0.9829,6.6,3.64
+dataset2,37.24,36.02,0.6866,0.6934,6.6,5.43
+in_the_wild,12.78,13.28,0.9424,0.9479,6.6,5.49
+arabic,20.91,22.24,0.8702,0.8595,6.6,3.71

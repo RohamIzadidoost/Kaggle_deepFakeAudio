@@ -179,3 +179,40 @@ for ck, tgt in [("hf_ast_asv19", "in_the_wild"), ("hf_ast_asv19", "dataset2")]:
             f"--manifest manifest_tgt_{tgt}_seed0.csv --target {tgt} --seed 0 "
             f"--batch 16 --tta_epochs {E} {OUT}",
             40 if E == 16 else 80, "stageG2")
+
+# ================= 2026-08-31 evening: our own model at ten seeds =============
+# The main method has been stuck at n=3 locally because only ckpt_ext seeds 0-2
+# survived the cloud. Source training turns out to cost 3.64 GiB peak and ~6 min
+# per model -- XLSRDetector freezes the encoder and trains only the top-4
+# transformer layers (50.6M of 315.7M params), so it was never the 300M
+# fine-tune that was assumed not to fit. Gated on train_source_local.py
+# --fidelity reproducing the cloud checkpoints first.
+
+# --- stage H: train the missing source checkpoints, one job per seed ---------
+for _s in range(3, 10):
+    add(f"H-train-source-seed{_s}",
+        f"CACHE_ON_CPU=1 ADAPTIVE_SMOKE=0 {PY} train_source_local.py "
+        f"--seeds {_s} >> train_source.out 2>&1",
+        26, "stageH")
+
+# --- stage I: the PUBLISHED config at the new seeds --------------------------
+# OUR_E_SWEEP="4" gives exactly {source, ours_E4}: the published E with no
+# adaptive arms. This is what extends the paper's own main table from the three
+# seeds we can currently verify locally to ten, on checkpoints we hold.
+for _s in range(3, 10):
+    add(f"I-ours-E4-seed{_s}",
+        f'CACHE_ON_CPU=1 ADAPTIVE_SMOKE=0 OUR_SEEDS={_s} OUR_E_SWEEP="4" '
+        f'{PY} adaptive_pipeline.py >> our_e4_10seed.out 2>&1',
+        18, "stageI")
+
+# --- stage J: E=32 at ten seeds, on the two decisive targets -----------------
+# A full E sweep at ten seeds is 66 GPU-hours; E=32 alone on every target is
+# 17.7. Restricted to arabic (largest E gain: +1.85 at E=4 -> +6.43 at E=64) and
+# dataset2 (the one target that degrades monotonically with E). Those two carry
+# the positive and the negative case, so a per-target Wilcoxon at n=10 on both is
+# what turns the E finding from an observation into a result.
+for _s in range(3, 10):
+    add(f"J-E32-seed{_s}",
+        f'CACHE_ON_CPU=1 ADAPTIVE_SMOKE=0 OUR_SEEDS={_s} OUR_TARGETS=arabic,dataset2 '
+        f'OUR_E_SWEEP="32" {PY} adaptive_pipeline.py >> our_e32_10seed.out 2>&1',
+        80, "stageJ")

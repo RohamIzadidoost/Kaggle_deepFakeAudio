@@ -237,3 +237,64 @@ undocumented checkpoints are kept in a separate arm.
 * `asvspoof2021df` and `asvspoof2021la` share lineage with ASVspoof2019, so
   cells pairing them with ASVspoof2019-trained checkpoints are condition shift,
   not clean cross-corpus transfer.
+
+---
+
+# Addendum — the main method at ten seeds (2026-09-01)
+
+Every result above concerns third-party checkpoints. This closes the gap that
+made our own model the weakest-evidenced part of the study: only `ckpt_ext`
+seeds 0-2 survived the cloud, so local work on the paper's own method was capped
+at n=3, below the n=6 where a paired Wilcoxon can reach p<0.05 at all.
+
+28 source checkpoints were trained here (~6.6 min each, 3.64 GiB peak; see
+`FIDELITY_NOTE.md` for the fidelity gate and the MLAAD bug it caught). All 40
+cells below are scored on one machine, so no cross-hardware confound remains.
+
+## 1. The published configuration replicates locally
+
+E=4, ten seeds, paired Wilcoxon with Holm correction:
+
+| target | src AUC | source | adapted | gain | s.d. | p_holm |
+|---|---|---|---|---|---|---|
+| arabic | 0.868 | 21.04 | 19.63 | **+1.41** | 0.57 | **0.008** |
+| asvspoof2019 | 0.990 | 4.77 | 3.63 | **+1.13** | 0.76 | **0.008** |
+| in_the_wild | 0.954 | 11.19 | 10.07 | +1.12 | 1.41 | 0.074 |
+| dataset2 | 0.701 | 35.88 | 36.04 | −0.16 | 0.83 | 0.695 |
+
+The manuscript reports 5.03→3.47, 12.78→11.33, 22.50→20.99 and a dataset2 null
+from the cloud run. Same pattern, same two targets surviving Holm, same nominal
+In-the-Wild, same null. This is an independent replication on independently
+trained checkpoints, not a re-reading of the same numbers.
+
+## 2. The budget defect, now properly powered
+
+E=32 against the published E=4, ten seeds each, same checkpoints and pools:
+
+| target | src AUC | gain @E=4 | gain @E=32 | E=32 beats E=4 | p |
+|---|---|---|---|---|---|
+| arabic | 0.868 | +1.41 | **+3.65** | **10/10** | **0.0020** |
+| dataset2 | 0.701 | −0.16 | −0.67 | 2/10 | 0.0645 |
+
+On Arabic, correcting the update budget **more than doubles the gain, unanimously
+across ten seeds**; against source directly, E=32 reaches p=0.0020. On dataset2 —
+the target whose source ranking is weakest — it does not help and trends worse.
+
+So the defect is real and costly where the method works, and correcting it is
+*not* universally safe. Both halves have to be reported: "E should be a step
+count" is right, but "raise E" is not a free win.
+
+## 3. Caveats that belong in the paper
+
+* **Mixed provenance.** Seeds 0-2 use cloud-trained checkpoints, seeds 3-9 were
+  trained here. Cloud and local source EERs show no detectable systematic offset
+  (Mann-Whitney p=0.38-1.00 per target), but at n=3 vs 7 that test has low power:
+  it establishes no *detectable* offset, not none.
+* **The same checkpoint scores differently on different hardware.** Seeds 0-2
+  scored 0.00-1.24 EER apart between the H200 run in `results_ext.csv` and this
+  3080 (ASVspoof2019 seed 2 matched exactly). Same weights, same pools, bf16
+  autocast -- EER is a threshold-crossing statistic and moves where scores are
+  dense. The manuscript already says single-checkpoint cross-corpus figures carry
+  unreported error bars; this shows the same checkpoint does too.
+* **E=32 was tested on two targets, not four**, chosen as the positive and
+  negative cases. A full E sweep at ten seeds is ~66 GPU-hours.
