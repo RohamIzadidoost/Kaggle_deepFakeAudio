@@ -216,3 +216,49 @@ for _s in range(3, 10):
         f'CACHE_ON_CPU=1 ADAPTIVE_SMOKE=0 OUR_SEEDS={_s} OUR_TARGETS=arabic,dataset2 '
         f'OUR_E_SWEEP="32" {PY} adaptive_pipeline.py >> our_e32_10seed.out 2>&1',
         80, "stageJ")
+
+# ================= 2026-09-01: closing the fairness hole, and more corpora =====
+
+# --- stage K: baselines at MATCHED budget ------------------------------------
+# We now claim E=32 beats the published E=4 for our method. That hands it 8x the
+# gradient updates, so the obvious reviewer question is whether the baselines
+# improve just as much on the same budget. Until they are run at matched E the
+# comparison is confounded, which makes this a correctness fix rather than an
+# extra result -- hence it runs first.
+#
+# Restricted to arabic and dataset2, the two targets the E claim is made on.
+for _s in range(0, 10):
+    add(f"K-baselines-E4E32-seed{_s}",
+        f'CACHE_ON_CPU=1 ADAPTIVE_SMOKE=0 OUR_SEEDS={_s} OUR_TARGETS=arabic,dataset2 '
+        f'OUR_BASELINE_E="4,32" {PY} adaptive_pipeline.py >> baselines_matched.out 2>&1',
+        145, "stageK")
+
+# --- stage M: finish the E curve at ten seeds on the other two targets -------
+for _s in range(0, 10):
+    add(f"M-E32-rest-seed{_s}",
+        f'CACHE_ON_CPU=1 ADAPTIVE_SMOKE=0 OUR_SEEDS={_s} '
+        f'OUR_TARGETS=asvspoof2019,in_the_wild OUR_E_SWEEP="32" '
+        f'{PY} adaptive_pipeline.py >> our_e32_rest.out 2>&1',
+        72, "stageM")
+
+# --- stage L: three more targets for our own model, ten seeds ----------------
+# Addresses the paper's stated scale limitation directly ("Seeds do not buy
+# corpora"). Source training is now ~6.6 min, so one shared source model per seed
+# plus TTA on three targets costs ~23 min/seed. See run_new_targets.sh for the
+# protocol and the condition-shift caveat that must accompany these numbers.
+for _s in range(0, 10):
+    add(f"L-new-targets-seed{_s}",
+        f"SEED={_s} ./run_new_targets.sh >> new_targets.out 2>&1",
+        23, "stageL")
+
+# --- stage N: is there a LABEL-FREE proxy for the calibration deficit? -------
+# The deficit predicts the adaptation gain (r=+0.56, rho=+0.69 over 70 cells)
+# where source AUC does not (r=-0.12). But it is computed from EER and accuracy,
+# so it needs labels and can only explain results after the fact. If a statistic
+# of the score distribution alone tracks it, the paper gets an actionable rule --
+# measure this, then decide whether to adapt -- instead of a post-hoc account.
+# Scoring only; no training, no adaptation.
+add("N-calibration-proxy",
+    "CACHE_ON_CPU=1 ADAPTIVE_SMOKE=0 INCLUDE_MLAAD=1 NEW_TARGETS=1 "
+    "python probe_calibration_proxy.py >> calib_proxy.out 2>&1",
+    45, "stageN")

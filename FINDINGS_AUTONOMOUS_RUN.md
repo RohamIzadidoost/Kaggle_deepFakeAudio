@@ -298,3 +298,99 @@ count" is right, but "raise E" is not a free win.
   unreported error bars; this shows the same checkpoint does too.
 * **E=32 was tested on two targets, not four**, chosen as the positive and
   negative cases. A full E sweep at ten seeds is ~66 GPU-hours.
+
+---
+
+# Addendum 2 — fairness, three more targets, and a label-free proxy (2026-09-02)
+
+28.5 GPU-h, 31 jobs, 0 failures.
+
+## 1. The E result is not a compute artefact (stage K)
+
+We claim E=32 beats the published E=4, which hands our method 8x the updates.
+Handed the same budget, the baselines do not benefit (ten seeds each):
+
+| target | method | E=4 | E=32 | delta | better | p |
+|---|---|---|---|---|---|---|
+| arabic | tent | 44.90 | 49.88 | **+4.98** | 0/10 | 0.0020 |
+| | st_only | 20.66 | 20.28 | −0.38 | 8/10 | 0.131 |
+| | **ours** | 19.63 | **17.39** | **−2.24** | 10/10 | **0.0020** |
+| dataset2 | tent | 40.56 | 42.81 | +2.25 | 3/10 | 0.232 |
+| | st_only | 35.38 | 35.53 | +0.14 | 5/10 | 0.770 |
+| | ours | 36.04 | 36.55 | +0.51 | 2/10 | 0.065 |
+
+Tent gets significantly *worse* with more budget; st_only does not move. Only
+the full method converts budget into gain. Note also that on dataset2 `ours`
+degrades with E while `st_only` is flat -- where there is no headroom it is the
+**consistency term** that goes bad, not the self-training.
+
+## 2. The E curve, all four targets, ten seeds (stage M)
+
+| target | src AUC | gain @E=4 | gain @E=32 | E=32 wins | p |
+|---|---|---|---|---|---|
+| arabic | 0.868 | +1.41 | +3.65 | 10/10 | 0.0020 |
+| in_the_wild | 0.954 | +1.12 | +2.69 | 9/10 | 0.0039 |
+| asvspoof2019 | 0.990 | +1.13 | +1.67 | 9/10 | 0.0098 |
+| dataset2 | 0.701 | −0.16 | −0.67 | 2/10 | 0.065 |
+
+Significant on three of four; the exception is the target with least
+calibration headroom.
+
+## 3. Three more targets, and what they do to the headline (stage L)
+
+| target | src AUC | source | ours | gain | p | deficit before → after |
+|---|---|---|---|---|---|---|
+| asvspoof2021la | 0.846 | 27.68 | 32.05 | **−4.37** | 0.0020 | −0.82 → −4.09 |
+| asvspoof2021df | 0.857 | 26.75 | 33.11 | **−6.36** | 0.0039 | −2.73 → −7.27 |
+| asvspoof2021pa (replay) | 0.591 | 43.63 | 41.14 | **+2.49** | 0.0020 | 3.19 → 0.04 |
+
+**Extending the target set erases the pooled EER benefit, while the calibration
+result strengthens:**
+
+| target set | n | EER gain | p | deficit | p |
+|---|---|---|---|---|---|
+| original 4 | 40 | +0.88 | 3.6e-05 | 8.63 → 1.53 | 1.3e-07 |
+| **all 7** | 70 | **−0.68** | **0.80** | 4.88 → −0.74 | **9.7e-11** |
+| synthetic only | 60 | −1.20 | 0.37 | 5.16 → −0.87 | 2.7e-09 |
+
+This is the same split the 196 third-party cells produced (calibration
+p=5e-20, EER p=0.81), now replicated on our own model. The reading is not that
+the method is weaker than believed, but that **the EER gain was always a
+consequence of calibration repair**: the original four targets arrive badly
+miscalibrated (deficits 3.7-12.3) so repairing the threshold also moves EER;
+the new three arrive already well-thresholded (−2.7 to +3.2), so there is
+nothing to repair and self-training only drifts them off.
+
+It does mean the paper's positive EER numbers are contingent on which targets
+were available, not a general property.
+
+**Independence caveat.** The three new targets are not independent corpora: all
+share ASVspoof2019 lineage (which is in the source pool), LA and DF are closely
+related to each other, and PA is a different detection task. "Seven targets"
+overstates independence the same way "43 cells" did.
+
+## 4. The precondition is diagnostic, not actionable (stage N)
+
+Calibration deficit predicts the gain (r=+0.56, rho=+0.69, n=70) where source
+AUC does not (r=−0.12, ns). But it is computed from EER and accuracy, so it
+needs labels. Testing whether any statistic of the score distribution alone
+tracks it:
+
+| statistic | vs deficit | vs gain |
+|---|---|---|
+| `pred_rate` | **r=+0.72** (3e-12) | +0.36 (0.002) |
+| `score_mean` | +0.69 (6e-11) | +0.30 (0.012) |
+| `otsu_gap` | +0.31 (0.008) | +0.17 (ns) |
+| `near_thresh` | −0.07 (ns) | −0.10 (ns) |
+
+`otsu_gap` -- the one candidate needing neither labels nor a prevalence
+assumption, and the one we expected to work -- largely failed.
+
+**And `pred_rate` does not work as a decision rule.** The two harmful targets sit
+at |pred_rate − 0.5| = 0.21-0.22, inside the range of the helpful ones
+(0.14-0.34); no threshold separates them, and no tau beat adapting everything.
+The r=+0.72 is misleading because the relation is **non-monotone**: deficit is
+low at pred_rate ~0.29 and high at both extremes (0.16 and 0.70-0.81).
+
+So the precondition explains results after the fact and cannot yet tell a
+deployer whether to adapt. Report it as such.

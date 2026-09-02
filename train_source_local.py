@@ -46,14 +46,23 @@ import torch
 import adaptive_pipeline as AP
 
 
-def source_pool_for(target, seed):
-    """The source pool for a fold: every corpus except the target, plus MLAAD.
+# Only these ever enter a source pool. Pinned explicitly rather than derived as
+# "everything but the target": once NEW_TARGETS=1 puts the ASVspoof2021 tracks
+# into `pool`, a derived rule would silently pull them into the source pool for
+# arabic, dataset2 and the rest -- changing those source models and breaking
+# comparability with every ten-seed number already recorded.
+SOURCE_CORPORA = ("arabic", "asvspoof2019", "dataset2", "in_the_wild")
 
-    Identical to extended_pipeline's rule, which is what produced the published
-    checkpoints -- a different pool here would make locally trained seeds
-    incomparable to the cloud-trained ones already in results_ext.csv.
+
+def source_pool_for(target, seed):
+    """The source pool for a fold: the original corpora except the target, plus MLAAD.
+
+    Identical to extended_pipeline's rule on the original four targets. For a
+    target outside SOURCE_CORPORA (the ASVspoof2021 tracks) nothing is excluded,
+    so the source model is trained on all four originals and one model per seed
+    serves every new target.
     """
-    sp = AP.pool[(AP.pool.corpus != target) & (AP.pool.corpus != "mlaad")]
+    sp = AP.pool[AP.pool.corpus.isin(SOURCE_CORPORA) & (AP.pool.corpus != target)]
     sp = pd.concat([sp, AP.mlaad_pool])
     return AP.sample_source(sp, AP.SOURCE_PER_CLASS, seed)
 

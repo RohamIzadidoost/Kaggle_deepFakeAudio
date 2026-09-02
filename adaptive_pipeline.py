@@ -241,6 +241,42 @@ def build_manifest():
     # missed the cloud checkpoint by +7.3 EER on Arabic and -8.1 on dataset2,
     # far outside seed noise. Off by default so every result already recorded
     # against this file stays bit-reproducible.
+    # NEW_TARGETS=1 adds the three ASVspoof2021 tracks as *targets*. They are
+    # never added to any source pool -- see SOURCE_CORPORA in
+    # train_source_local.py -- so the source model for each of the original four
+    # targets is unchanged and their recorded ten-seed results stay comparable.
+    #
+    # All three share ASVspoof2019 lineage, which IS in the source pool. They are
+    # therefore a condition-shift arm (codec/replay), not new corpora proper, and
+    # must be reported as such. PA is replay: a different detection task again.
+    if os.environ.get("NEW_TARGETS") == "1":
+        import csv as _csv
+        _specs = {
+            "asvspoof2021la": ("data/dataset_1/LA-keys-full/keys/LA/CM/trial_metadata.txt",
+                               ["data/dataset_1/ASVspoof2021_LA_eval/ASVspoof2021_LA_eval/flac"], 5),
+            "asvspoof2021pa": ("data/dataset_1/PA-keys-full/keys/PA/CM/trial_metadata.txt",
+                               [f"data/dataset_1/ASVspoof2021_PA_eval_part{p:02d}/ASVspoof2021_PA_eval/flac"
+                                for p in range(4)], 9),
+        }
+        for _name, (_keys, _dirs, _lc) in _specs.items():
+            _lab = {}
+            for _line in open(_keys):
+                _q = _line.split()
+                if len(_q) > _lc and _q[_lc] in ("spoof", "bonafide"):
+                    _lab[_q[1]] = "fake" if _q[_lc] == "spoof" else "real"
+            for _d in _dirs:
+                for _f in glob.glob(os.path.join(_d, "*.flac")):
+                    _stem = os.path.splitext(os.path.basename(_f))[0]
+                    if _stem in _lab:
+                        rows.append((_f, _lab[_stem], _name, _name, "en"))
+        # 2021-DF comes from the already-parsed manifest.csv, as in
+        # make_target_manifests.py, rather than re-globbing 61 GB.
+        _df = pd.read_csv("manifest.csv", low_memory=False)
+        _df = _df[_df.dataset_source == "dataset_1_asvspoof2021_DF"]
+        for _pth, _l in zip(_df.filepath.values, _df.label.values):
+            rows.append((_pth, _l, "asvspoof2021df", "asvspoof2021df", "en"))
+        log("NEW_TARGETS: added asvspoof2021 la/pa/df as targets (never as source)")
+
     if os.environ.get("INCLUDE_MLAAD") == "1":
         # MLAAD ships to different roots on different machines -- the Kaggle
         # download lands in data/mlaad, this box has it under data/dataset_3.
@@ -772,13 +808,29 @@ def run_grid():
             # the rest of the curve, and specifically whether it plateaus
             # (safe: pick a big budget, no labels needed) or peaks and declines
             # (unusable: locating the peak would need target labels).
-            if os.environ.get("OUR_E_SWEEP"):
+            # OUR_BASELINE_E="4,32" runs tent and self-training-only at those
+            # epoch counts. This exists to close a fairness hole rather than to
+            # add a result: we claim E=32 beats the published E=4 for our
+            # method, which gives it 8x the updates. A reviewer will ask whether
+            # the baselines improve as much when handed the same budget, and
+            # until they are run at matched E the comparison is confounded.
+            if os.environ.get("OUR_BASELINE_E"):
+                _bs = [int(x) for x in os.environ["OUR_BASELINE_E"].split(",")]
+                methods = {"source": None}
+                for _e in _bs:
+                    methods[f"tent_E{_e}"] = (
+                        lambda ee: (lambda m, i, **k: tent(m, i, epochs=ee)))(_e)
+                    methods[f"st_only_E{_e}"] = (
+                        lambda ee: (lambda m, i, **k: adapt(m, i, use_st=True,
+                                                            use_cons=False, epochs=ee)))(_e)
+            elif os.environ.get("OUR_E_SWEEP"):
                 _es = [int(x) for x in os.environ["OUR_E_SWEEP"].split(",")]
                 methods = {"source": None}
                 for _e in _es:
                     # bind e per-iteration; a bare closure would capture the last value
                     methods[f"ours_E{_e}"] = (lambda ee: (lambda m, i, **k: adapt(m, i, epochs=ee)))(_e)
-            if seed in ABLATION_SEEDS and not os.environ.get("OUR_E_SWEEP"):
+            if seed in ABLATION_SEEDS and not (os.environ.get("OUR_E_SWEEP")
+                                               or os.environ.get("OUR_BASELINE_E")):
                 methods["ours_aq"] = lambda m, i, **k: adapt_adaptive(m, i, True, False, **k)
                 methods["ours_ae"] = lambda m, i, **k: adapt_adaptive(m, i, False, True, **k)
 
@@ -805,7 +857,8 @@ def run_grid():
             # inductive check: adapt on one half, evaluate on the disjoint half.
             # Skipped during an E sweep -- it exercises adapt_adaptive(), which is
             # a different arm from the fixed-E adapt() the sweep is measuring.
-            if not os.environ.get("OUR_E_SWEEP") and not done(seed, target, "ours_adaptive", "inductive"):
+            if not (os.environ.get("OUR_E_SWEEP") or os.environ.get("OUR_BASELINE_E")) \
+                    and not done(seed, target, "ours_adaptive", "inductive"):
                 try:
                     torch.manual_seed(seed); np.random.seed(seed)
                     half = len(tgt_idx) // 2
