@@ -275,7 +275,18 @@ def build_manifest():
         _df = _df[_df.dataset_source == "dataset_1_asvspoof2021_DF"]
         for _pth, _l in zip(_df.filepath.values, _df.label.values):
             rows.append((_pth, _l, "asvspoof2021df", "asvspoof2021df", "en"))
-        log("NEW_TARGETS: added asvspoof2021 la/pa/df as targets (never as source)")
+        # Two corpora with no ASVspoof lineage at all, fetched by
+        # fetch_hf_corpus.py. These are what the "extending the target set erases
+        # the EER benefit" finding actually needs: the three ASVspoof2021 tracks
+        # are relatives of a corpus already in the source pool, which a reviewer
+        # can fairly discount.
+        for _hf in ("wavefake", "commercialtts"):
+            for _lab in ("real", "fake"):
+                _d = f"data/hf_{_hf}/{_lab}"
+                for _w in sorted(glob.glob(f"{_d}/*.wav")):
+                    rows.append((_w, _lab, f"hf_{_hf}", f"hf_{_hf}", "en"))
+        log("NEW_TARGETS: added asvspoof2021 la/pa/df + hf_wavefake, hf_commercialtts "
+            "as targets (never as source)")
 
     if os.environ.get("INCLUDE_MLAAD") == "1":
         # MLAAD ships to different roots on different machines -- the Kaggle
@@ -773,7 +784,27 @@ def run_grid():
                 continue
 
             log(f"=== {tag} ===")
-            tgt_df = sample_target(pool[pool.corpus == target], TARGET_PER_CLASS, seed)
+            # TARGET_SKEW=0.9 makes the target pool 90% fake instead of balanced.
+            # Both the published q=0.3 symmetric pseudo-labelling AND the trivial
+            # median-threshold baseline implicitly assume a balanced pool: q takes
+            # the top and bottom 30% as fake/real regardless of the true prior, and
+            # the median predicts exactly 50% positive. If they degrade together
+            # under skew they share that assumption, which would also explain the
+            # documented Protocol A collapse (26.33 -> 42.46 EER on a 97%-spoof
+            # pool) that the paper reports but does not account for.
+            _skew = os.environ.get("TARGET_SKEW")
+            if _skew:
+                _sk = float(_skew)
+                _sub = pool[pool.corpus == target]
+                _n = 2 * TARGET_PER_CLASS
+                _want = {"fake": int(round(_n * _sk)), "real": int(round(_n * (1 - _sk)))}
+                _parts = []
+                for _lab, _g in _sub.groupby("label"):
+                    _parts.append(_g.sample(min(_want.get(_lab, 0), len(_g)), random_state=seed))
+                tgt_df = pd.concat(_parts).sample(frac=1, random_state=seed)
+                log(f"  SKEW {_sk}: pool {tgt_df.label.value_counts().to_dict()}")
+            else:
+                tgt_df = sample_target(pool[pool.corpus == target], TARGET_PER_CLASS, seed)
             tgt_idx = idx_of(tgt_df)
             log(f"  target {len(tgt_df)} clips")
 
@@ -834,8 +865,17 @@ def run_grid():
                 methods["ours_aq"] = lambda m, i, **k: adapt_adaptive(m, i, True, False, **k)
                 methods["ours_ae"] = lambda m, i, **k: adapt_adaptive(m, i, False, True, **k)
 
+            # The setting label must be computed BEFORE the resume guard, not
+            # only at record time. Keying the guard on a hardcoded "transductive"
+            # while writing rows under "skew0.9" makes every skewed fold look
+            # already-done: the first attempt at this experiment "completed" ten
+            # jobs in 0.6 min each and wrote nothing. This is the resume-guard
+            # hazard the repo already documents; it silently skips folds rather
+            # than failing.
+            _setting = ("transductive" if not os.environ.get("TARGET_SKEW")
+                        else f"skew{os.environ['TARGET_SKEW']}")
             for name, fn in methods.items():
-                if done(seed, target, name, "transductive"):
+                if done(seed, target, name, _setting):
                     log(f"  {name}: already recorded, skipping")
                     continue
                 try:
@@ -845,7 +885,7 @@ def run_grid():
                                                          tag=f"{tag}/{name}", seed=seed,
                                                          target=target, method=name)
                     m, y, s = metrics(model, tgt_idx)
-                    record(seed=seed, target=target, method=name, setting="transductive", family="xlsr",
+                    record(seed=seed, target=target, method=name, setting=_setting, family="xlsr",
                            eer=round(m["eer"], 3), auc=round(m["auc"], 4), acc=round(m["acc"], 2),
                            n=len(tgt_idx), minutes=round((time.time() - t0) / 60, 1))
                     log(f"  {name:14s} EER {m['eer']:6.2f}  AUC {m['auc']:.3f}  ({(time.time()-t0)/60:.1f} min)")

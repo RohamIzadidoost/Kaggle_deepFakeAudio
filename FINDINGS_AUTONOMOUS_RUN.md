@@ -394,3 +394,161 @@ low at pred_rate ~0.29 and high at both extremes (0.16 and 0.70-0.81).
 
 So the precondition explains results after the fact and cannot yet tell a
 deployer whether to adapt. Report it as such.
+
+---
+
+# Addendum 3 — the method is a threshold rule with a prior assumption (2026-09-02/03)
+
+Two experiments, one mechanism. Together they explain the EER null, the
+calibration result, the dataset2 "null", the two new significant failures, and
+the Protocol A collapse the paper reports without accounting for.
+
+## 1. A one-line label-free baseline recovers 94% of the method
+
+For each source checkpoint, balanced-pool accuracy at four thresholds (raw
+accuracy, matching what `adaptive_pipeline.metrics` records), against the
+adapted model at 0.5. Seventy cells, seven targets, ten seeds.
+
+| | shipped 0.5 | **TTA @0.5** | otsu | **median** | oracle (labels) |
+|---|---|---|---|---|---|
+| pooled | 70.7 | **75.6** | 71.0 | **75.3** | 76.6 |
+
+| vs TTA | delta | wins | p |
+|---|---|---|---|
+| otsu (label-free) | −4.62 | 22/70 | 3.5e-06 |
+| median (label-free) | **−0.32** | 23/70 | **0.014** |
+| oracle (uses labels) | +0.99 | 41/70 | 0.017 |
+
+TTA beats thresholding at the median significantly but by **0.32 accuracy
+points** -- it recovers 4.6 of TTA's 4.9-point gain, ~94%, with no training, no
+gradients and none of the 16,706 adapted parameters. The labelled oracle is only
+0.99 above TTA, so both sit near the ceiling of what any threshold can do. Per
+target it is mixed: the median *beats* TTA by 3.9 on ASVspoof2019 and ties on
+dataset2.
+
+Method note: an earlier pass compared balanced accuracy against the recorded raw
+accuracy and reported the two as statistically indistinguishable (p=0.088). That
+comparison was invalid -- the pools are not exactly 50/50 -- and the corrected
+run is what is reported here.
+
+## 2. Skew the pool and both break, together
+
+If the reason they nearly coincide is a shared balanced-pool assumption -- the
+median predicts exactly 50% positive, `q=0.3` takes the top and bottom 30% as
+pseudo-fake/real regardless of the true prior -- then skewing the pool should
+break them. It does (four targets, five seeds):
+
+| pool | EER gain | p | **accuracy gain** |
+|---|---|---|---|
+| balanced | +0.86 | 0.005 | **+7.6** |
+| 70% fake | +0.70 | <0.001 | **−3.5** |
+| 90% fake | −0.58 | 0.010 | **−26.5** |
+
+Ranking is nearly flat across all three. Accuracy collapses: at 90% fake the
+source scores 87.3% and adaptation drags it to 60.8%.
+
+**So the method is a threshold rule that targets a balanced-prior operating
+point.** Where the true prior is balanced that is a repair; where it is not, it
+is damage. This is the same assumption the median baseline makes, which is why
+S1 found them within 0.32 points.
+
+It also accounts for the Protocol A result (26.33 -> 42.46 EER on a 97%-spoof
+pool) that the manuscript reports as an unexplained limitation. Same mechanism,
+now measured across a controlled skew sweep rather than observed once.
+
+## 3. The actionable precondition, at last
+
+S4 of Addendum 2 looked for a label-free proxy for the calibration deficit and
+failed: otsu_gap did not track it, and pred_rate tracked it but could not
+separate the harmful cells because the relation is non-monotone.
+
+The skew sweep supplies what that search was for, and it is simpler: **this
+method assumes the target pool is roughly class-balanced.** That is not
+estimated from the audio at all -- deployment prevalence is something an operator
+usually knows -- and it is checkable without a single label.
+
+## 4. A silent failure worth recording
+
+The first attempt at the skew experiment reported "queue complete", ten jobs,
+0.6 min each, and wrote nothing. `run_grid`'s resume guard keys on
+`done(seed, target, name, "transductive")` with the setting hardcoded, while the
+skew change relabelled rows only at `record()` time -- so every skewed fold
+looked already-done and was skipped. This is the resume-guard hazard the repo
+already documents; it fails by succeeding quietly. The guard and the record now
+share one computed setting label.
+
+---
+
+# Addendum 4 — two ASVspoof-independent corpora, and a correction (2026-09-03)
+
+Addendum 2 reported that extending the target set from four to seven erased the
+pooled EER benefit (+0.88 -> -0.68) and read it as "the paper's positive EER
+numbers are contingent on which targets were to hand". It also flagged that the
+three added targets were ASVspoof2021 relatives and so not independent corpora.
+
+**That flag was the whole story.** WaveFake (vocoder artefacts over LJSpeech) and
+a 2024 commercial-TTS corpus (ElevenLabs/Polly/Kokoro/Hume/Speechify) share no
+ASVspoof lineage. On our own model, ten seeds each:
+
+| target | src AUC | source | ours | gain | p | deficit |
+|---|---|---|---|---|---|---|
+| hf_wavefake | 0.938 | 13.52 | 11.05 | **+2.47** | 0.0020 | 15.59 -> 0.59 |
+| hf_commercialtts | 0.935 | 14.17 | 11.24 | **+2.93** | 0.0020 | 5.77 -> 3.55 |
+
+Both significantly positive, and **larger than any of the original four**
+(mean +0.88).
+
+| target set | n | EER gain | p |
+|---|---|---|---|
+| original 4 | 40 | +0.88 | <0.001 |
+| + 3 ASVspoof2021 relatives | 70 | **-0.68** | 0.804 |
+| **+ 2 independent corpora** | 60 | **+1.48** | **<0.001** |
+| all 9 | 90 | +0.07 | 0.032 |
+
+So adding corpora does not erase the benefit. Adding *ASVspoof relatives* does.
+
+**The mechanism is the same one running through every result.** LA and DF arrive
+with NEGATIVE deficit (-0.82, -2.73) because the source model has already seen
+ASVspoof2019, their lineage: the threshold is roughly right, there is nothing to
+repair, and adaptation only drifts it off. WaveFake arrives at deficit 15.59 and
+is repaired to 0.59, which is where its +2.47 comes from.
+
+Revised claim: the benefit is contingent not on which targets were available but
+on **calibration headroom, which lineage-relatedness predicts**. That is both
+more defensible and more useful than Addendum 2's reading, and it is consistent
+with the skew result (Addendum 3): the method moves the threshold to a
+balanced-prior operating point, which helps exactly when the shipped threshold
+is wrong and hurts when it was already right.
+
+## Third-party on the same two corpora: mixed
+
+48 cells, 9 checkpoints, 3 seeds (the two in-domain pairs excluded by the runner).
+
+| target | n | EER gain | p | deficit | p |
+|---|---|---|---|---|---|
+| hf_wavefake | 24 | **+5.12** | <0.0001 | 8.98 -> 4.14 | 0.32 |
+| hf_commercialtts | 24 | **-2.66** | 0.034 | 3.37 -> 2.85 | 0.64 |
+| pooled | 48 | +1.23 | 0.301 | 6.18 -> 3.49 | 0.24 |
+
+Significant in both directions on different corpora, and -- unlike everywhere
+else in this study -- the deficit closure is **not** significant on these two.
+With n=24 per corpus and only three seeds this arm is underpowered relative to
+the ten-seed cells; it should be reported as breadth, not as a test.
+
+## Grand total, third-party arm
+
+**257 cells, 9 checkpoints, 10 corpora:**
+
+| measure | source -> adapted | p |
+|---|---|---|
+| calibration deficit | 7.77 -> **1.04** | **8.1e-20** |
+| EER | +0.46 | 0.162 (ns) |
+
+The split that has held from the first 43 cells to the last 257 is unchanged:
+the threshold repair is overwhelming, the ranking effect is not significant.
+
+## Corpus that did not arrive
+
+`alexlicuriceanu/ro-dia-deepfake-audio` (Romanian, language diversity) failed
+after five exponential-backoff retries against HTTP 429 on unauthenticated Hub
+requests. Not load-bearing for any claim; worth retrying with an HF token.

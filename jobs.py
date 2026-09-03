@@ -262,3 +262,57 @@ add("N-calibration-proxy",
     "CACHE_ON_CPU=1 ADAPTIVE_SMOKE=0 INCLUDE_MLAAD=1 NEW_TARGETS=1 "
     "python probe_calibration_proxy.py >> calib_proxy.out 2>&1",
     45, "stageN")
+
+# ================= 2026-09-02 overnight: mechanism, not more data ============
+
+# --- stage P: the skew experiment -------------------------------------------
+# Phase 1 found that a one-line label-free rule -- threshold at the median score
+# -- recovers 94% of the full method's accuracy gain (4.6 of 4.9 pts; TTA wins by
+# only 0.32, p=0.014, against an oracle ceiling 0.99 above TTA). The natural
+# question is WHY they nearly coincide.
+#
+# Hypothesis: both assume a balanced pool. The median predicts exactly 50%
+# positive; q=0.3 takes the top and bottom 30% as pseudo-fake/real regardless of
+# the true prior. If that is the shared mechanism, skewing the pool should break
+# BOTH together -- and it would explain the Protocol A collapse (26.33 -> 42.46
+# EER on a 97%-spoof pool) that the paper reports without accounting for.
+#
+# Two skews x four targets x five seeds. Rows are tagged setting="skew0.9" etc so
+# they can never be pooled with the balanced results.
+for _sk in ("0.9", "0.7"):
+    for _s in range(0, 5):
+        add(f"P-skew{_sk}-seed{_s}",
+            f'CACHE_ON_CPU=1 ADAPTIVE_SMOKE=0 INCLUDE_MLAAD=1 TARGET_SKEW={_sk} '
+            f'OUR_SEEDS={_s} OUR_E_SWEEP="4" {PY} adaptive_pipeline.py '
+            f'>> skew_experiment.out 2>&1',
+            25, "stageP")
+
+# --- stage Q: two genuinely independent corpora, our model, ten seeds --------
+# The finding that most needs this: "extending the target set from four to seven
+# erases the pooled EER benefit" currently rests on three ASVspoof2021 tracks,
+# all relatives of a corpus that is itself in the source pool. WaveFake (vocoder
+# artefacts over LJSpeech) and commercial TTS (ElevenLabs/Polly/Kokoro/Hume/
+# Speechify, 2024) share no lineage with ASVspoof at all.
+for _s in range(0, 10):
+    add(f"Q-newcorpora-seed{_s}",
+        f'CACHE_ON_CPU=1 ADAPTIVE_SMOKE=0 INCLUDE_MLAAD=1 NEW_TARGETS=1 '
+        f'OUR_SEEDS={_s} OUR_TARGETS=hf_wavefake,hf_commercialtts OUR_E_SWEEP="4" '
+        f'{PY} adaptive_pipeline.py >> new_corpora.out 2>&1',
+        14, "stageQ")
+
+# --- stage R: the same two corpora, third-party checkpoints, three seeds -----
+# Extends the 196-cell calibration result onto corpora none of these models has
+# seen. The two in-domain pairs are refused by public_ckpt_tta.py itself
+# (ssl_aasist_wavefake on hf_wavefake, hf_xlsr_stafford on hf_commercialtts).
+_R_CKPTS = [c for c in ALL_CKPTS]
+for _ck in _R_CKPTS:
+    for _tg in ("hf_wavefake", "hf_commercialtts"):
+        if (_ck == "ssl_aasist_wavefake" and _tg == "hf_wavefake") or \
+           (_ck == "hf_xlsr_stafford" and _tg == "hf_commercialtts"):
+            continue
+        for _s in range(0, 3):
+            add(f"R-{_ck}-{_tg}-s{_s}",
+                f"{PY} public_ckpt_tta.py --mode ours --ckpt {_ck} "
+                f"--manifest manifest_tgt_{_tg}_seed{_s}.csv --target {_tg} --seed {_s} "
+                f"--batch 16 {OUT}",
+                8, "stageR")

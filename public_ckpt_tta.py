@@ -84,10 +84,11 @@ CHECKPOINTS = {
         source="ash56/ssl-aasist (Garg et al. 2025, arXiv:2502.05674)",
         arch="SSL-AASIST (XLS-R 300M + AASIST)",
         train_data="WaveFake / LJSpeech, HiFiGAN vocoder",
+        # hf_wavefake IS its training corpus -- scoring there is memorisation.
         # Which of our four EER target corpora this checkpoint has seen in
         # training. WaveFake/LJSpeech is none of them, so every target is a
         # genuine cross-corpus transfer for this model.
-        trained_on_corpora=(),
+        trained_on_corpora=("hf_wavefake",),
     ),
 }
 
@@ -146,9 +147,10 @@ _HF = {
         source="garystafford/wav2vec2-deepfake-voice-detector",
         arch="wav2vec2 XLS-R large + sequence-classification head",
         train_data="commercial TTS/voice-cloning vendors (ElevenLabs, Polly, Kokoro, Hume, Speechify)",
+        # hf_commercialtts IS its training corpus.
         # Fine-tuned FROM hf_xlsr_gustking, so it inherits that checkpoint's
         # unknown exposure and is a sibling of it, not an independent model.
-        trained_on_corpora=("asvspoof2019",), provenance="documented",
+        trained_on_corpora=("asvspoof2019", "hf_commercialtts"), provenance="documented",
         sibling_of="hf_xlsr_gustking",
     ),
     "hf_w2v2_mothecreator": dict(
