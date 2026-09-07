@@ -316,3 +316,52 @@ for _ck in _R_CKPTS:
                 f"--manifest manifest_tgt_{_tg}_seed{_s}.csv --target {_tg} --seed {_s} "
                 f"--batch 16 {OUT}",
                 8, "stageR")
+
+# ================= 2026-09-07: autonomous pass to strengthen the paper ========
+# The queue was fully drained (384/384). These stages exist because three claims
+# the manuscript now leads with are thinner than the calibration-deficit result
+# they sit beside:
+#   S  -- "the method is a label-free threshold rule" is shown on our own model
+#         only (threshold_control.csv, 70 cells). Put it to the third-party grid.
+#   T  -- "E=32 reverses the AST degradations" rests on ONE seed (stage G2).
+#   R2 -- the ASVspoof-independent third-party arm is 3 seeds; its deficit
+#         closure is the one place in the study that misses significance.
+
+# --- stage S: median/otsu threshold control on the third-party grid ----------
+# One job; scores each (checkpoint, corpus) cell's seed-0 pool once, no
+# adaptation. Writes threshold_control_multi.csv incrementally, so a kill leaves
+# usable rows. ~76 cells, most 2-13 min; the AST cells dominate. Est 3.5 h.
+add("S-threshold-control-multi",
+    f"{PY} threshold_control_multi.py >> threshold_control_multi.out 2>&1",
+    210, "stageS")
+
+# --- stage T: E=32 depth on the two AST degradation cells --------------------
+# hf_ast_asv19 on in_the_wild (-3.79 EER at E=4, the study's largest significant
+# degradation) and dataset2 (-2.14). Stage G2 showed both flip strongly positive
+# at E=32 -- but at seed 0 only. Seeds 1-4 give n=5 (with G2's seed 0) for a
+# Wilcoxon of E=32-gain against source, and the E=4 rows at seeds 0-9 already
+# exist from stage D for the paired contrast. E=32 on AST is ~65-90 min/cell.
+for _ck, _tg in [("hf_ast_asv19", "in_the_wild"), ("hf_ast_asv19", "dataset2")]:
+    for _s in range(1, 6):
+        add(f"T-E32-{_ck}-{_tg}-s{_s}",
+            f"{PY} public_ckpt_tta.py --mode ours --ckpt {_ck} "
+            f"--manifest manifest_tgt_{_tg}_seed{_s}.csv --target {_tg} --seed {_s} "
+            f"--batch 16 --tta_epochs 32 {OUT}",
+            90, "stageT")
+
+# --- stage R2: the ASVspoof-independent third-party arm, seeds 3-9 -----------
+# Takes R from 3 seeds to 10. The R arm's deficit closure (6.18 -> 3.49) is the
+# only pooled deficit result in the study that is not significant (p=0.24,
+# n=48); ten seeds is the minimum at which its per-corpus Wilcoxon can reach
+# p<0.05. Same job shape as stage R, which ran clean at seeds 0-2.
+for _ck in ALL_CKPTS:
+    for _tg in ("hf_wavefake", "hf_commercialtts"):
+        if (_ck == "ssl_aasist_wavefake" and _tg == "hf_wavefake") or \
+           (_ck == "hf_xlsr_stafford" and _tg == "hf_commercialtts"):
+            continue
+        for _s in range(3, 10):
+            add(f"R-{_ck}-{_tg}-s{_s}",
+                f"{PY} public_ckpt_tta.py --mode ours --ckpt {_ck} "
+                f"--manifest manifest_tgt_{_tg}_seed{_s}.csv --target {_tg} --seed {_s} "
+                f"--batch 16 {OUT}",
+                8, "stageR2")

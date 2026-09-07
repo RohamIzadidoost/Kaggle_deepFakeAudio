@@ -84,3 +84,8 @@ manifest_tgt_*.csv
 queue_state.json
 queue_log.txt
 run_log_*.txt
+
+# --- local LaTeX bibliography build output ---
+*.bbl
+*.blg
+build_jasmp/

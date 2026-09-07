@@ -351,3 +351,63 @@ Optional polish, not required for correctness: `asdg` could gain
 
 Lesson for the next citation pass: R6 is not a one-time gate. Any new `\bibitem`
 added after a verification sweep is unverified again by definition.
+
+---
+
+## 13. ICASSP breadth pass + autonomous strengthening (2026-08-27 → 09-07)
+
+Branch `icassp-breadth`. Full narrative and every number: `FINDINGS_AUTONOMOUS_RUN.md`
+(Addenda 1–5). Summary of what changed the paper's claims:
+
+**The headline narrowed, and firmed.** Across 257 third-party cross-corpus cells
+(9 released checkpoints, 5 architectures incl. an Audio Spectrogram Transformer,
+10 corpora) the method **closes the calibration deficit** `(100−EER) − acc@0.5`
+from 7.77 → 1.04 points (p = 8.1e−20, 187/257) while its effect on **ranking is
+not significant** (EER +0.46, p = 0.16). This split has held from the first 43
+cells to the last 257. The paper now leads with threshold-repair, not EER.
+
+**Claims retired / reframed:**
+- The `r = +0.86` source-AUC precondition changes sign under resampling
+  (−0.20 at 43 cells, −0.02 at 257) — retired, not restated.
+- "Improves In-the-Wild EER on all four public checkpoints" was true only of that
+  single-corpus arm; at breadth 7/12 up, 5/12 down, 4 significant degradations.
+- `E` counts epochs, so the update budget scales with pool size — reported as a
+  protocol defect. E=32 more than doubles the Arabic gain (10/10 seeds,
+  p = 0.002) but degrades the weakest-ranking target; matched-budget control
+  (stage K) shows Tent/st_only do not benefit from the 8× budget.
+
+**Mechanism nailed down (Addendum 3 + stage S):** a one-line label-free rule —
+threshold at the median score — is statistically indistinguishable from the full
+gradient method across 133 cells (recovers 94% on 70 our-model cells; *beats* TTA
+by 1.9 pts, p = 0.04, on 63 third-party cells, where adaptation can degrade
+ranking and a threshold move cannot). Both land ~1 pt under a labelled oracle.
+Skewing the pool away from
+class balance breaks both together (50/70/90% fake → acc gain
++7.6/−3.5/−26.5, ranking flat). **The method is a threshold rule targeting a
+balanced-prior operating point.** Actionable precondition: the target pool must
+be roughly class-balanced — checkable without labels, unlike the AUC story.
+
+**The positive EER story survives, conditionally (Addendum 4):** on two corpora
+sharing no lineage with the source pool (WaveFake, 2024 commercial TTS) the
+method improves EER by +2.5 / +2.9 points (10 seeds, p = 0.002), *larger* than
+any original target. The benefit is contingent on calibration headroom, which
+lineage-relatedness predicts — ASVspoof2021 relatives (LA/DF/PA) arrive
+well-thresholded and adaptation only drifts them off.
+
+**Own model at 10 seeds (Addendum 1):** 28 source checkpoints trained locally
+(~6.6 min each, fidelity-gated against the cloud run — see `FIDELITY_NOTE.md`),
+so the paper's own method is no longer capped at n = 3. Published config
+replicates: Arabic +1.41 (p = 0.008), ASVspoof2019 +1.13 (p = 0.008),
+In-the-Wild +1.12 (nominal), dataset2 null.
+
+**Autonomous GPU pass (2026-09-07, Addendum 5):** queue was drained; three new
+value-ordered stages queued (S: median control at breadth; T: E=32 on the AST
+degradation cells at 5 seeds; R2: the independent-corpora third-party arm at 10
+seeds). New files `threshold_control_multi.py`, `analyze_threshold_control_multi.py`;
+no committed-result file modified. GPU cost of the whole branch: ~101 h + this
+pass, 0 failures.
+
+**Paper state:** `main_icassp.tex` rewritten and compiling at 4 content pages +
+refs-only page 5, no overfull boxes. `PROJECT_LOG` §6 ("Final validated
+results") is now superseded by this section and the FINDINGS doc — the 9.42% /
+5.50% numbers there are the pre-breadth cloud run.

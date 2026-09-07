@@ -552,3 +552,74 @@ the threshold repair is overwhelming, the ranking effect is not significant.
 `alexlicuriceanu/ro-dia-deepfake-audio` (Romanian, language diversity) failed
 after five exponential-backoff retries against HTTP 429 on unauthenticated Hub
 requests. Not load-bearing for any claim; worth retrying with an HF token.
+
+---
+
+# Addendum 5 — autonomous pass to strengthen the manuscript (2026-09-07)
+
+Context: queue was fully drained (384/384, 0 failures). The manuscript at commit
+`a60bfb4` had folded in the 196-cell breadth result but not Addenda 2-4, and
+three claims it now leads with were thinner than the calibration-deficit result
+beside them. This pass (a) rewrote the manuscript around Addenda 2-5 and (b)
+queued three GPU stages, ordered so a lost GPU leaves the most valuable work
+done.
+
+## What went into the manuscript (no GPU)
+
+* **Abstract + conclusion + contributions** rewritten around threshold-repair:
+  the median-threshold control, the skew sweep, and the WaveFake/commercial-TTS
+  positive result are now first-class, not addenda.
+* **257-cell numbers** replace the 196-cell ones for every pooled third-party
+  claim (deficit 7.77->1.04, p=8.1e-20, 187/257; EER +0.46, p=0.16 ns; AUC
+  +0.005, p=0.04). Verified against `analyze_public_ckpt_multi.py`'s own dedup
+  (mean over repeated runs per seed/target/family).
+* **Within-family honesty at breadth.** The 196-era "35/35 and 32/32" becomes,
+  deduped over 257: AST 39/39 (p=5e-8), WaveFake-XLS-R 39/40, deepfense_s42
+  38/40 (p<1e-11) -- but a *no-op* where the shipped threshold is already right
+  (stafford, mothecreator) and it *worsens* calibration on one w2v2 classifier
+  (gustking, 2/12, deficit 8.87->13.53). Stated plainly.
+* **Median-threshold control** (Addendum 3 S1) now in Results: 70 our-model
+  cells, median 75.3 vs TTA 75.6 vs oracle 76.6; recovers 94% of the gain, TTA
+  wins by 0.32 (p=0.014). Stage S extends this to the third-party grid.
+* **Skew sweep** (Addendum 3 S2) replaces the anecdotal Protocol-A note in the
+  class-balance limitation: 50/70/90% fake -> acc gain +7.6/-3.5/-26.5, ranking
+  flat. Precondition stated as "operator knows deployment prevalence".
+* **Matched-budget fairness** (stage K): E=32 hands the method 8x updates;
+  Tent gets *worse* (+5 EER on Arabic), st_only flat -- so the E gain is the
+  method's, not the compute's. One clause added to the E paragraph.
+* **Page budget.** Additions pushed content onto p5 (violates ICASSP
+  "refs-only"). Trimmed the Tent per-seed list, the bootstrap-CI sentence, the
+  DANN/ASDG paragraph, the comparison-points list, and the conclusion back to
+  4-page content + refs-only p5. No overfull boxes.
+
+## What was queued (GPU), value-ordered
+
+| stage | what | why | est |
+|---|---|---|---|
+| **S** | median/otsu threshold control on the 76-cell third-party grid, seed 0, scoring only | "the method is a label-free threshold rule" is shown on our model only | 1.5 h |
+| **T** | E=32 on the two AST degradation cells, seeds 1-5 | the "E=32 reverses the AST degradations" claim rests on **one** seed (stage G2) | ~13 h |
+| **R2** | the ASVspoof-independent third-party arm (WaveFake, commercial-TTS), seeds 3-9 | its deficit closure is the only pooled deficit result in the study that misses significance (n=48, 3 seeds) | ~14 h |
+
+New files: `threshold_control_multi.py` (scoring only, reuses
+`public_ckpt_tta.build_model/score`, verified to reproduce the pipeline's source
+EER/AUC/acc exactly on `hf_w2v2_bisher/arabic`),
+`analyze_threshold_control_multi.py`. Stages appended to `jobs.py`; no existing
+file with committed results was modified.
+
+### Results (filled as stages complete)
+
+* **Stage S (done, 63 third-party cells, 9 checkpoints, 8 corpora, seed 0).**
+  The median-threshold rule **beats** the gradient TTA method at breadth:
+  median $75.6\%$ acc vs TTA $73.7\%$ (labelled oracle $75.9\%$), paired
+  $p{=}0.041$, median $\ge$ TTA in $38/63$ cells. It recovers $133\%$ of TTA's
+  accuracy gain over the shipped threshold. `otsu` is bad ($-5.4$ vs TTA).
+  Reading: where adaptation degrades a checkpoint's ranking (the significant
+  degradations), a threshold move cannot -- so the label-free rule is the safer
+  of the two. Combined with the 70 our-model cells: **133 cells, median and TTA
+  statistically indistinguishable** ($p{=}0.89$), both $\sim$1 pt under the
+  oracle. This is now the paper's framing: the gradient method is doing,
+  expensively, what a one-line threshold move does at least as well. Per-target
+  medians in `threshold_control_multi.csv`; analysis
+  `analyze_threshold_control_multi.py`.
+* **Stage T:** _pending_
+* **Stage R2:** _pending_
