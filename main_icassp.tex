@@ -334,8 +334,8 @@ $+3.65$ EER on $10/10$ seeds ($p{=}0.002$), while on LibriSpeech-TTS---the
 weakest source ranking---it does not help ($2/10$). Handed the same $8\times$
 budget the baselines do not benefit (Tent worsens by $5$ EER points on Arabic,
 self-training-only is flat), so the gain is the method's, not the compute's.
-The two significant AST \emph{degradations} likewise reverse: at $E{=}32$ their
-EER gain goes $-3.78\!\to\!{+}7.24$ and $-2.14\!\to\!{+}1.86$, positive on
+On third-party checkpoints, both significant AST \emph{degradations} reverse at
+$E{=}32$: EER gain $-3.78\!\to\!{+}7.24$ and $-2.14\!\to\!{+}1.86$, positive on
 $6/6$ seeds each ($p{=}0.031$). $E$ belongs in step counts, not epochs; but more
 steps is not a free win (it hurts the weakest-ranking target monotonically), so
 we report the defect rather than re-tabulate around it.
