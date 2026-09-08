@@ -60,11 +60,12 @@ protocol, EER improves on three targets (In-the-Wild $12.78\!\to\!11.33\%$,
 Arabic $22.50\!\to\!20.99\%$, ASVspoof2019 $5.03\!\to\!3.47\%$; two survive Holm
 correction) and is neutral on the fourth, the one with the weakest source
 ranking. Applied unmodified to nine \emph{publicly released} checkpoints we did
-not train---five architectures, one a spectrogram transformer---over $257$
+not train---five architectures, one a spectrogram transformer---over $369$
 cross-corpus cells, it closes the gap between accuracy at the shipped threshold
-and the accuracy the ranking already supports ($7.8\!\to\!1.0$ points,
-$p{\approx}10^{-20}$, adapting $16{,}706$ parameters) while its effect on
-ranking is not significant: the mechanism is threshold repair. Consistent with
+and the accuracy the ranking already supports ($7.3\!\to\!2.0$ points,
+$p{\approx}10^{-17}$, adapting $16{,}706$ parameters) while its effect on
+ranking is an order of magnitude weaker ($+0.9$ EER, and split by corpus): the
+mechanism is threshold repair. Consistent with
 this, a label-free rule that moves the threshold to the median score is
 statistically indistinguishable from the full method over $133$ cells (both
 ${\sim}1$ point below a labelled oracle), and both break together when the
@@ -111,7 +112,7 @@ mechanism at \emph{operating-point repair under a balanced-prior assumption},
 not domain-invariance or improved separability; and (v) evidence that the method
 acts as a \emph{label-free wrapper for third-party detectors}, restoring the
 operating point of nine publicly released checkpoints across five architectures
-and ten corpora ($257$ cells) without retraining them.
+and ten corpora ($369$ cells) without retraining them.
 
 \textbf{Related work.} Frozen or fine-tuned SSL front-ends with AASIST or
 attentive back-ends dominate recent benchmarks~\cite{wav2vec2aug,xlsrsls,aasist,rawnet2};
@@ -271,31 +272,31 @@ source model, so we apply the published configuration unmodified to nine
 released detectors we did not train---XLS-R+AASIST checkpoints trained on
 WaveFake~\cite{shiftyspeech} and on ASVspoof2019~\cite{deepfensehf},
 wav2vec2 sequence classifiers, and an Audio Spectrogram
-Transformer~\cite{ast}---across ten corpora, $257$ cells in all.
+Transformer~\cite{ast}---across ten corpora, $369$ cells in all.
 
 The consistent effect is \emph{re-calibration}. Writing
 $\delta{=}(100{-}\mathrm{EER}){-}\mathrm{acc}@0.5$ for the accuracy a model's
 ranking supports but its shipped threshold does not deliver, adaptation drives
-$\delta$ from $7.77$ to $1.04$ points ($187/257$ cells, Wilcoxon
-$p{=}8.1{\times}10^{-20}$), and $\mathrm{corr}(\delta_{\text{before}},
-\delta_{\text{after}}){=}{+}0.22$: where it lands barely depends on where it
+$\delta$ from $7.29$ to $1.96$ points ($248/369$ cells, Wilcoxon
+$p{=}2.2{\times}10^{-17}$), and $\mathrm{corr}(\delta_{\text{before}},
+\delta_{\text{after}}){=}{+}0.17$: where it lands barely depends on where it
 started. Within families it holds wherever there is a deficit to close---the
 spectrogram transformer $39/39$ ($p{=}5{\times}10^{-8}$), the WaveFake-trained
-XLS-R $39/40$, one ASVspoof2019-trained XLS-R $38/40$ ($p{<}10^{-11}$)---is a
-no-op on families whose shipped threshold is already near-optimal, and
-\emph{worsens} calibration on one wav2vec2 classifier ($2/12$). That the same
-LayerNorm-and-head selection rule, designed against XLS-R, re-calibrates a
-mel-spectrogram transformer unchanged is the clearest architecture-independence
-evidence here.
+XLS-R $39/40$, one ASVspoof2019-trained XLS-R ($p{<}10^{-11}$)---is a no-op on
+families whose shipped threshold is already near-optimal, and \emph{worsens}
+calibration on one wav2vec2 classifier. That the same LayerNorm-and-head
+selection rule, designed against XLS-R, re-calibrates a mel-spectrogram
+transformer unchanged is the clearest architecture-independence evidence here.
 
-Ranking is a different matter. Pooled over the same cells the EER change is
-\emph{not} significant ($+0.46\%$, $p{=}0.16$; AUC $+0.005$, $p{=}0.04$).
-Per cell at ten seeds with Holm correction, $8/12$ tested cells are
-significant---but four of those are significant \emph{degradations}, the largest
-$38.13\!\to\!41.91\%$. Our earlier single-corpus result (In-the-Wild, four
-checkpoints, all improved, $16.41\!\to\!10.10\%$ on the weakest) reproduces but
-does not generalise. It is not memorisation: adapting on half of In-the-Wild and
-scoring the disjoint half gives $4.08\%$ vs.\ $4.06\%$ transductive.
+Ranking is a different matter. On the $209$ cells whose corpora share ASVspoof
+lineage the EER change is \emph{not} significant ($+0.28\%$, $p{=}0.52$); adding
+the two lineage-independent corpora it becomes small and split ($+0.9\%$,
+$p{=}0.003$)---an order of magnitude under the $5.3$-point calibration shift, and
+per corpus a significant improvement on one, degradation on the other. Our
+earlier single-corpus result (In-the-Wild, four checkpoints all improved)
+reproduces but does not generalise---four of $12$ ten-seed cells are significant
+degradations, the largest $38.13\!\to\!41.91\%$---and it is not memorisation
+(inductive $4.08$ vs.\ transductive $4.06\%$).
 
 \textbf{The method is a label-free threshold rule.} If the entire benefit is a
 shifted operating point, gradient descent should not be needed to obtain it. For
@@ -321,10 +322,13 @@ corpora that share no lineage with any source---WaveFake (vocoder artefacts over
 LJSpeech)~\cite{shiftyspeech} and a 2024 commercial-TTS set (ElevenLabs, Polly,
 Kokoro, Hume, Speechify)---instead arrive badly mis-thresholded (deficit $15.6$,
 $5.8$) and adaptation improves their EER by $+2.5$ and $+2.9$ points ($10$ seeds
-each, $p{=}0.002$), \emph{larger} than any original target. Pooling the six
-genuinely independent targets gives $+1.48$ EER ($n{=}60$, $p{<}10^{-8}$). The
-positive EER numbers are contingent not on which targets were to hand but on
-calibration headroom, which lineage-relatedness predicts.
+each, $p{=}0.002$), \emph{larger} than any original target ($+1.48$ pooled over
+the six independent targets, $n{=}60$, $p{<}10^{-8}$). The nine third-party
+checkpoints on these two corpora ($160$ cells) confirm it from the other side:
+WaveFake ($\delta{=}9.0$) is repaired and EER improves ($+6.2\%$, $p{=}10^{-13}$),
+commercial-TTS ($\delta{=}3.4$) has nothing to repair and EER drifts worse
+($-2.6\%$). The positive EER numbers are contingent not on which targets were to
+hand but on calibration headroom, which lineage-relatedness predicts.
 
 \textbf{The adaptation budget is a confound we introduced.} $E$ counts epochs,
 so the number of updates scales with pool size: $E{=}4$ over In-the-Wild's
@@ -340,17 +344,15 @@ $6/6$ seeds each ($p{=}0.031$). $E$ belongs in step counts, not epochs; but more
 steps is not a free win (it hurts the weakest-ranking target monotonically), so
 we report the defect rather than re-tabulate around it.
 
-\textbf{Backbone and prior DG baselines.} RawNet2Lite (no SSL pretraining)
-stays near chance on every target (AUC $0.40$--$0.65$) even retrained for 40
-epochs with stronger regularisation, so cross-corpus viability starts from SSL
-pretraining, not the TTA step. Both train-time DG baselines are beaten pooled
-over all 40 pairs ($30/40$ each); per target we beat DANN on two of four
-($p{\le}0.0098$; tie on In-the-Wild and LibriSpeech-TTS) and ASDG on three of
-four, with ASDG better on LibriSpeech-TTS ($32.64$ vs.\ $33.74\%$). DANN sees
-the held-out target's unlabeled audio every training step yet is worse, costs
-$3\times$ as much, and is seed-unstable (ASVspoof2019 EER $3.23$--$14.85\%$);
-ASDG beats plain source-only on only two of four targets (Table~\ref{tab:dann}).
-Neither is a reliable route to cross-corpus robustness here.
+\textbf{Backbone and prior DG baselines.} RawNet2Lite (no SSL pretraining) stays
+near chance on every target (AUC $0.40$--$0.65$) even retrained for 40 epochs, so
+cross-corpus viability starts from SSL pretraining, not the TTA step. Both
+train-time DG baselines are beaten pooled over all 40 pairs ($30/40$ each); per
+target we beat DANN on two of four and ASDG on three of four (ASDG better on
+LibriSpeech-TTS). DANN sees the held-out target's unlabeled audio every step yet
+is worse, costs $3\times$ as much, and is seed-unstable; ASDG beats plain
+source-only on only two of four targets (Table~\ref{tab:dann}). Neither is a
+reliable route to cross-corpus robustness here.
 
 \begin{table}[t]
 \centering
@@ -432,7 +434,7 @@ mis-specified budget, as above.
 \item \textbf{Scale.} The main table is four targets, ten seeds; going from
 three to ten seeds made the per-target tests possible but shrank our DG margin
 to two per-target wins against DANN and three against ASDG. Breadth comes from
-the third-party arm (nine detectors, ten corpora, $257$ cells) and six
+the third-party arm (nine detectors, ten corpora, $369$ cells) and six
 additional ten-seed targets for our own model, which is where the source-AUC
 ordering was falsified and the calibration account confirmed. The mechanistic
 claims (threshold rule, balanced-prior assumption) are established on our model
@@ -445,13 +447,12 @@ data and are kept in a separate arm.
 Cross-corpus audio deepfake detection fails because the operating point is
 mis-calibrated, not because ranking is lost. Our unsupervised TTA repairs the
 operating point---closing the shipped-vs-attainable accuracy gap on nine
-third-party detectors over $257$ cells ($p{\approx}10^{-20}$) while leaving
-ranking unchanged---and a label-free move of the threshold to the median score
-matches it over $133$ cells with no training; both require a class-balanced
-target pool. The EER gains that remain are conditional on calibration headroom, which
-lineage-relatedness predicts (independent WaveFake and commercial-TTS targets
-gain $+2.5$/$+2.9$ EER). Source AUC does not predict the gain and is retired.
-It is a re-calibration wrapper, not a detector.
+third-party detectors over $369$ cells ($p{\approx}10^{-17}$) with a ranking
+effect an order of magnitude smaller---and a label-free median-threshold move
+matches it over $133$ cells with no training. Both require a class-balanced
+target pool, and the residual EER gains are conditional on calibration headroom,
+which lineage-relatedness predicts (source AUC does not, and is retired). It is a
+re-calibration wrapper, not a detector.
 
 {\small
 \begin{thebibliography}{1}

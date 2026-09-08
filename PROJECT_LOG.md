@@ -359,12 +359,14 @@ added after a verification sweep is unverified again by definition.
 Branch `icassp-breadth`. Full narrative and every number: `FINDINGS_AUTONOMOUS_RUN.md`
 (Addenda 1–5). Summary of what changed the paper's claims:
 
-**The headline narrowed, and firmed.** Across 257 third-party cross-corpus cells
+**The headline narrowed, and firmed.** Across 369 third-party cross-corpus cells
 (9 released checkpoints, 5 architectures incl. an Audio Spectrogram Transformer,
 10 corpora) the method **closes the calibration deficit** `(100−EER) − acc@0.5`
-from 7.77 → 1.04 points (p = 8.1e−20, 187/257) while its effect on **ranking is
-not significant** (EER +0.46, p = 0.16). This split has held from the first 43
-cells to the last 257. The paper now leads with threshold-repair, not EER.
+from 7.29 → 1.96 points (p = 2.2e−17, 248/369). Its effect on **ranking** is an
+order of magnitude smaller: null (p = 0.52) on the 209 ASVspoof-lineage cells,
++0.9 EER (p = 0.003) once the two lineage-independent corpora are pooled in —
+driven entirely by WaveFake, where the deficit is largest. The paper leads with
+threshold-repair, not EER, and reports the ranking effect split this way.
 
 **Claims retired / reframed:**
 - The `r = +0.86` source-AUC precondition changes sign under resampling

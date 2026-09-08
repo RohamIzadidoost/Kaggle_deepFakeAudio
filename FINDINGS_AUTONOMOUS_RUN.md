@@ -629,4 +629,30 @@ file with committed results was modified.
   - `dataset2`: E=4 gain $-2.14 \to$ E=32 gain $+1.86$, **6/6 positive**, p=0.031.
     E=32 beats E=4 by +4.0, 6/6.
   The E-defect claim no longer rests on one seed. `analyze_stage_t.py`.
-* **Stage R2:** _pending_
+* **Stage R2 (done, WaveFake + commercial-TTS, third-party, 10 seeds, 160 cells).**
+  - `hf_wavefake`: EER $33.87 \to 27.72$ (**+6.15**, p=1.2e-13); deficit
+    $9.01 \to 4.96$ (p=0.084, up from p=0.32 at 3 seeds).
+  - `hf_commercialtts`: EER $36.03 \to 38.68$ (**-2.64**, p=3.8e-4, a
+    *degradation*); deficit $3.36 \to 2.83$ (p=0.34 -- nothing to repair).
+  - Pooled: EER +1.75 (p=0.008); **deficit $6.18 \to 3.89$, p=0.040** -- now
+    significant on this arm (was p=0.24 at 3 seeds).
+  The split is the same one running through the study, cleaner: repair happens
+  where there is a deficit (WaveFake $\delta=9$), and only there does EER move.
+  `analyze_stage_r2.py`.
+
+## Revised grand total, third-party arm (all stages, incl. R2)
+
+**369 cells, 9 checkpoints, 10 corpora** (deduped per seed/target/family):
+
+| measure | source -> adapted | p |
+|---|---|---|
+| calibration deficit | 7.29 -> **1.96** | **2.2e-17** |
+| EER (all 369) | +0.92 | 0.003 |
+| EER (209 ASVspoof-lineage cells only) | +0.28 | 0.52 (ns) |
+| AUC | +0.010 | 0.002 |
+
+Adding R2's 112 cells (WaveFake dominates, EER +6.2 at p=1e-13) tips the
+*pooled* EER gain into significance (+0.92, p=0.003) -- but it is an order of
+magnitude under the calibration shift, entirely from the one corpus with the
+largest deficit, and null (p=0.52) on the 209 lineage-related cells. The paper
+now reports it split this way rather than as a flat "ranking not significant".
