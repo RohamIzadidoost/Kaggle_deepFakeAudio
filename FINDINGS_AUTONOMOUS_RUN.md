@@ -621,5 +621,12 @@ file with committed results was modified.
   expensively, what a one-line threshold move does at least as well. Per-target
   medians in `threshold_control_multi.csv`; analysis
   `analyze_threshold_control_multi.py`.
-* **Stage T:** _pending_
+* **Stage T (done, hf_ast_asv19, E=32, seeds 1-5 + G2's seed 0).** Both AST
+  degradations -- the two largest significant ones in the study at E=4 -- reverse
+  cleanly at E=32:
+  - `in_the_wild`: E=4 gain $-3.78 \to$ E=32 gain $+7.24$, **6/6 seeds positive**,
+    p=0.031 (the n=6 Wilcoxon floor). E=32 beats E=4 by +11.0, 6/6.
+  - `dataset2`: E=4 gain $-2.14 \to$ E=32 gain $+1.86$, **6/6 positive**, p=0.031.
+    E=32 beats E=4 by +4.0, 6/6.
+  The E-defect claim no longer rests on one seed. `analyze_stage_t.py`.
 * **Stage R2:** _pending_
