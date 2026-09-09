@@ -748,4 +748,28 @@ gradient TTA raise per-sub-population AUC -- something a threshold move provably
 cannot -- or is per-sub-population AUC flat, i.e. the whole effect is the
 threshold?
 
-* **Result: _pending_** (stage U, ~3 h)
+**Result (done, 70 sub-population cells, 5 seeds):**
+
+| target | src AUC | per-sub-pop AUC source -> adapted | dAUC | p | up |
+|---|---|---|---|---|---|
+| ASVspoof2019 (A01-A06) | 0.99 | 0.9907 -> 0.9941 | **+0.0034** | **1.9e-9** | **30/30** |
+| dataset2 (8 TTS) | 0.71 | 0.8112 -> 0.8127 | +0.0015 | 0.65 | 22/40 |
+
+**The gradient method is not merely a threshold shift.** On ASVspoof2019, where
+the source ranking is strong, adaptation raises ROC-AUC within *every one* of the
+six attack families -- 30/30 attack x seed cells, +1.1 EER, p=1.9e-9 -- and a
+threshold move cannot change any AUC. The largest per-attack gains are on the two
+hardest attacks (A04: dAUC +0.0071, dEER +1.60; A06: +0.0083, +1.66); the
+near-perfect ones (A01/A02 at AUC 0.9994) barely move. On dataset2 (source AUC
+0.71) there is no separability to sharpen and the effect is null.
+
+Split by sub-population source AUC: the dAUC magnitude is identical (+0.0023) for
+strong (>=0.95, p=5e-5, 34/38) and weak (<0.95, p=0.49, 18/32) sub-populations,
+but only *detectable* where ranking is strong.
+
+**So the median-rule equivalence holds exactly where the method reduces to
+re-thresholding** -- weak source ranking, or third-party checkpoints whose
+ranking it degrades -- **and breaks where the method has a ranking to work
+with**: given the precondition, adaptation does something threshold-free
+(sharpens the boundary within each attack family), which is the paper's answer
+to "why not just move the threshold". `r2_vuln1_subpop.py`.

@@ -409,7 +409,28 @@ seeds). New files `threshold_control_multi.py`, `analyze_threshold_control_multi
 no committed-result file modified. GPU cost of the whole branch: ~101 h + this
 pass, 0 failures.
 
-**Paper state:** `main_icassp.tex` rewritten and compiling at 4 content pages +
-refs-only page 5, no overfull boxes. `PROJECT_LOG` §6 ("Final validated
-results") is now superseded by this section and the FINDINGS doc — the 9.42% /
-5.50% numbers there are the pre-breadth cloud run.
+**R2 reviewer vulnerabilities (2026-09-09, Addendum 6).** A reviewer summary
+flagged two downgrade risks. Both now addressed:
+- **Median-rule equivalence.** The median-threshold rule matches the full method
+  *on average*, but on ASVspoof2019 (strong source ranking) gradient TTA raises
+  ROC-AUC within every one of the six attack families — 30/30 attack×seed cells,
+  +1.1 EER, p = 1.9e−9 — which no threshold move can do. Null on dataset2
+  (source AUC 0.71). So the equivalence holds where the method reduces to
+  re-calibration; given a usable ranking it adds real separability
+  (`r2_vuln1_subpop.py`, stage U).
+- **Class-balance precondition.** BBSE (`p̂ = M⁻¹q`, M the source confusion
+  matrix) estimates target prevalence label-free to within 1.4% at 50–95% skew;
+  re-pointing the threshold at the p̂ quantile matches the labelled
+  accuracy-optimal threshold to within 0.4 pts (a score GMM does not: 28% error
+  at 90% fake), robust to moderate calibration drift. The threshold is
+  recoverable at any prior; the self-training pseudo-labels stay noisy under
+  severe skew (`r2_vuln2_prevalence_cpu.py`, CPU only). A parallel opus session
+  had already killed the score-shape strategies (GMM/Otsu/k-means/FreeMatch/
+  prototype) — BBSE is different because it reads source error structure, not
+  the target score distribution.
+
+**Paper state:** `main_icassp.tex` compiles at 4 content pages + refs-only page
+5, no overfull boxes; abstract, contributions (iv), results and limitations now
+carry V1/V2. `PROJECT_LOG` §6 ("Final validated results") is superseded by this
+section and the FINDINGS doc — the 9.42% / 5.50% numbers there are the
+pre-breadth cloud run.

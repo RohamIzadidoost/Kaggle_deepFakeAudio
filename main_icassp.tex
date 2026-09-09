@@ -65,11 +65,10 @@ cross-corpus cells, it closes the gap between accuracy at the shipped threshold
 and the accuracy the ranking already supports ($7.3\!\to\!2.0$ points,
 $p{\approx}10^{-17}$, adapting $16{,}706$ parameters) while its effect on
 ranking is an order of magnitude weaker ($+0.9$ EER, and split by corpus): the
-mechanism is threshold repair. Consistent with
-this, a label-free rule that moves the threshold to the median score is
-statistically indistinguishable from the full method over $133$ cells (both
-${\sim}1$ point below a labelled oracle), and both break together when the
-target pool is skewed from class balance. The EER gains that do
+mechanism is threshold repair, and a label-free median-threshold rule matches
+the full method on average---though where source ranking is strong the gradient
+step does add per-attack separability a threshold cannot, and label-free prior
+estimation lifts most of the class-balance requirement. The EER gains that do
 occur track \emph{calibration headroom}: on two corpora sharing no lineage with
 the source pool (WaveFake, 2024 commercial TTS) adaptation improves EER by
 $+2.5$ and $+2.9$ points ($p{=}0.002$), larger than on the original targets.
@@ -107,12 +106,13 @@ recalibration, self-training-only, a non-SSL backbone, DANN, and an
 ASDG-style aggregation-separation baseline), including the
 one target where the method does not help; (iv) a mechanistic analysis---proxy
 $\mathcal{A}$-distance, a label-free median-threshold control that matches the
-full method over $133$ cells, and a class-balance skew sweep---placing the
-mechanism at \emph{operating-point repair under a balanced-prior assumption},
-not domain-invariance or improved separability; and (v) evidence that the method
-acts as a \emph{label-free wrapper for third-party detectors}, restoring the
-operating point of nine publicly released checkpoints across five architectures
-and ten corpora ($369$ cells) without retraining them.
+full method on average, a per-attack test showing the gradient step \emph{does}
+add separability where source ranking is strong, and a class-balance study with
+a label-free prevalence estimator that removes most of the balance
+requirement---placing the mechanism at \emph{operating-point repair}; and
+(v) evidence that the method acts as a \emph{label-free wrapper for third-party
+detectors}, restoring the operating point of nine publicly released checkpoints
+across five architectures and ten corpora ($369$ cells) without retraining them.
 
 \textbf{Related work.} Frozen or fine-tuned SSL front-ends with AASIST or
 attentive back-ends dominate recent benchmarks~\cite{wav2vec2aug,xlsrsls,aasist,rawnet2};
@@ -298,19 +298,20 @@ reproduces but does not generalise---four of $12$ ten-seed cells are significant
 degradations, the largest $38.13\!\to\!41.91\%$---and it is not memorisation
 (inductive $4.08$ vs.\ transductive $4.06\%$).
 
-\textbf{The method is a label-free threshold rule.} If the entire benefit is a
-shifted operating point, gradient descent should not be needed to obtain it. For
-each source checkpoint we score the pool once and threshold at the \emph{median}
-score (label-free; the split predicting $50\%$ positive). Over $70$ of our own
-cells the median rule reaches $75.3\%$ accuracy vs.\ TTA's $75.6\%$ (labelled
-oracle $76.6\%$)---$94\%$ of TTA's gain with no training and none of the
-$16{,}706$ adapted parameters. Over $63$ third-party cells it \emph{beats} TTA,
-$75.6$ vs.\ $73.7\%$ ($p{=}0.04$, within $0.4$ of the oracle): where adaptation
-degrades a checkpoint's ranking a threshold move cannot, so it is the safer of
-the two. Pooled over all $133$ cells the two are statistically indistinguishable,
-both ${\sim}1$ point under the labelled oracle. Both assume a class-balanced pool
-and break together when that fails (Sec.~\ref{sec:lim}). The gradient method is
-doing, expensively, what a one-line threshold move does at least as well.
+\textbf{A label-free threshold rule captures most of it---but not all.} If the
+whole benefit were a shifted operating point, gradient descent would be
+unnecessary. Thresholding each source checkpoint's pool at the \emph{median} score
+(label-free) recovers $94\%$ of TTA's accuracy gain over $70$ of our own cells
+($75.3$ vs.\ $75.6\%$, oracle $76.6\%$) and \emph{beats} it over $63$
+third-party cells ($75.6$ vs.\ $73.7\%$, $p{=}0.04$, where adaptation degrades a
+checkpoint's ranking); pooled over $133$ cells the two are indistinguishable,
+both assuming a class-balanced pool (Sec.~\ref{sec:lim}). What a threshold
+\emph{cannot} do is change ROC-AUC, and where the source ranking is strong the
+gradient method does: on ASVspoof2019 it raises within-attack-family AUC on all
+six families ($30/30$ attack$\times$seed cells, $+1.1$ EER, $p{=}10^{-9}$),
+largest on the two hardest; on AUC-$0.71$ LibriSpeech-TTS there is nothing to
+sharpen and the effect is null. The equivalence holds where the method reduces
+to re-calibration; given a usable ranking, adaptation adds real separability.
 
 \textbf{Where EER gains do occur, they track calibration headroom, and lineage
 predicts headroom.} Extending our own model past the four original targets:
@@ -351,8 +352,7 @@ train-time DG baselines are beaten pooled over all 40 pairs ($30/40$ each); per
 target we beat DANN on two of four and ASDG on three of four (ASDG better on
 LibriSpeech-TTS). DANN sees the held-out target's unlabeled audio every step yet
 is worse, costs $3\times$ as much, and is seed-unstable; ASDG beats plain
-source-only on only two of four targets (Table~\ref{tab:dann}). Neither is a
-reliable route to cross-corpus robustness here.
+source-only on only two of four (Table~\ref{tab:dann}). Neither is reliable here.
 
 \begin{table}[t]
 \centering
@@ -376,14 +376,14 @@ Arabic & 22.50 / .843 & 28.53 / .759 & 27.41 / .798 & \textbf{20.99} / .866 \\
 \end{tabular}}
 \end{table}
 
-\textbf{Mechanism.} An inductive check (adapt and evaluate on disjoint target
-halves) rules out transductive memorisation. The proxy $\mathcal{A}$-distance
-and a linear domain-origin probe both \emph{increase} slightly after adaptation
-(Arabic $\hat d_{\mathcal{A}}\!:1.545\!\to\!1.606$), the opposite of what
-domain-invariance predicts: adaptation re-shapes the boundary with
-rank-reliable pseudo-labels rather than erasing domain identity, consistent with
-DANN underperforming despite optimising that quantity. MLAAD fake-clip recall is
-uniform across seen and unseen languages ($93.9$ vs.\ $93.3\%$).
+\textbf{Mechanism.} An inductive check (disjoint adapt/eval halves) rules out
+transductive memorisation. The proxy $\mathcal{A}$-distance and a linear
+domain-origin probe both \emph{increase} slightly after adaptation (Arabic
+$\hat d_{\mathcal{A}}\!:1.545\!\to\!1.606$), the opposite of what
+domain-invariance predicts: adaptation re-shapes the boundary with rank-reliable
+pseudo-labels rather than erasing domain identity---consistent with DANN
+underperforming despite optimising that quantity. MLAAD fake recall is uniform
+across seen and unseen languages ($93.9$ vs.\ $93.3\%$).
 
 \begin{figure}[t]
 \centering
@@ -411,22 +411,23 @@ we can rescue (Fig.~\ref{fig:aucgain}). Our non-SSL backbone never reaches a
 ranking worth adapting (AUC $0.40$--$0.65$), so it fails the precondition
 before TTA becomes applicable and we did not run adaptation on it; every
 third-party checkpoint we adapt is itself a pretrained transformer.
-\item \textbf{Class balance is a second precondition, and it is the one the
-operator can check without labels.} The fixed-quantile rule labels the bottom
-$q$ of the pool ``confident real'' whatever the true prior, so it targets a
-\emph{balanced}-prior operating point. A controlled skew sweep (our model, four
-targets) confirms the mechanism: as the pool goes $50\!\to\!70\!\to\!90\%$ fake,
-the accuracy gain goes $+7.6\!\to\!{-}3.5\!\to\!{-}26.5$ points while ranking
-stays flat---at $90\%$ fake, adaptation drags a $87.3\%$ source model to
-$60.8\%$. This is the same failure seen once on the official ASVspoof2021-DF
-protocol ($97.2\%$-spoof pool: source $26.33\%$ EER, TTA $42.46\%$), and
-label-free corrections do not fix it (prevalence-weighted budget: $32.58\%$ /
-$42.46\%$ under two source recipes; $q$-curriculum: $42.50\%$). Deployment
-prevalence is normally known, so we state it as a precondition rather than
-estimate it from audio. (Our source model is also not state-of-the-art---$8$--$9\%$
-EER is reported on 2021-DF by SSL+AASIST systems against our $26.33\%$
-source-only---so this is a \emph{relative}-gain claim on a fixed backbone, to be
-re-verified on a stronger one.)
+\item \textbf{Class balance is a second precondition---partly removable.} The
+fixed-quantile rule labels the bottom $q$ of the pool ``confident real''
+whatever the true prior, so it targets a \emph{balanced}-prior operating point.
+A controlled skew sweep confirms the mechanism: at $50\!\to\!70\!\to\!90\%$
+fake the accuracy gain goes $+7.6\!\to\!{-}3.5\!\to\!{-}26.5$ points while
+ranking stays flat (this also accounts for the ASVspoof2021-DF collapse: source
+$26.33\%$ EER, TTA $42.46\%$ on a $97\%$-spoof pool). But the prior is estimable
+label-free by black-box shift estimation ($\hat p{=}M^{-1}q$, $M$ the source
+confusion matrix): across $50$--$95\%$ fake, BBSE recovers it to within $1.4\%$
+and re-pointing the threshold at the $\hat p$ quantile matches the
+\emph{labelled} accuracy-optimal threshold to within $0.4$ points---a score GMM
+does not ($28\%$ error at $90\%$ fake)---and it is robust to moderate calibration
+drift, reading source error structure not the target score shape. So the
+threshold is recoverable at any prior; the confident-tail pseudo-labels stay
+noisy under severe skew even with a prior-matched budget. Our source model is
+also not state-of-the-art ($26.33\%$ vs.\ published $8$--$9\%$ on 2021-DF), so
+this is a relative-gain claim on a fixed backbone.
 \item \textbf{Fixed hyperparameters.} $q$ and $\lambda$ are label-free and not
 per-target optimal; a label-free $\lambda$ schedule pays nothing at our scale
 (within $0.24$ EER of a per-point oracle). $E$ is not a hyperparameter but a
@@ -434,25 +435,23 @@ mis-specified budget, as above.
 \item \textbf{Scale.} The main table is four targets, ten seeds; going from
 three to ten seeds made the per-target tests possible but shrank our DG margin
 to two per-target wins against DANN and three against ASDG. Breadth comes from
-the third-party arm (nine detectors, ten corpora, $369$ cells) and six
-additional ten-seed targets for our own model, which is where the source-AUC
-ordering was falsified and the calibration account confirmed. The mechanistic
-claims (threshold rule, balanced-prior assumption) are established on our model
-and the label-free control; the two large HF checkpoints run at batch $8$ not
-$16$, and three of the nine third-party checkpoints have undocumented training
-data and are kept in a separate arm.
+the third-party arm (nine detectors, ten corpora, $369$ cells), where the
+source-AUC ordering was falsified and the calibration account confirmed. Two
+large HF checkpoints run at batch $8$ not $16$, and three of the nine have
+undocumented training data and sit in a separate arm.
 \end{itemize}
 
 \section{Conclusion}
 Cross-corpus audio deepfake detection fails because the operating point is
-mis-calibrated, not because ranking is lost. Our unsupervised TTA repairs the
-operating point---closing the shipped-vs-attainable accuracy gap on nine
-third-party detectors over $369$ cells ($p{\approx}10^{-17}$) with a ranking
-effect an order of magnitude smaller---and a label-free median-threshold move
-matches it over $133$ cells with no training. Both require a class-balanced
-target pool, and the residual EER gains are conditional on calibration headroom,
-which lineage-relatedness predicts (source AUC does not, and is retired). It is a
-re-calibration wrapper, not a detector.
+mis-calibrated, not because ranking is lost. Our unsupervised TTA repairs it
+($369$ third-party cells, $p{\approx}10^{-17}$, ranking effect an order of
+magnitude smaller), and a label-free median-threshold move matches it on
+average. The gradient step earns its cost only where the source ranking is
+strong---on ASVspoof2019 it sharpens within-attack ROC-AUC ($30/30$ cells),
+which no threshold can---and the class-balance requirement is largely removable
+by label-free prior estimation. Source AUC does not predict the gain and is
+retired. Given a usable source ranking the method re-calibrates and modestly
+re-separates; without one it is a threshold rule.
 
 {\small
 \begin{thebibliography}{1}
