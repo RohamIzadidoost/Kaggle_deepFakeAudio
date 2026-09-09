@@ -45,8 +45,8 @@ from sklearn.metrics import roc_auc_score
 from eval_protocol import DF_KEYS_DEFAULT, load_df_keys, score_official_df
 from rawboost_gpu import RawBoostGPU
 
-SMOKE = False   # <-- run this first; only then set False for the real run
-RECIPE = "rawboost"   # "baseline" (gain+noise, 8ep) or "rawboost" (Phase 1b)
+SMOKE = os.environ.get("PROTOA_SMOKE", "0") == "1"   # run this first
+RECIPE = os.environ.get("PROTOA_RECIPE", "rawboost")   # "baseline" or "rawboost"
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 USE_BF16 = torch.cuda.is_available() and torch.cuda.is_bf16_supported()
@@ -319,6 +319,42 @@ def estimate_prevalence(scores, min_prior=0.02, max_prior=0.98):
     return float(np.clip(pi_real, min_prior, max_prior))
 
 
+def bbse_prevalence(model, la19_train, adapt_df, min_prior=0.005, max_prior=0.995):
+    """Black-box shift estimation of P(real) on the DF adapt pool.
+
+    M[y, yhat] = P_src(yhat | y) from a class-balanced 2019-LA train slice (the
+    labelled in-domain data the source model was fitted on, on disk); q = the
+    observed DF-eval prediction histogram; p = M^{-T} q, clipped to a simplex.
+
+    Unlike the 2-component GMM above, BBSE never reads the *shape* of the target
+    score distribution -- only the source error rates and the target prediction
+    rate -- so it is not fooled by the RawBoost source model's degenerate score
+    histogram, which is the exact failure that made `estimate_prevalence` return
+    a confidently-wrong prior there (results_protocol_a.csv: ours_prior_rawboost
+    42.46 EER, no recovery). On the synthetic/real skew sweep BBSE tracks the
+    true prior to ~1.4% at 50-95% fake where the GMM is ~28% off
+    (r2_vuln2_prevalence_cpu.py).
+    """
+    bal = pd.concat([g.sample(min(len(g), 2000), random_state=0)
+                     for _, g in la19_train.groupby("y")]).reset_index(drop=True)
+    s_src = stream_score(model, bal.rename(columns={"path": "path"}), tag="bbse-M ")
+    yh = (s_src >= 0.5).astype(int)
+    y = bal.y.values.astype(int)
+    M = np.array([[np.mean(yh[y == 0] == 0), np.mean(yh[y == 0] == 1)],
+                  [np.mean(yh[y == 1] == 0), np.mean(yh[y == 1] == 1)]])
+    s_t = stream_score(model, adapt_df, tag="bbse-q ")
+    q = np.array([np.mean((s_t >= 0.5) == 0), np.mean((s_t >= 0.5) == 1)])
+    try:
+        p = np.linalg.solve(M.T, q)
+    except np.linalg.LinAlgError:
+        return 0.5
+    p = np.clip(p, 1e-4, 1.0 - 1e-4)
+    pi_real = float(p[0] / p.sum())
+    log(f"  BBSE: M={M.round(3).tolist()}  q={q.round(3).tolist()}  "
+        f"pi_real={pi_real:.4f}")
+    return float(np.clip(pi_real, min_prior, max_prior))
+
+
 # ---------------------------------------------------------------- train / score
 def fit_source(model, df, epochs):
     """Train on the 2019-LA train pool. Cosine schedule + weight decay (the
@@ -377,7 +413,8 @@ def stream_score(model, df, chunk=4096, tag=""):
     return out
 
 
-def adapt(model, df, epochs=TTA_EPOCHS, prior_aware=False, adaptive=False):
+def adapt(model, df, epochs=TTA_EPOCHS, prior_aware=False, adaptive=False,
+          bbse=False, la19=None):
     """Confident-tail pseudo-label self-training + channel consistency, on an
     unlabeled subsample. Same objective as extended_pipeline.py:412; the pool is
     small enough (ADAPT_N) to cache on GPU.
@@ -416,20 +453,23 @@ def adapt(model, df, epochs=TTA_EPOCHS, prior_aware=False, adaptive=False):
 
     lo_frac, hi_frac = Q, Q
     pi_real = 0.5
-    if prior_aware or adaptive:
-        model.eval()
-        with torch.no_grad():
-            s0 = []
-            for i in range(0, n, BATCH):
-                x, _ = pool.batch(torch.arange(i, min(i + BATCH, n)), train=False)
-                s0.append(torch.softmax(model(x)[0].float(), 1)[:, 1])
-            s0 = torch.cat(s0).cpu().numpy()
-        if adaptive:
-            pi_real, bic_delta, shrunk = AT.estimate_prevalence_guarded(s0)
-            log(f"  estimated P(real) = {pi_real:.4f} "
-                f"(bic_delta {bic_delta:.1f}, shrunk_to_symmetric={shrunk})")
+    if prior_aware or adaptive or bbse:
+        if bbse:
+            pi_real = bbse_prevalence(model, la19, df)
         else:
-            pi_real = estimate_prevalence(s0)
+            model.eval()
+            with torch.no_grad():
+                s0 = []
+                for i in range(0, n, BATCH):
+                    x, _ = pool.batch(torch.arange(i, min(i + BATCH, n)), train=False)
+                    s0.append(torch.softmax(model(x)[0].float(), 1)[:, 1])
+                s0 = torch.cat(s0).cpu().numpy()
+            if adaptive:
+                pi_real, bic_delta, shrunk = AT.estimate_prevalence_guarded(s0)
+                log(f"  estimated P(real) = {pi_real:.4f} "
+                    f"(bic_delta {bic_delta:.1f}, shrunk_to_symmetric={shrunk})")
+            else:
+                pi_real = estimate_prevalence(s0)
         lo_frac, hi_frac = 2 * Q * pi_real, 2 * Q * (1 - pi_real)
         log(f"  pseudo-real budget {lo_frac:.4f}  pseudo-fake budget {hi_frac:.4f}")
 
@@ -580,6 +620,7 @@ def main():
     m_ours = "ours" + METHOD_SUFFIX
     m_ours_prior = "ours_prior" + METHOD_SUFFIX
     m_ours_adaptive = "ours_adaptive" + METHOD_SUFFIX
+    m_ours_bbse = "ours_bbse" + METHOD_SUFFIX
 
     if m_source not in done:
         log(f"scoring DF eval with the {m_source} model")
@@ -618,6 +659,17 @@ def main():
                set(adapt_df.utt))
     else:
         log(f"{m_ours_adaptive} already recorded, skipping")
+
+    if m_ours_bbse not in done:
+        log(f"[bbse] adapting on {len(adapt_df)} unlabeled DF eval clips "
+            f"(prevalence by black-box shift estimation from the labelled 2019-LA "
+            f"train slice; still no target labels)")
+        adapted_b = adapt(copy.deepcopy(model), adapt_df, bbse=True, la19=train)
+        log(f"scoring DF eval with the BBSE-adapted ({m_ours_bbse}) model")
+        report(m_ours_bbse, ev, stream_score(adapted_b, ev, tag=f"{m_ours_bbse} "),
+               set(adapt_df.utt))
+    else:
+        log(f"{m_ours_bbse} already recorded, skipping")
 
     log(f"DONE in {(time.time() - t0) / 60:.1f} min | "
         f"peak GPU {torch.cuda.max_memory_allocated() / 1e9:.1f} GB")

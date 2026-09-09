@@ -393,3 +393,40 @@ for _sk in ("0.9", "0.7"):
             f'OUR_TARGETS=arabic,dataset2,in_the_wild,asvspoof2019 '
             f'{PY} adaptive_pipeline.py >> dynq_skew.out 2>&1',
             95, "stageV")
+
+# --- stage W: Protocol A (official 97%-spoof DF eval) with a BBSE prior --------
+# The paper reports the Protocol-A collapse (source 26.33 -> naive-TTA 42.46 EER)
+# as an unexplained open problem; the GMM-fed prior-aware budget recovered it
+# only to 32.58 (baseline recipe) / not at all (rawboost). protocol_a.py now has
+# an `ours_bbse` arm: same asymmetric tail_budget, prevalence by black-box shift
+# estimation from the labelled 2019-LA train slice. Source/ours/ours_prior rows
+# already exist, so each run only computes the new arm.
+add("W1-protoA-smoke",
+    "PROTOA_SMOKE=1 PROTOA_RECIPE=baseline python protocol_a.py >> protoA_bbse.out 2>&1",
+    6, "stageW")
+add("W2-protoA-bbse-baseline",
+    "PROTOA_RECIPE=baseline python protocol_a.py >> protoA_bbse.out 2>&1",
+    55, "stageW")
+add("W3-protoA-bbse-rawboost",
+    "PROTOA_RECIPE=rawboost python protocol_a.py >> protoA_bbse.out 2>&1",
+    55, "stageW")
+
+# --- stage V2: fill the dynq seed budget ------------------------------------
+for _s in range(5, 10):
+    add(f"V-dynq-skew0.9-seed{_s}",
+        f'CACHE_ON_CPU=1 ADAPTIVE_SMOKE=0 INCLUDE_MLAAD=1 DYNQ=1 TARGET_SKEW=0.9 '
+        f'OUR_SEEDS={_s} OUR_TARGETS=arabic,dataset2,in_the_wild,asvspoof2019 '
+        f'{PY} adaptive_pipeline.py >> dynq_skew.out 2>&1', 95, "stageV2")
+for _s in range(3, 7):
+    add(f"V-dynq-skew0.7-seed{_s}",
+        f'CACHE_ON_CPU=1 ADAPTIVE_SMOKE=0 INCLUDE_MLAAD=1 DYNQ=1 TARGET_SKEW=0.7 '
+        f'OUR_SEEDS={_s} OUR_TARGETS=arabic,dataset2,in_the_wild,asvspoof2019 '
+        f'{PY} adaptive_pipeline.py >> dynq_skew.out 2>&1', 95, "stageV2")
+
+# --- stage Y: map the dynq curve at 0.8 and 0.95 skew ----------------------
+for _sk in ("0.8", "0.95"):
+    for _s in range(0, 3):
+        add(f"Y-dynq-skew{_sk}-seed{_s}",
+            f'CACHE_ON_CPU=1 ADAPTIVE_SMOKE=0 INCLUDE_MLAAD=1 DYNQ=1 TARGET_SKEW={_sk} '
+            f'OUR_SEEDS={_s} OUR_TARGETS=arabic,dataset2,in_the_wild,asvspoof2019 '
+            f'{PY} adaptive_pipeline.py >> dynq_skew.out 2>&1', 95, "stageY")
