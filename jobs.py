@@ -376,3 +376,20 @@ add("U-subpop-separability",
     'CACHE_ON_CPU=1 ADAPTIVE_SMOKE=0 python r2_vuln1_subpop.py '
     '>> r2_vuln1_subpop.out 2>&1',
     220, "stageU")
+
+# ================= 2026-09-09 pm: dynamic q on unbalanced pools =============
+# The user's actual ask for V2: make q=0.3 dynamic so the FULL method (not just
+# the eval threshold) works on skewed data. adapt_dynq() = published adapt() with
+# the confident-tail budget split by a BBSE prevalence estimate, nothing else
+# changed. A smoke on a 90%-fake In-the-Wild pool already turned the documented
+# collapse (source 4.28 -> fixed-q 7.76 EER) into a gain (dynq 3.85). This runs
+# it properly: 4 EER targets x {70%, 90% fake} x seeds, vs fixed q=0.3 and vs
+# the existing GMM-fed adaptive arm.
+for _sk in ("0.9", "0.7"):
+    for _s in (range(0, 5) if _sk == "0.9" else range(0, 3)):
+        add(f"V-dynq-skew{_sk}-seed{_s}",
+            f'CACHE_ON_CPU=1 ADAPTIVE_SMOKE=0 INCLUDE_MLAAD=1 DYNQ=1 '
+            f'TARGET_SKEW={_sk} OUR_SEEDS={_s} '
+            f'OUR_TARGETS=arabic,dataset2,in_the_wild,asvspoof2019 '
+            f'{PY} adaptive_pipeline.py >> dynq_skew.out 2>&1',
+            95, "stageV")

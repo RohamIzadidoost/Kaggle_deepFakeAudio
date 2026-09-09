@@ -575,6 +575,79 @@ def adapt(model, idx, use_st=True, use_cons=True, epochs=TTA_EPOCHS):
                 loss.backward(); opt.step()
     return model
 
+
+def _bbse_pi_fake(model, tgt_idx, seed, target):
+    """Label-free P(fake) on the target pool by black-box shift estimation.
+
+    M[y, yhat] = P_source(yhat | y) from an in-domain labelled source-pool split;
+    q = observed target prediction histogram; p = M^{-T} q, clipped to a simplex.
+    Unlike the 2-component GMM (AT.estimate_prevalence_guarded), BBSE reads the
+    *source* error structure and the *target prediction rate*, not the target
+    score-distribution shape -- so it survives the calibration shift that this
+    paper's thesis says is exactly what does transfer cross-corpus. On the skew
+    sweep it estimates the prior to within ~1.4% at 50-95% fake where the GMM is
+    ~28% off (r2_vuln2_prevalence_cpu.py).
+    """
+    src_df = sample_source(pool[pool.corpus != target], 1500, seed if seed is not None else 0)
+    src_idx = idx_of(src_df)
+    y_src, s_src = score(model, src_idx)
+    y_src = np.asarray(y_src).astype(int)
+    yh = (s_src >= 0.5).astype(int)
+    M = np.array([[np.mean(yh[y_src == 0] == 0), np.mean(yh[y_src == 0] == 1)],
+                  [np.mean(yh[y_src == 1] == 0), np.mean(yh[y_src == 1] == 1)]])
+    _, s_t = score(model, tgt_idx)
+    q = np.array([np.mean((s_t >= 0.5) == 0), np.mean((s_t >= 0.5) == 1)])
+    try:
+        p = np.linalg.solve(M.T, q)
+    except np.linalg.LinAlgError:
+        return 0.5
+    p = np.clip(p, 1e-3, 1.0 - 1e-3)
+    return float(p[1] / p.sum())
+
+
+def adapt_dynq(model, idx, epochs=TTA_EPOCHS, seed=None, target=None, **_):
+    """adapt(), but the confident-tail budget is split by a BBSE prevalence
+    estimate instead of the fixed symmetric q=0.3.
+
+    On a balanced pool BBSE returns ~0.5 and AT.tail_budget gives (Q, Q) exactly
+    -- byte-identical to adapt(). On a 90%-fake pool it gives (~0.06, ~0.54): the
+    pseudo-real bucket shrinks to the true real fraction instead of scooping up
+    900 mislabelled fakes. Prevalence is estimated ONCE from the frozen
+    pre-adaptation model (re-estimating per epoch lets a drifting model reinforce
+    its own mistakes -- protocol_a.py:392).
+    """
+    set_tta_params(model)
+    opt = torch.optim.Adam(trainable(model), lr=TTA_LR)
+    pi_fake = _bbse_pi_fake(model, idx, seed, target)
+    lo_frac, hi_frac = AT.tail_budget(Q, 1.0 - pi_fake)     # tail_budget takes pi_real
+    log(f"  dynq: BBSE pi_fake={pi_fake:.3f}  budget=(lo {lo_frac:.3f}, hi {hi_frac:.3f})")
+    for _ in range(epochs):
+        _, s = score(model, idx)
+        pl = torch.full((len(idx),), -1, dtype=torch.long, device=DEVICE)
+        if lo_frac > 0:
+            pl[torch.from_numpy(s <= np.quantile(s, lo_frac)).to(DEVICE)] = 0
+        if hi_frac > 0:
+            pl[torch.from_numpy(s >= np.quantile(s, 1.0 - hi_frac)).to(DEVICE)] = 1
+        model.train(); model.ssl.eval()
+        order = torch.randperm(len(idx), device=DEVICE)
+        for i in range(0, len(order), BATCH):
+            sel = order[i:i + BATCH]
+            x, _ = get_batch(idx[sel], train=False)
+            bpl = pl[sel]
+            opt.zero_grad(set_to_none=True)
+            with amp():
+                logits, _ = model(x)
+                p = torch.softmax(logits, 1)
+                loss = torch.zeros((), device=DEVICE)
+                conf = bpl >= 0
+                if conf.any():
+                    loss = loss + F.cross_entropy(logits[conf], bpl[conf])
+                loss = loss + LAMBDA_CONS * F.mse_loss(
+                    torch.softmax(model(augment(x))[0], 1), p.detach())
+            if loss.requires_grad:
+                loss.backward(); opt.step()
+    return model
+
 def tent(model, idx, epochs=TTA_EPOCHS):
     set_tta_params(model)
     opt = torch.optim.Adam(trainable(model), lr=TTA_LR)
@@ -828,6 +901,22 @@ def run_grid():
                 "ours_fixed":    lambda m, i, **k: adapt(m, i),
                 "ours_adaptive": lambda m, i, **k: adapt_adaptive(m, i, True, True, **k),
             }
+            # DYNQ=1: the minimal dynamic-q arm -- published adapt() with the
+            # confident-tail budget split by a BBSE prevalence estimate instead
+            # of the fixed symmetric q=0.3, and nothing else changed (no q ramp,
+            # no adaptive E). Point: the prevalence-weighted budget was reported
+            # to fail on Protocol A, but it was fed by the 2-component GMM, which
+            # r2_vuln2_prevalence_cpu.py shows is ~28% wrong at 90% skew. BBSE is
+            # ~1.4% off there. Run with TARGET_SKEW to test whether a correct
+            # prior makes dynamic q actually work on unbalanced pools.
+            if os.environ.get("DYNQ"):
+                methods = {
+                    "source":     None,
+                    "ours_fixed": lambda m, i, **k: adapt(m, i),
+                    "ours_dynq":  lambda m, i, **k: adapt_dynq(m, i, seed=k.get("seed"),
+                                                               target=k.get("target")),
+                    "ours_gmmq":  lambda m, i, **k: adapt_adaptive(m, i, True, False, **k),
+                }
             # OUR_E_SWEEP="8,16,32" replaces the arms above with published-adapt()
             # runs at those epoch counts, to map the shape of the E curve on OUR
             # source model. Motivation: E is an *epoch* count, so the update budget
@@ -861,7 +950,8 @@ def run_grid():
                     # bind e per-iteration; a bare closure would capture the last value
                     methods[f"ours_E{_e}"] = (lambda ee: (lambda m, i, **k: adapt(m, i, epochs=ee)))(_e)
             if seed in ABLATION_SEEDS and not (os.environ.get("OUR_E_SWEEP")
-                                               or os.environ.get("OUR_BASELINE_E")):
+                                               or os.environ.get("OUR_BASELINE_E")
+                                               or os.environ.get("DYNQ")):
                 methods["ours_aq"] = lambda m, i, **k: adapt_adaptive(m, i, True, False, **k)
                 methods["ours_ae"] = lambda m, i, **k: adapt_adaptive(m, i, False, True, **k)
 
@@ -897,7 +987,8 @@ def run_grid():
             # inductive check: adapt on one half, evaluate on the disjoint half.
             # Skipped during an E sweep -- it exercises adapt_adaptive(), which is
             # a different arm from the fixed-E adapt() the sweep is measuring.
-            if not (os.environ.get("OUR_E_SWEEP") or os.environ.get("OUR_BASELINE_E")) \
+            if not (os.environ.get("OUR_E_SWEEP") or os.environ.get("OUR_BASELINE_E")
+                    or os.environ.get("DYNQ")) \
                     and not done(seed, target, "ours_adaptive", "inductive"):
                 try:
                     torch.manual_seed(seed); np.random.seed(seed)
