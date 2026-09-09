@@ -411,6 +411,20 @@ add("W3-protoA-bbse-rawboost",
     "PROTOA_RECIPE=rawboost python protocol_a.py >> protoA_bbse.out 2>&1",
     55, "stageW")
 
+# W2 revealed that `ours_adaptive` on the BASELINE recipe -- the guarded-GMM +
+# q-curriculum + churn-stop machinery, never previously run on baseline (the
+# paper only tested it on RawBoost, where it failed) -- reaches 24.40 EER / .865
+# AUC, BEATING source-only (26.33). n=1. These seeds power that, plus a combined
+# BBSE-prevalence-into-the-curriculum arm.
+add("W4-protoA-bbse-adaptive-s0",
+    "PROTOA_RECIPE=baseline PROTOA_ARMS=bbse_adaptive python protocol_a.py >> protoA_bbse.out 2>&1",
+    55, "stageW")
+for _s in (1, 2):
+    add(f"W{4+_s}-protoA-adaptive-s{_s}",
+        f"PROTOA_RECIPE=baseline PROTOA_SEED={_s} PROTOA_ARMS=adaptive,bbse_adaptive "
+        f"python protocol_a.py >> protoA_bbse.out 2>&1",
+        110, "stageW")
+
 # --- stage V2: fill the dynq seed budget ------------------------------------
 for _s in range(5, 10):
     add(f"V-dynq-skew0.9-seed{_s}",
@@ -423,8 +437,8 @@ for _s in range(3, 7):
         f'OUR_SEEDS={_s} OUR_TARGETS=arabic,dataset2,in_the_wild,asvspoof2019 '
         f'{PY} adaptive_pipeline.py >> dynq_skew.out 2>&1', 95, "stageV2")
 
-# --- stage Y: map the dynq curve at 0.8 and 0.95 skew ----------------------
-for _sk in ("0.8", "0.95"):
+# --- stage Y: map the dynq curve at 0.95 skew (the extreme case) -----------
+for _sk in ("0.95",):
     for _s in range(0, 3):
         add(f"Y-dynq-skew{_sk}-seed{_s}",
             f'CACHE_ON_CPU=1 ADAPTIVE_SMOKE=0 INCLUDE_MLAAD=1 DYNQ=1 TARGET_SKEW={_sk} '

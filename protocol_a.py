@@ -571,9 +571,10 @@ def report(name, df, scores, adapt_utts=None):
 
 def main():
     t0 = time.time()
-    torch.manual_seed(0)
-    np.random.seed(0)
-    log(f"=== Protocol A | SMOKE={SMOKE} | bf16={USE_BF16} ===")
+    SEED = int(os.environ.get("PROTOA_SEED", "0"))
+    torch.manual_seed(SEED)
+    np.random.seed(SEED)
+    log(f"=== Protocol A | SMOKE={SMOKE} | bf16={USE_BF16} | seed={SEED} ===")
 
     train = build_la19_train()
     ev = build_df_eval(phase="eval")
@@ -616,22 +617,32 @@ def main():
         done = set(prev[prev.setting == "official_eval"].method)
     log(f"already recorded: {done or '(none)'}")
 
-    m_source = "source" + METHOD_SUFFIX
-    m_ours = "ours" + METHOD_SUFFIX
-    m_ours_prior = "ours_prior" + METHOD_SUFFIX
-    m_ours_adaptive = "ours_adaptive" + METHOD_SUFFIX
-    m_ours_bbse = "ours_bbse" + METHOD_SUFFIX
+    # PROTOA_ARMS=adaptive,bbse_adaptive restricts which arms run (each unrun arm
+    # is a ~45 min re-score of the 400k official pool). "source" is implicit.
+    _only = os.environ.get("PROTOA_ARMS")
+    _want = set(_only.split(",")) if _only else None
 
-    if m_source not in done:
+    def _skip(arm):
+        return _want is not None and arm not in _want and arm != "source"
+
+    _sfx = METHOD_SUFFIX + ("" if SEED == 0 else f"_s{SEED}")
+    m_source = "source" + METHOD_SUFFIX          # seed-invariant (no adaptation)
+    m_ours = "ours" + _sfx
+    m_ours_prior = "ours_prior" + _sfx
+    m_ours_adaptive = "ours_adaptive" + _sfx
+    m_ours_bbse = "ours_bbse" + _sfx
+    m_ours_bbse_ad = "ours_bbse_adaptive" + _sfx
+
+    if m_source not in done and not _skip("source"):
         log(f"scoring DF eval with the {m_source} model")
         report(m_source, ev, stream_score(model, ev, tag=f"{m_source} "))
     else:
         log(f"{m_source} already recorded, skipping re-score")
 
-    adapt_df = ev.sample(min(ADAPT_N, len(ev)), random_state=0)
+    adapt_df = ev.sample(min(ADAPT_N, len(ev)), random_state=SEED)
     import copy
 
-    if m_ours not in done:
+    if m_ours not in done and not _skip("ours"):
         log(f"[naive] adapting on {len(adapt_df)} unlabeled DF eval clips "
             f"(symmetric Q, no labels used)")
         adapted = adapt(copy.deepcopy(model), adapt_df, prior_aware=False)
@@ -640,7 +651,7 @@ def main():
     else:
         log(f"{m_ours} already recorded, skipping")
 
-    if m_ours_prior not in done:
+    if m_ours_prior not in done and not _skip("prior"):
         log(f"[prior-aware] adapting on {len(adapt_df)} unlabeled DF eval clips "
             f"(prevalence-weighted budget, no labels used)")
         adapted_p = adapt(copy.deepcopy(model), adapt_df, prior_aware=True)
@@ -650,7 +661,7 @@ def main():
     else:
         log(f"{m_ours_prior} already recorded, skipping")
 
-    if m_ours_adaptive not in done:
+    if m_ours_adaptive not in done and not _skip("adaptive"):
         log(f"[adaptive] adapting on {len(adapt_df)} unlabeled DF eval clips "
             f"(BIC-guarded prevalence + q ramp + score-movement stopping, no labels used)")
         adapted_a = adapt(copy.deepcopy(model), adapt_df, adaptive=True)
@@ -660,7 +671,7 @@ def main():
     else:
         log(f"{m_ours_adaptive} already recorded, skipping")
 
-    if m_ours_bbse not in done:
+    if m_ours_bbse not in done and not _skip("bbse"):
         log(f"[bbse] adapting on {len(adapt_df)} unlabeled DF eval clips "
             f"(prevalence by black-box shift estimation from the labelled 2019-LA "
             f"train slice; still no target labels)")
@@ -670,6 +681,17 @@ def main():
                set(adapt_df.utt))
     else:
         log(f"{m_ours_bbse} already recorded, skipping")
+
+    if m_ours_bbse_ad not in done and not _skip("bbse_adaptive"):
+        log(f"[bbse+adaptive] BBSE prevalence feeding the guarded/curriculum/"
+            f"early-stop machinery instead of the 2-component GMM")
+        adapted_ba = adapt(copy.deepcopy(model), adapt_df, adaptive=True,
+                           bbse=True, la19=train)
+        log(f"scoring DF eval with the BBSE+adaptive model ({m_ours_bbse_ad})")
+        report(m_ours_bbse_ad, ev, stream_score(adapted_ba, ev, tag=f"{m_ours_bbse_ad} "),
+               set(adapt_df.utt))
+    else:
+        log(f"{m_ours_bbse_ad} already recorded, skipping")
 
     log(f"DONE in {(time.time() - t0) / 60:.1f} min | "
         f"peak GPU {torch.cuda.max_memory_allocated() / 1e9:.1f} GB")
