@@ -656,3 +656,96 @@ Adding R2's 112 cells (WaveFake dominates, EER +6.2 at p=1e-13) tips the
 magnitude under the calibration shift, entirely from the one corpus with the
 largest deficit, and null (p=0.52) on the 209 lineage-related cells. The paper
 now reports it split this way rather than as a flat "ranking not significant".
+
+---
+
+# Addendum 6 -- the two ICASSP-R2 reviewer vulnerabilities (2026-09-09)
+
+A reviewer summary flagged two vulnerabilities as downgrade risks:
+1. **The one-line-rule equivalence** -- the median-threshold rule matches the
+   full gradient TTA over 133 cells, so why the gradient method?
+2. **The class-balance precondition** -- accuracy collapses (87.3 -> 60.8) when
+   the target pool is 90% fake, and deepfakes in the wild are a minority class.
+
+A scheduled autonomous session started on these at 08:31, stalled ~2.5 h into a
+permission prompt with nothing written, and was killed. A parallel opus session
+had already CPU-falsified the class-imbalance strategy list (GMM/Otsu/k-means/
+FreeMatch/consistency-filter/prototype-anchoring): all either are the shipped
+incumbent or buy skew-awareness by spending calibration-invariance -- none beat
+"don't adapt" under skew. **It did not test BBSE.** This addendum does.
+
+## V2 -- BBSE removes the class-balance precondition for the threshold
+
+Script: `r2_vuln2_prevalence_cpu.py` (CPU, no GPU). Real saved
+In-the-Wild source scores + synthetic logit-normal ensembles at source AUC
+{0.65,0.75,0.85,0.95}, resampled to pools 50-95% fake, 40 bootstraps each.
+Three label-free prevalence estimators re-point the decision threshold at the
+(1 - pi_hat) quantile:
+
+| | GMM (incumbent) | **BBSE** | pred-rate |
+|---|---|---|---|
+| mean \|pi_hat - pi_true\|, skew 0.9 | 0.276 | **0.013** | 0.168 |
+| corr(pi_hat, pi_true), n=1200 | +0.62 | **+0.993** | +0.68 |
+
+**Raw accuracy by threshold rule (mean over sources+boots):**
+
+| skew | shipped 0.5 | median | prev-oracle | prev-GMM | **prev-BBSE** |
+|---|---|---|---|---|---|
+| 0.50 | 76.0 | 77.0 | 77.0 | 76.8 | **76.9** |
+| 0.70 | 77.2 | 70.5 | 79.7 | 75.1 | **79.9** |
+| 0.90 | 78.4 | 57.6 | 89.8 | 69.2 | **90.1** |
+| 0.95 | 78.7 | 53.9 | 94.2 | 66.6 | **94.5** |
+
+BBSE **tracks the labelled oracle to within 0.4 points at every skew** and ties
+the median rule at 0.50. GMM (the shipped `estimate_prevalence_guarded`) is
+balance-biased and only half-corrects. The median rule collapses exactly as the
+skew sweep showed.
+
+**Robustness to calibration drift** (the opus session's decisive test -- a
+monotone logit shift leaves AUC bitwise unchanged and only moves calibration):
+
+| logit shift | skew 0.5 | skew 0.7 | skew 0.9  (racc: median / BBSE / oracle) |
+|---|---|---|---|
+| 0.0 | 89.3 / 89.2 / 89.7 | 78.0 / 90.5 / 90.8 | 59.8 / **94.9** / 95.5 |
+| +1.0 | 89.3 / 88.2 / 89.7 | 78.0 / 90.5 / 90.8 | 59.8 / **95.4** / 95.5 |
+| +2.0 | 89.3 / 84.5 / 89.7 | 78.0 / 89.0 / 90.8 | 59.8 / **94.5** / 95.5 |
+| -1.5 | 89.3 / 86.2 / 89.7 | 78.0 / 87.8 / 90.8 | 59.8 / **92.3** / 95.5 |
+
+BBSE is **robust to moderate drift** and degrades gracefully under severe drift
+-- and at the skews where it matters (0.7, 0.9) it stays within ~1-3 points of
+the oracle at every shift level. The one soft spot: severe drift + a
+near-balanced pool, where BBSE moves a threshold that did not need moving
+(84.5 vs oracle 89.7 at shift +2, skew 0.5). Gate on |pi_hat - 0.5| to avoid it.
+
+**Why BBSE works where the score-shape rules failed:** it never reads the target
+score *distribution* (which is exactly what miscalibration corrupts). It uses
+the *source* confusion matrix M and the target *prediction rate* q, and solves
+p = M^{-1} q. A monotone logit shift moves q predictably, so M^{-1} partly
+corrects it.
+
+**What BBSE does NOT fully fix: the pseudo-labelling.** Symmetric q=0.3 tails
+give real-tail pseudo-label purity 0.85 -> 0.13 as skew goes 0.5 -> 0.95.
+BBSE-asymmetric tails (`tail_budget(0.3, pi_hat)`) roughly double it
+(0.85 -> 0.52) by shrinking the real bucket to the true (small) prevalence --
+better, but still noisy at extreme skew. So under severe imbalance the
+**threshold** fix (BBSE + no gradient step) is clean; the **gradient** method
+stays bounded.
+
+**Caveat that belongs in the paper:** under extreme skew the raw-accuracy-optimal
+threshold is not the balanced-accuracy-optimal one (BBSE's *balanced* accuracy
+drops the same way the median's does -- 76.9 -> 71.7 at skew 0.9, matching the
+oracle's 71.7). So the honest claim is: *the balanced-pool assumption is only
+needed if the operator also wants a balanced operating point; if they want
+accuracy at the true (known or BBSE-estimated) prevalence, that is recoverable
+label-free.*
+
+## V1 -- per-sub-population separability (stage U, running)
+
+`r2_vuln1_subpop.py` -> `r2_vuln1_subpop.csv`. For ASVspoof2019 (A01-A06) and
+dataset2 (8 TTS systems), per-generator ROC-AUC and EER (that generator's fakes
+vs all reals), before and after published `adapt()`, seeds 0-4. The test: does
+gradient TTA raise per-sub-population AUC -- something a threshold move provably
+cannot -- or is per-sub-population AUC flat, i.e. the whole effect is the
+threshold?
+
+* **Result: _pending_** (stage U, ~3 h)

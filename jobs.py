@@ -365,3 +365,14 @@ for _ck in ALL_CKPTS:
                 f"--manifest manifest_tgt_{_tg}_seed{_s}.csv --target {_tg} --seed {_s} "
                 f"--batch 16 {OUT}",
                 8, "stageR2")
+
+# ================= 2026-09-09: R2 reviewer vulnerabilities ===================
+# V1 (median-rule equivalence): does gradient TTA lift per-generator
+# sub-population AUC, which a threshold move provably cannot? One job, loops
+# over {asvspoof2019 (A01-A06), dataset2 (8 TTS systems)} x seeds 0-4, scoring
+# + published adapt() + scoring per cell. Writes r2_vuln1_subpop.csv.
+add("U-subpop-separability",
+    'SUBPOP_TARGETS=asvspoof2019,dataset2 SUBPOP_SEEDS=0,1,2,3,4 '
+    'CACHE_ON_CPU=1 ADAPTIVE_SMOKE=0 python r2_vuln1_subpop.py '
+    '>> r2_vuln1_subpop.out 2>&1',
+    220, "stageU")
