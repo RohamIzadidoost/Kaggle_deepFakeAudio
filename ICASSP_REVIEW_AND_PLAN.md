@@ -537,3 +537,40 @@ sentence than "all four fail" and a much more defensible one.
    selecting TTA hyper-parameters per target requires target labels, which is
    precisely the resource the setting assumes absent. A matched budget is the
    only comparison the setting admits.
+
+### The rank-agreement guard works, and it was free
+
+Tested on CPU from score dumps already on disk, so contribution (iv) is
+de-risked days before the stop-trace stage produces its out-of-sample version.
+$\rho=\mathrm{Spearman}(s_{\text{adapted}}, s_{\text{source}})$ on the official DF
+pool, against the labelled AUC change it is not allowed to see:
+
+| arm | $\rho$ (label-free) | $\Delta$AUC | guard at $\rho\!\ge\!0.85$ |
+|---|---|---|---|
+| ETA | 0.312 | $-0.0635$ | abort |
+| Tent | 0.438 | $-0.0158$ | abort |
+| SHOT | 0.767 | $-0.0198$ | abort |
+| TTA, symmetric $q$ (**ours, published**) | 0.816 | $-0.0077$ | **abort** |
+| TTA, prior-corrected | 0.867 | $+0.0008$ | keep |
+| SAR | 0.970 | $0.0000$ | keep |
+
+Pearson $+0.84$ / Spearman $+0.89$ against $\Delta$AUC. As a keep/abort rule it
+is **exact**: four harmful arms caught, none missed, no false alarms — and it
+flags our own published configuration, which is the point. It is
+method-agnostic; nothing in it knows which algorithm produced the scores.
+
+Caveats recorded in the paper: $\rho$ conflates re-ordering (SHOT) with
+resolution collapse through ties (Tent, ETA); and the threshold is fitted on
+these six arms, with the out-of-sample validation still queued.
+
+### Page budget
+
+Adding all of this took the manuscript to 6 pages. Trimmed back to **4 content
+pages + 1 references-only page**, the ICASSP format, by: folding the guard table
+into Table I (same information, one table), dropping both figures — the score
+distribution figure, whose message is now the deficit column, and the prior
+sweep, whose key numbers are the median-rule row of Table I plus two sentences —
+compressing the inherited breadth/mechanism material to a single paragraph, and
+tightening related work, setup, limitations and conclusion. The cross-corpus
+multi-baseline table was kept over the figures: a reviewer needs the baseline
+comparison more than a plot. `fig_prior_rules.png` remains in the repo.

@@ -106,34 +106,29 @@ a released state-of-the-art checkpoint on the official ASVspoof2021-DF
 protocol (Table~\ref{tab:protoa}).
 
 \textbf{Contributions.} (i) The ranking--calibration asymmetry as the mechanism
-of cross-corpus failure, established over $369$ third-party evaluation cells and
-tested directly---a proxy $\mathcal{A}$-distance \emph{rises} after adaptation,
-so the effect is operating-point repair, not learned invariance.
-(ii) The class-prior assumption hidden in confident-quantile TTA, measured on
-the field's standard benchmark at its real prevalence, where it inverts the sign
-of the published method's effect on a SOTA checkpoint.
-(iii) A label-free correction: black-box shift estimation of the target prior,
-used to split the pseudo-label budget, which turns that damage into an $11\%$
-relative EER reduction on the official protocol---threshold-free, so no
-re-thresholding rule explains it.
-(iv) A label-free budget: rank agreement with the frozen source model both
-selects the number of adaptation steps and predicts entropy-minimisation
-collapse before it happens.
+of cross-corpus failure, over $369$ third-party cells and tested directly: a
+proxy $\mathcal{A}$-distance \emph{rises} after adaptation, so the effect is
+operating-point repair, not learned invariance. (ii) The class-prior assumption
+hidden in confident-quantile TTA, measured on the field's standard benchmark at
+its real prevalence, where it inverts the sign of the published method's effect
+on a SOTA checkpoint. (iii) A label-free correction---shift estimation of the
+target prior, used to split the pseudo-label budget---turning that damage into
+an $11\%$ relative EER reduction, threshold-free. (iv) A label-free,
+method-agnostic guard: rank agreement with the frozen source model separates the
+adaptations that damaged a released checkpoint from those that did not, with no
+misses and no false alarms, including flagging our own published configuration.
 
-\textbf{Related work.} Frozen or fine-tuned SSL front-ends with AASIST or
-attentive back-ends dominate recent benchmarks~\cite{wav2vec2aug,xlsrsls,aasist,rawnet2}.
-Train-time domain generalisation aligns real and separates fake across source
-domains (aggregation--separation~\cite{asdg}) or runs gradient-reversal
-domain-adversarial training over source and target jointly (DANN)~\cite{dann};
-both act at training time rather than at deployment. In TTA, entropy
-minimisation (Tent)~\cite{tent} is the reference recipe; its instability
-prompted reliable-sample filtering and anti-forgetting (ETA/EATA)~\cite{eata},
-sharpness-aware entropy with a recovery scheme (SAR)~\cite{sar}, and
-information maximisation with self-labelling (SHOT)~\cite{shot}. We compare
-against all four. Batch-statistics recalibration~\cite{adabn} is a no-op for
-LayerNorm architectures. Our prior estimator is black-box shift
-estimation~\cite{bbse}; the proxy $\mathcal{A}$-distance is from Ben-David et
-al.~\cite{bendavid}.
+\textbf{Related work.} SSL front-ends with AASIST or attentive back-ends
+dominate recent benchmarks~\cite{wav2vec2aug,xlsrsls,aasist,rawnet2}. Train-time
+domain generalisation aligns source domains~\cite{asdg} or runs gradient
+reversal over source and target jointly~\cite{dann}; both act before deployment.
+In TTA, entropy minimisation (Tent)~\cite{tent} is the reference recipe, and its
+instability prompted reliable-sample filtering (ETA/EATA)~\cite{eata},
+sharpness-aware entropy with a recovery scheme (SAR)~\cite{sar}, and information
+maximisation with self-labelling (SHOT)~\cite{shot} --- we compare against all
+four. Batch-statistics recalibration~\cite{adabn} is a no-op for LayerNorm.
+The prior estimator is black-box shift estimation~\cite{bbse}; the proxy
+$\mathcal{A}$-distance is from~\cite{bendavid}.
 
 \section{Method}
 \label{sec:method}
@@ -145,9 +140,10 @@ $\mathcal{T}$. No target label is read at any point.
 \textbf{What breaks under corpus shift.} Ranking quality
 $\mathrm{AUC}=\Pr[s_\theta(x^+){>}s_\theta(x^-)]$ is threshold-free; accuracy at
 a fixed $\tau$ is not. Empirically AUC degrades far less than accuracy at
-$\tau{=}0.5$ under source$\to$target shift (Fig.~\ref{fig:scores}). The
-deployable object is therefore the score \emph{order}, and the broken object is
-the operating point. Everything below follows from taking that literally.
+$\tau{=}0.5$ under source$\to$target shift: across $369$ third-party evaluation
+cells the accuracy a model's ranking supports but its shipped threshold does not
+deliver averages $7.29$ points. The deployable object is therefore the score
+\emph{order}, and the broken object is the operating point. Everything below follows from taking that literally.
 
 \textbf{(a) The target prior, label-free.} An operating point is a statement
 about a prior, so we estimate the prior rather than assume it. Black-box shift
@@ -202,61 +198,42 @@ $\lambda{=}0.3$, $q{=}0.3$. Restricting the trainable set and using only
 prior-corrected confident tails is what prevents the degenerate collapse to
 which entropy minimisation is prone.
 
-\textbf{(d) A label-free budget, and a collapse guard.} Adaptation needs a stop,
-and the number of steps has been the weakest-specified part of TTA recipes in
-this area. Our thesis says the source \emph{ranking} is the asset being
-exploited, so an update that destroys it has discarded its own precondition ---
-and a TTA collapse \emph{is} a ranking collapse. We monitor
-$\rho_t=\mathrm{Spearman}\big(s_{\theta_t}(\mathcal T),\,s_{\theta_0}(\mathcal T)\big)$,
-computable without labels, and keep the last step with $\rho_t\ge\tau$. A second
-monitor, $|\Pr[s_{\theta_t}{>}\tfrac12]-\hat\pi_{\mathrm{fake}}|$, flags a model
-that is re-labelling the pool rather than re-calibrating on it.
-Sec.~\ref{sec:results} validates both leave-one-target-out against the oracle
-budget, with churn and confidence as controls.
-
-\begin{figure}[t]
-\centering
-\safefig{0.95\columnwidth}{fig_score_dist.png}
-\caption{Detector scores on unseen In-the-Wild audio. \textbf{Left:} the source
-model pushes many real clips past $\tau{=}0.5$ (accuracy well below AUC) yet
-still ranks most real below fake. \textbf{Right:} adaptation shifts the real
-mass back across the threshold.}
-\label{fig:scores}
-\end{figure}
+\textbf{(d) A label-free guard.} Adaptation needs a stop, and the step count has
+been the weakest-specified part of TTA recipes here. Since the source ranking is
+the asset being exploited, we monitor rank agreement with the frozen source
+model,
+$\rho_t=\mathrm{Spearman}\big(s_{\theta_t}(\mathcal T),s_{\theta_0}(\mathcal T)\big)$,
+and keep the last step with $\rho_t\ge\tau$ (Sec.~\ref{sec:results}).
 
 \section{Experimental Setup}
 \textbf{Protocol A (published baselines exist).} The official ASVspoof2021-DF
-eval partition, scored against the official CM keys. We hold $400{,}435$ of the
-$611{,}829$ trials locally; the missing part is uniform across codec, label and
-phase (verified $75$--$25$ in every stratum), so the pooled EER is an unbiased
-estimate of the full-set number, and we report $n$ throughout. True spoof rate
-$97.22\%$. Because our own source model is not competitive on this protocol
-($26.33\%$ EER against a published $8.54\%$), we run the method on \emph{released
-third-party checkpoints} instead: DeepFense's XLS-R\,300M\,+\,AASIST detectors
-trained on ASVspoof2019-LA train~\cite{deepfensehf}, at three independent
-training seeds. Adaptation uses an unlabelled $20{,}000$-clip subsample of the
-eval pool; we report the full official pooled EER and, as an inductive check,
-the EER restricted to trials \emph{not} in that subsample.
+eval partition against the official CM keys: $400{,}435$ of $611{,}829$ trials
+are held locally and the missing part is uniform across codec, label and phase
+(verified $75$--$25$ in every stratum), so the pooled EER is unbiased; true spoof
+rate $97.22\%$. Because our own source model is not competitive here ($26.33\%$
+vs.\ a published $8.54\%$), we run the method on \emph{released} checkpoints:
+DeepFense XLS-R\,300M\,+\,AASIST trained on ASVspoof2019-LA~\cite{deepfensehf}, at
+three independent training seeds. Adaptation uses an unlabelled $20{,}000$-clip
+subsample of the eval pool; we report the full official pooled EER and, as an
+inductive check, the EER over trials \emph{not} in that subsample.
 
 \textbf{Protocol B (cross-corpus, balanced).} Leave-one-corpus-out over four
 EER-capable targets: ASVspoof2019-LA~\cite{asvspoof19}; D2 (LibriSpeech bona
-fide vs.\ eight open TTS/voice-cloning systems); In-the-Wild~\cite{itw}; and the
-Arabic Audio Deepfake set~\cite{arad}. For each held-out target the source pool
-merges the other three with a 38-language MLAAD subset~\cite{mlaad}
-(fake-only); held-out target audio is never in any source pool and six MLAAD
-languages are held out of every pool. Ten seeds per target per method.
+fide vs.\ eight open TTS systems); In-the-Wild~\cite{itw}; and the Arabic Audio
+Deepfake set~\cite{arad}. Each held-out target's source pool merges the other
+three with a 38-language MLAAD subset~\cite{mlaad}; held-out target audio is
+never in any source pool and six MLAAD languages are held out of every pool.
+Ten seeds per target per method.
 
 \textbf{Protocol C (a benchmark at its own prevalence).} All $31{,}779$
-In-the-Wild clips --- the whole benchmark, not the $6{,}000$-clip subsample the
-third-party arm uses --- at its native $37.2\%$ fake rate, which is skewed the
+In-the-Wild clips at their native $37.2\%$ fake rate --- skewed the
 \emph{opposite} way to DF's $97.2\%$.
 
-\textbf{Comparison points.} Source-only; the median-threshold rule (label-free,
-no gradient); Tent~\cite{tent}; SHOT~\cite{shot}; ETA and EATA~\cite{eata};
-SAR~\cite{sar}; AdaBN~\cite{adabn}; DANN~\cite{dann} (trained to convergence
-with the held-out target's unlabeled inputs --- more privileged access than
-ours); an ASDG-style aggregation--separation baseline~\cite{asdg}; and a
-target-supervised oracle. Two published constants in the modern TTA
+\textbf{Comparison points.} Source-only; the median-threshold rule; Tent, SHOT,
+ETA/EATA, SAR; AdaBN~\cite{adabn}; DANN~\cite{dann} (trained to convergence with
+the held-out target's unlabeled inputs --- more privileged access than ours); an
+ASDG-style baseline~\cite{asdg}; and a target-supervised oracle. Two published
+constants in the modern TTA
 baselines are degenerate at $C{=}2$ and were re-derived rather than
 transplanted. EATA's redundancy filter ($|\cos(p,\bar p)|{<}0.05$) is calibrated
 for $C{=}1000$; on the binary simplex the minimum attainable cosine is $0.71$ at
@@ -270,12 +247,11 @@ freezing the model at its initial weights (verified: $32$ resets in $32$ steps,
 zero net movement); we keep its relative position,
 $e_0=(0.2/\ln 1000)\ln C=0.020$.
 
-\textbf{Baseline fairness.} Every TTA arm adapts the \emph{same} parameter set
-($16{,}706$ LayerNorm-and-head parameters) with the same learning rate, batch
-size and number of passes. We did not tune each baseline separately, and could
-not have: selecting TTA hyper-parameters per target needs target labels, which
-is the resource the entire setting assumes is unavailable. A matched budget is
-therefore the only comparison the setting admits, and it is the one we report.
+\textbf{Baseline fairness.} Every TTA arm adapts the \emph{same} $16{,}706$
+parameters with the same lr, batch and pass count. No baseline was tuned
+separately, and none could be: per-target TTA tuning needs target labels, the
+one resource the setting assumes absent, so a matched budget is the only
+admissible comparison.
 
 \textbf{Implementation.} 16\,kHz audio, top-4-layer XLS-R fine-tuning for our own
 source models (Adam, lr\,$2{\times}10^{-4}$, batch 32, 8 epochs). Adaptation:
@@ -288,45 +264,45 @@ each checkpoint's own training length). Code and manifests:
 
 \begin{table}[t]
 \centering
-\caption{Official ASVspoof2021-DF eval, $400{,}435$ trials, $97.22\%$ spoof,
-on a \emph{released} XLS-R+AASIST checkpoint~\cite{deepfensehf} we did not
-train. All adaptation is label-free. ``Deficit'' is
-$(100{-}\mathrm{EER})-\mathrm{acc}@0.5$: the accuracy the ranking supports but
-the threshold does not deliver.}
+\caption{Official ASVspoof2021-DF eval, $400{,}435$ trials, $97.22\%$ spoof, on a
+\emph{released} XLS-R+AASIST checkpoint~\cite{deepfensehf} we did not train. All
+adaptation is label-free. ``Deficit'' is
+$(100{-}\mathrm{EER})-\mathrm{acc}@0.5$: the accuracy the ranking supports but the
+threshold does not deliver. $\rho$ is rank agreement with the frozen source
+model --- computable at deployment, unlike every other column; at
+$\rho{\ge}0.85$ it keeps exactly the arms that did not damage the checkpoint and
+aborts exactly those that did, \emph{including our own} symmetric-$q$
+configuration.}
 \label{tab:protoa}
 \resizebox{\columnwidth}{!}{%
-\begin{tabular}{@{}lcccc@{}}
+\begin{tabular}{@{}lccccc@{}}
 \toprule
-& EER\,\% & AUC & acc@$0.5$ & deficit \\
+& EER\,\% & AUC & acc@$0.5$ & deficit & $\rho$ \\
 \midrule
-Source (as released) & 4.51 & .9923 & 98.87 & $-3.38$ \\
-\;+ median-threshold rule & 4.51$^\dagger$ & .9923$^\dagger$ & 59.06 & --- \\
-\;+ Tent~\cite{tent} & 4.06$^\ddagger$ & .9765 & 98.52 & $-2.58$ \\
-\;+ SHOT~\cite{shot} & 6.38 & .9725 & 77.64 & $+15.99$ \\
-\;+ ETA~\cite{eata} & 7.44$^\ddagger$ & .9288 & 98.93 & $-6.37$ \\
-\;+ SAR~\cite{sar} & 4.47$^\S$ & .9923 & 98.88 & $-3.35$ \\
-\;+ TTA, fixed confidence $0.95$ & \PENDING{8b} & & & \\
-\;+ TTA, symmetric $q{=}0.3$ & 5.84 & .9846 & 62.96 & $+31.20$ \\
-\rowcolor{green!12}\;+ TTA, \textbf{prior-corrected} & \textbf{4.02} & \textbf{.9931} & \textbf{98.95} & $-2.97$ \\
-\;\;\;\;(disjoint/inductive half) & 4.03 & .9931 & 98.95 & \\
+Source (as released) & 4.51 & .9923 & 98.87 & $-3.38$ & 1.000 \\
+\;+ median-threshold rule & 4.51$^\dagger$ & .9923$^\dagger$ & 59.06 & --- & --- \\
+\;+ ETA~\cite{eata} & 7.44$^\ddagger$ & .9288 & 98.93 & $-6.37$ & 0.312 \\
+\;+ Tent~\cite{tent} & 4.06$^\ddagger$ & .9765 & 98.52 & $-2.58$ & 0.438 \\
+\;+ SHOT~\cite{shot} & 6.38 & .9725 & 77.64 & $+15.99$ & 0.767 \\
+\;+ TTA, fixed confidence $0.95$ & \PENDING{8b} & & & & \\
+\;+ TTA, symmetric $q{=}0.3$ & 5.84 & .9846 & 62.96 & $+31.20$ & 0.816 \\
+\rowcolor{green!12}\;+ TTA, \textbf{prior-corrected} & \textbf{4.02} & \textbf{.9931} & \textbf{98.95} & $-2.97$ & 0.867 \\
+\;\;\;\;(disjoint/inductive half) & 4.03 & .9931 & 98.95 & & \\
+\;+ SAR~\cite{sar} & 4.47$^\S$ & .9923 & 98.88 & $-3.35$ & 0.970 \\
 \midrule
-\multicolumn{5}{@{}l@{}}{\emph{published Protocol-A systems, for scale:}
-Wav2DF-TSL $1.95$; SSL$+$SLS $2.87$;}\\
-\multicolumn{5}{@{}l@{}}{Wav2Vec2-AASIST $8.54$; challenge DF top-1 $15.64$;
+\multicolumn{6}{@{}l@{}}{\emph{published Protocol-A systems, for scale:}
+Wav2DF-TSL $1.95$; SSL$+$SLS $2.87$; Wav2Vec2-AASIST $8.54$;}\\
+\multicolumn{6}{@{}l@{}}{challenge DF top-1 $15.64$;
 \emph{our own source model} $26.33$.}\\
 \bottomrule
 \end{tabular}}
 \\[2pt]
-\footnotesize $^\dagger$ A threshold cannot change EER or AUC; both are computed
-from the score ROC. The median rule is a control for the \emph{accuracy} claim
-and is by construction incapable of producing any EER result in this paper.
-$^\ddagger$ EER computed over a pool that is more than $93\%$ a single tied
-score --- Tent saturates $98.07\%$ of the $400{,}435$ scores to exactly $1.0$
-($1{,}247$ distinct values left) and ETA $97.71\%$ --- so these EERs are
-statements about ROC tie-breaking. Read the AUC column, which tie-breaking
-cannot rescue. $^\S$ SAR neither damages nor adapts: its recovery scheme reverted
-the model $308$ times in $2{,}500$ steps and its AUC is unchanged to four
-decimals.
+\footnotesize $^\dagger$ A threshold cannot change EER or AUC; both come from the
+score ROC. The median rule is a control for the \emph{accuracy} claim and cannot
+produce any EER result in this paper. $^\ddagger$ EER over a pool that is more
+than $93\%$ a single tied score (Tent saturates $98.07\%$ of scores to exactly
+$1.0$, ETA $97.71\%$); read AUC. $^\S$ SAR neither damages nor adapts: $308$
+recovery resets in $2{,}500$ steps, AUC unchanged to four decimals.
 \end{table}
 
 \subsection{The class prior is the hidden variable}
@@ -380,55 +356,39 @@ checkpoints and \PENDING{stage 2/5: seeds} seeds the effect is
 \subsection{Why this is not a re-thresholding result}
 Both EER and AUC improve, and neither takes a threshold as input, so no
 operating-point rule can produce this gain. The cleanest form of that argument
-is available directly: use the \emph{same} prior estimate to re-point the
-threshold and take no gradient step at all, and accuracy moves from $98.92$ to
-$98.94\%$ while EER stays at $4.51$ by construction. Feed the same estimate into
-the pseudo-label budget instead and EER goes to $4.02$. The prior is doing its
-work in the budget, not at the threshold. That matters because on
-\emph{balanced} pools a one-line median-threshold rule is genuinely competitive
-with gradient adaptation on accuracy --- we reported it as such, and it is the
-right control for a calibration claim. Resampling the same DF score
-distribution to a range of target priors shows why it was competitive and what
-it costs:
+uses the \emph{same} prior estimate twice: re-point the threshold with it and
+take no gradient step, and accuracy moves $98.92\!\to\!98.94\%$ while EER stays
+at $4.51$ by construction; feed it to the pseudo-label budget instead and EER
+goes to $4.02$. The prior does its work in the budget, not at the threshold.
 
-\begin{figure}[t]
-\centering
-\safefig{\columnwidth}{fig_prior_rules.png}
-\caption{The same official-DF score distribution, resampled to a range of
-target priors. \textbf{Left:} the median rule is the \emph{best} label-free
-operating-point rule at $50/50$ --- the only prevalence at which our earlier
-threshold-control experiments ever measured it, because the evaluation pipeline
-balanced every pool to $0.489$--$0.539$ --- and the worst by $40$ points at the
-benchmark's own prior. \textbf{Right:} what the two rules assume about the
-prior. The median rule's implicit estimate is a flat $0.5$; BBSE tracks the
-truth, with a positive bias that is largest at balanced priors (it assumes
-\emph{label} shift, and DF's codec conditions also shift covariates) and
-vanishes as the prior approaches the one the benchmark has.}
-\label{fig:prior}
-\end{figure}
+On \emph{balanced} pools a one-line median-threshold rule is genuinely
+competitive with gradient adaptation on accuracy --- we reported it as such, and
+it is the right control for a calibration claim. Resampling the DF scores across
+target priors shows why, and what it costs: the median rule gives $95.6\%$
+accuracy at a prior of $0.5$ (shipped threshold $88.3$, labelled oracle $95.7$)
+and falls monotonically to $59.0\%$ at the benchmark's own $0.972$, while a
+threshold at the $(1{-}\hat\pi)$ quantile tracks the shipped one throughout.
 
-\noindent Fig.~\ref{fig:prior} makes the shape of it plain: the median rule is
-the best rule at $50/50$ and the worst by $40$ points at the benchmark's own
-prior ($95.6$ vs.\ $59.0\%$ accuracy). That is its assumption, not an accident,
-and every cell on which it was previously evaluated satisfied that assumption
-by construction.
+\noindent That is the rule's assumption, not an accident --- and every cell on
+which it was previously evaluated satisfied that assumption by construction,
+having been balanced to a prevalence of $0.489$--$0.539$ by the evaluation
+pipeline itself.
 
 \subsection{Cross-corpus, balanced pools}
-On the balanced leave-one-corpus-out protocol the prior correction is inert by
-construction ($\hat\pi{\approx}0.5$ gives back the symmetric budget exactly), so
-Table~\ref{tab:main} measures the rest of the method. It wins on three of four
-targets --- ASVspoof2019 $5.03\!\to\!3.47\%$ ($10/10$ seeds), Arabic
-$22.50\!\to\!20.99\%$ ($10/10$), In-the-Wild $12.78\!\to\!11.33\%$ ($8/10$) ---
-and is EER-neutral on LibriSpeech-TTS, the target with the lowest source AUC
-($0.73$). Per-target Wilcoxon against source-only is significant on
-ASVspoof2019 and Arabic ($p{=}0.0020$, Holm-adjusted $0.0078$) and nominal on
-In-the-Wild ($0.0293$, adjusted $0.0586$). Against the modern TTA baselines,
+Here the prior correction is inert by construction ($\hat\pi{\approx}0.5$ returns
+the symmetric budget exactly), so Table~\ref{tab:main} measures the rest of the
+method. It wins on three of four targets ($10/10$ seeds on ASVspoof2019 and
+Arabic, $8/10$ on In-the-Wild) and is EER-neutral on LibriSpeech-TTS, the target
+with the lowest source AUC ($0.73$). Per-target Wilcoxon against source-only is
+significant on ASVspoof2019 and Arabic ($p{=}0.0020$, Holm $0.0078$) and nominal
+on In-the-Wild ($0.0293$, Holm $0.0586$). Against the modern TTA baselines,
 \PENDING{stage 4}.
 
 \begin{table}[t]
 \centering
-\caption{Cross-corpus EER\,\%\,/\,AUC, mean over 10 seeds
-(leave-one-corpus-out, balanced pools, transductive).}
+\caption{Cross-corpus EER\,\%\,/\,AUC, mean over 10 seeds (leave-one-corpus-out,
+balanced pools, transductive). Dropping the consistency term
+($\lambda{=}0$) gives $4.20/33.39/11.55/22.19$.}
 \label{tab:main}
 \resizebox{\columnwidth}{!}{%
 \begin{tabular}{@{}lcccc@{}}
@@ -443,7 +403,6 @@ EATA~\cite{eata} & \PENDING{s4} & \PENDING{s4} & \PENDING{s4} & \PENDING{s4} \\
 SAR~\cite{sar} & \PENDING{s4} & \PENDING{s4} & \PENDING{s4} & \PENDING{s4} \\
 DANN~\cite{dann} & 7.35 / .966 & 34.43 / .717 & 13.34 / .924 & 28.53 / .759 \\
 ASDG~\cite{asdg} & 4.98 / .987 & \textbf{32.64} / .749 & 17.33 / .891 & 27.41 / .798 \\
-Self-training only & 4.20 / .987 & 33.39 / .709 & 11.55 / .950 & 22.19 / .846 \\
 \rowcolor{green!12}\textbf{Ours} & \textbf{3.47} / .994 & 33.74 / .727 & \textbf{11.33} / .958 & \textbf{20.99} / .866 \\
 \midrule
 Oracle (target-supervised) & 0.89 / .999 & 13.93 / .939 & 4.42 / .992 & 9.50 / .968 \\
@@ -451,88 +410,87 @@ Oracle (target-supervised) & 0.89 / .999 & 13.93 / .939 & 4.42 / .992 & 9.50 / .
 \end{tabular}}
 \end{table}
 
-\textbf{Tent is not merely unstable, it is unpredictably catastrophic --- and
-sometimes silently so.} On ASVspoof2019 its per-seed EER splits five seeds near
-source-only and four at or near chance with no warning sign (std $21.96$); on
-Arabic it is a \emph{consistent} chance-level failure ($9/10$ seeds). Ours shows
-no comparable collapse on any target (largest std $2.01$). The failure is a
-ranking failure first: run on the strongest and weakest public checkpoints, Tent
-collapses to chance on one ($16.41\!\to\!49.80\%$ EER, AUC $.918\!\to\!.502$) but
-only degrades AUC on the other ($.986\!\to\!.979$). On the DF pool it is worse
-than that, because the damage does not show in the field's headline metric: Tent
-returns a \emph{lower} EER than the source model ($4.06$ vs.\ $4.51$) while
-saturating $98\%$ of the pool to one tied score. A TTA study that reports EER
-without a score-resolution check can record an entropy-minimisation collapse as
-an improvement.
+\textbf{Tent is unpredictably catastrophic, and sometimes silently so.} On
+ASVspoof2019 its per-seed EER splits five seeds near source-only and four at or
+near chance with no warning sign (std $21.96$); on Arabic it is a consistent
+chance-level failure ($9/10$ seeds). Ours shows no comparable collapse anywhere
+(largest std $2.01$). The failure is a ranking failure first: on the strongest
+and weakest public checkpoints Tent collapses to chance on one
+($16.41\!\to\!49.80\%$ EER, AUC $.918\!\to\!.502$) but only degrades AUC on the
+other. On the DF pool the damage does not show in the field's headline metric at
+all --- Tent returns a \emph{lower} EER than source ($4.06$ vs.\ $4.51$) while
+saturating $98\%$ of the pool to one tied score. A TTA study reporting EER
+without a score-resolution check can record a collapse as an improvement.
 
-\subsection{A label-free adaptation budget}
-\PENDING{stage 6/7: the stopping-rule table --- oracle vs. rank-agreement guard
-vs. prior guard vs. churn vs. confidence, leave-one-target-out.}
+\subsection{A label-free guard}
+If the source \emph{ranking} is the asset adaptation exploits, an update that
+destroys it has discarded its own precondition --- and that is visible without
+labels, by comparing the adapted scores' \emph{order} against the frozen source
+model's on the same pool. The $\rho$ column of Table~\ref{tab:protoa} is exactly
+that comparison. It tracks the labelled AUC change closely (Pearson $+0.84$,
+Spearman $+0.89$ over the six adapted arms), and as a keep/abort rule at
+$\rho\ge0.85$ it is exact on this pool: four harmful arms caught, none missed, no
+false alarms. Nothing in it knows which algorithm produced the scores, so it is
+usable as a deployment-time safety check on any of them --- and it flags our own
+published configuration.
+
+Two limits. $\rho$ conflates genuine re-ordering (SHOT, no ties) with resolution
+collapse through ties (Tent, ETA); both are damage, so the guard is sound, but
+the mechanisms differ. And the threshold is fitted on these six arms;
+\PENDING{stage 6/7} gives the out-of-sample version --- per-epoch traces on the
+four leave-one-corpus-out targets, threshold chosen leave-one-target-out against
+the oracle budget, with churn and confidence as controls.
 
 \subsection{Breadth, and the mechanism}
 Applied unmodified to nine released checkpoints across five architectures and
 ten corpora ($369$ cells), the consistent effect is \emph{re-calibration}:
-writing $\delta{=}(100{-}\mathrm{EER}){-}\mathrm{acc}@0.5$, adaptation drives
-$\delta$ from $7.29$ to $1.96$ points ($248/369$ cells, Wilcoxon
+$\delta$ falls $7.29\!\to\!1.96$ points ($248/369$ cells,
 $p{=}2.2{\times}10^{-17}$), with
-$\mathrm{corr}(\delta_{\text{before}},\delta_{\text{after}}){=}{+}0.17$: where it
-lands barely depends on where it started. That the same LayerNorm-and-head
-selection rule, designed against XLS-R, re-calibrates a mel-spectrogram
-transformer~\cite{ast} unchanged ($39/39$ cells, $p{=}5{\times}10^{-8}$) is the
-clearest architecture-independence evidence here.
-
-The mechanism is \emph{not} learned invariance. A proxy $\mathcal{A}$-distance
-and a linear domain-origin probe both \emph{increase} after adaptation (Arabic
-$\hat d_{\mathcal{A}}\!:1.545\!\to\!1.606$), the opposite of what
-domain-invariance predicts --- consistent with DANN underperforming despite
-optimising exactly that quantity. What the gradient step does add, beyond any
-threshold, is separability where the source ranking is strong: on ASVspoof2019
-it raises within-attack-family AUC on all six attack families ($30/30$
-attack$\times$seed cells, $p{=}10^{-9}$), largest on the two hardest; on
-AUC-$0.71$ LibriSpeech-TTS there is nothing to sharpen and the effect is null.
+$\mathrm{corr}(\delta_{\text{before}},\delta_{\text{after}}){=}{+}0.17$ --- where
+it lands barely depends on where it started --- and the same
+LayerNorm-and-head rule designed against XLS-R re-calibrates a mel-spectrogram
+transformer~\cite{ast} unchanged ($39/39$, $p{=}5{\times}10^{-8}$). The mechanism
+is \emph{not} learned invariance: a proxy $\mathcal{A}$-distance and a linear
+domain-origin probe both \emph{rise} after adaptation (Arabic
+$1.545\!\to\!1.606$), the opposite of what domain-invariance predicts and
+consistent with DANN underperforming while optimising exactly that quantity.
+What the gradient adds beyond any threshold is separability where the ranking is
+strong: on ASVspoof2019 it raises within-attack-family AUC on all six families
+($30/30$, $p{=}10^{-9}$); on AUC-$0.71$ LibriSpeech-TTS it is null.
 
 \section{Discussion and Limitations}
 \label{sec:lim}
 \begin{itemize}
-\item \textbf{Prior estimation assumes label shift; real corpora also shift
+\item \textbf{Prior estimation assumes label shift; corpora also shift
 covariates.} Every estimator we tried carries the same positive bias --- largest
-at balanced priors ($\hat\pi{\approx}0.61$ at a true $0.50$) and vanishing at high
+at balanced priors ($\hat\pi{\approx}0.61$ at a true $0.50$), vanishing at high
 skew ($0.974$ at $0.972$) --- because DF's codec conditions raise the detector's
 real-class error above its source-domain rate and all of them assume that rate
 carries over. A bias shared by four unrelated estimators is a property of the
-shift, not of the estimator. Fortunately the correction is most accurate exactly
-where it is most needed.
-\item \textbf{The prior fixes the budget, not the threshold.} On a checkpoint
-whose shipped threshold is already near-optimal, the BBSE \emph{threshold} buys
-nothing over $\tau{=}0.5$ ($98.94$ vs.\ $98.92$). The gain reported here comes
-from the pseudo-label budget.
-\item \textbf{Needs an already-reliable source ranking.} A low-AUC starting
-point is not a regime we can rescue: a from-scratch non-SSL backbone never
-reaches a ranking worth adapting (AUC $0.40$--$0.65$), and the AUC-$0.71$
-target is the one null in Table~\ref{tab:main}. Every third-party checkpoint we
-adapt is itself a pretrained transformer.
-\item \textbf{Relative, not absolute, on our own model.} We improve released
-checkpoints; we did not train a Protocol-A-competitive detector ourselves
-($26.33\%$ vs.\ a published $8.54\%$), so all claims here are of the form
-``this wrapper improves that detector''.
-\item \textbf{Fixed hyper-parameters.} $q$ and $\lambda$ are label-free and not
-per-target optimal; a label-free $\lambda$ schedule pays nothing at our scale
-(within $0.24$ EER of a per-point oracle).
+shift, not the estimator; usefully, it is smallest where it matters most.
+\item \textbf{The prior fixes the budget, not the threshold.} Where a shipped
+threshold is already near-optimal, the BBSE threshold buys nothing over
+$\tau{=}0.5$ ($98.94$ vs.\ $98.92$). The gain comes from the pseudo-label budget.
+\item \textbf{Needs a reliable source ranking, and improves someone else's
+model.} A low-AUC start is not a regime we can rescue (a from-scratch non-SSL
+backbone never reaches AUC $0.65$; the AUC-$0.71$ target is the one null in
+Table~\ref{tab:main}), and we did not train a Protocol-A-competitive detector
+ourselves ($26.33\%$ vs.\ a published $8.54\%$) --- every claim is of the form
+``this wrapper improves that detector''. $q$ and $\lambda$ are fixed and
+label-free, not per-target optimal.
 \end{itemize}
 
 \section{Conclusion}
-Cross-corpus audio deepfake detection fails at the operating point, not in the
-representation, and the repair can be done at test time without labels. But the
-recipe the field uses to do it assumes a class-balanced target pool --- an
-assumption that holds where TTA is measured and essentially nowhere else, in
-either direction of skew. On the official ASVspoof2021-DF protocol at its real
-$97.2\%$ spoof prior, that assumption turns
-the published configuration into a $1.3$-point EER \emph{regression} on a
-state-of-the-art released checkpoint; a label-free estimate of the prior turns
-it into an $11\%$ relative improvement. Because both EER and AUC move, the
-result is not re-thresholding; and because the correction is provably inert at
-$\hat\pi{=}0.5$, it costs nothing on the balanced benchmarks where the field
-currently measures.
+Cross-corpus deepfake detection fails at the operating point, not in the
+representation, and the repair needs no labels. But the recipes used to make it
+assume a class-balanced target pool --- an assumption that holds where TTA is
+measured and essentially nowhere else, in either direction of skew. At
+ASVspoof2021-DF's real $97.2\%$ prior that assumption turns the published
+configuration into a $1.3$-point EER \emph{regression} on a state-of-the-art
+released checkpoint, and three of four modern TTA baselines degrade it too; a
+label-free prior estimate turns it into an $11\%$ relative improvement. Both EER
+and AUC move, so this is not re-thresholding, and the correction is provably
+inert at $\hat\pi{=}0.5$, so it costs nothing where the field currently measures.
 
 {\small
 \begin{thebibliography}{1}

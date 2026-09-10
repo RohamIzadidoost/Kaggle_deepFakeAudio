@@ -22,7 +22,7 @@ df = pd.read_csv("prevalence_rules_df2021.csv")
 g = df.groupby("prior").mean(numeric_only=True).reset_index()
 true_prior = float(g.prior.max())
 
-fig, axes = plt.subplots(1, 2, figsize=(7.0, 2.5))
+fig, axes = plt.subplots(1, 2, figsize=(7.4, 2.05))
 
 # --- left: what each label-free threshold rule delivers as the prior moves ---
 ax = axes[0]
