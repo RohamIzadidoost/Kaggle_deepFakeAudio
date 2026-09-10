@@ -324,7 +324,12 @@ checkpoints and \PENDING{stage 2/5: seeds} seeds the effect is
 
 \subsection{Why this is not a re-thresholding result}
 Both EER and AUC improve, and neither takes a threshold as input, so no
-operating-point rule can produce this gain. That matters because on
+operating-point rule can produce this gain. The cleanest form of that argument
+is available directly: use the \emph{same} prior estimate to re-point the
+threshold and take no gradient step at all, and accuracy moves from $98.92$ to
+$98.94\%$ while EER stays at $4.51$ by construction. Feed the same estimate into
+the pseudo-label budget instead and EER goes to $4.02$. The prior is doing its
+work in the budget, not at the threshold. That matters because on
 \emph{balanced} pools a one-line median-threshold rule is genuinely competitive
 with gradient adaptation on accuracy --- we reported it as such, and it is the
 right control for a calibration claim. Resampling the same DF score
