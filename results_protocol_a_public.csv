@@ -1,0 +1,7 @@
+ckpt,method,setting,eer,auc,acc,acc_median_rule,n,attainable,deficit,smoke
+deepfense_w2v2_aasist_s2,source,official_eval,4.51,0.9923,98.866,59.06,400435,95.49,-3.376,False
+deepfense_w2v2_aasist_s2,source,disjoint_eval,4.515,0.9923,98.873,59.101,380435,95.485,-3.388,False
+deepfense_w2v2_aasist_s2,ours_fixed,official_eval,5.836,0.9846,62.961,52.798,400435,94.164,31.204,False,22.6
+deepfense_w2v2_aasist_s2,ours_fixed,disjoint_eval,5.842,0.9846,62.961,52.776,380435,94.158,31.196,False,22.6
+deepfense_w2v2_aasist_s2,ours_bbse,official_eval,4.02,0.9931,98.948,67.393,400435,95.98,-2.968,False,0.9715,0.9708,0.0171,0.5829,22.7
+deepfense_w2v2_aasist_s2,ours_bbse,disjoint_eval,4.034,0.9931,98.95,67.405,380435,95.966,-2.984,False,0.9715,0.9708,0.0171,0.5829,22.7

@@ -252,3 +252,52 @@ This reframes the whole paper's contribution and is worth spending the two
 remaining seeds on: the class-balance assumption buried inside every
 confident-quantile TTA method is not a footnote, it is a *failure mode on the
 standard benchmark*, and a label-free prior estimate removes it.
+
+### Job A1 complete for seed 2 — the headline
+
+Official ASVspoof2021-DF eval, 400,435 trials on disk, 97.22% spoof,
+`deepfense_w2v2_aasist_s2` (XLS-R 300M + AASIST, ASVspoof2019-LA train).
+Everything below is label-free: no target labels, no retraining, 16,706
+adapted parameters.
+
+| arm | EER | AUC | acc@0.5 | deficit |
+|---|---|---|---|---|
+| source | 4.510 | .9923 | 98.87 | -3.38 |
+| naive fixed-$q{=}0.3$ (the published config) | 5.836 | .9846 | 62.96 | +31.20 |
+| **prior-corrected (BBSE) budget** | **4.020** | **.9931** | **98.95** | -2.97 |
+| — same model, disjoint/inductive half | 4.034 | .9931 | 98.95 | — |
+
+* **4.51 -> 4.02% EER, an 11% relative reduction**, on a checkpoint that was
+  already better than the published Wav2Vec2-AASIST Protocol-A baseline
+  (8.54%). Both EER *and* AUC improve, so no threshold rule can account for it.
+* The naive configuration goes the other way and **damages** the same
+  checkpoint (EER +1.33, accuracy -35.9). The entire difference between the two
+  arms is one label-free number: $\hat\pi_{fake}=0.9715$ against a true 0.9708.
+* The inductive check reproduces it (4.034 vs 4.020), so it is not transduction.
+
+### The prior sweep, from cached scores (CPU, no GPU)
+
+`analyze_prevalence_rules.py` resamples the same score distribution to a range
+of target priors. Raw accuracy:
+
+| target prior | shipped $\tau{=}0.5$ | median rule | BBSE threshold | oracle |
+|---|---|---|---|---|
+| 0.50 | 88.27 | **95.55** | 88.34 | 95.70 |
+| 0.70 | 92.73 | 81.91 | 92.75 | 95.72 |
+| 0.90 | 97.30 | 62.01 | 97.30 | 97.34 |
+| 0.9722 (true) | 98.92 | 58.96 | 98.94 | 99.09 |
+
+The median rule is the *best* rule at 50/50 and the worst by 40 points at the
+benchmark's actual prior. That is not a coincidence, it is its assumption. The
+paper's "a one-line rule recovers 94% of the gain" was measured on pools our
+own pipeline had balanced to 0.489-0.539.
+
+**Two things to state honestly about BBSE here.** (i) Its prior estimate carries
+a positive bias that is largest at balanced priors ($\hat\pi$ 0.61 at a true
+0.50) and shrinks toward the truth at high skew (0.9738 at 0.9722): BBSE assumes
+*label* shift, and DF's codec conditions are also a covariate shift, so the
+in-domain $M$ under-states target error. (ii) On a checkpoint whose shipped
+threshold is already near-optimal, the BBSE *threshold* buys essentially nothing
+over $\tau{=}0.5$ (98.94 vs 98.92). The value of the prior estimate here is in
+the **pseudo-label budget**, not the threshold — which is exactly where the
+4.51 -> 4.02 came from, and is the claim the paper should make.
