@@ -295,7 +295,7 @@ Source (as released) & 4.51 & .9923 & 98.87 & $-3.38$ \\
 \;+ Tent~\cite{tent} & 4.06$^\ddagger$ & .9765 & 98.52 & $-2.58$ \\
 \;+ SHOT~\cite{shot} & 6.38 & .9725 & 77.64 & $+15.99$ \\
 \;+ ETA~\cite{eata} & 7.44$^\ddagger$ & .9288 & 98.93 & $-6.37$ \\
-\;+ SAR~\cite{sar} & \PENDING{stage 1} & & & \\
+\;+ SAR~\cite{sar} & 4.47$^\S$ & .9923 & 98.88 & $-3.35$ \\
 \;+ TTA, fixed confidence $0.95$ & \PENDING{8b} & & & \\
 \;+ TTA, symmetric $q{=}0.3$ & 5.84 & .9846 & 62.96 & $+31.20$ \\
 \rowcolor{green!12}\;+ TTA, \textbf{prior-corrected} & \textbf{4.02} & \textbf{.9931} & \textbf{98.95} & $-2.97$ \\
@@ -315,7 +315,9 @@ $^\ddagger$ EER computed over a pool that is more than $93\%$ a single tied
 score --- Tent saturates $98.07\%$ of the $400{,}435$ scores to exactly $1.0$
 ($1{,}247$ distinct values left) and ETA $97.71\%$ --- so these EERs are
 statements about ROC tie-breaking. Read the AUC column, which tie-breaking
-cannot rescue.
+cannot rescue. $^\S$ SAR neither damages nor adapts: its recovery scheme reverted
+the model $308$ times in $2{,}500$ steps and its AUC is unchanged to four
+decimals.
 \end{table}
 
 \subsection{The class prior is the hidden variable}
@@ -346,6 +348,16 @@ uncertain, not \emph{confident-and-right} from \emph{confident-and-wrong}, and
 mis-calibration under corpus shift manufactures exactly the latter. A TTA
 safeguard keyed on the model's own confidence inherits the broken calibration it
 is meant to guard against.
+
+SAR is the exception that clarifies the rule. It is the only prior method here
+that does not degrade the checkpoint --- and it manages that by declining to
+move it: $308$ model-recovery resets in $2{,}500$ steps, an AUC unchanged to
+four decimals, and a score distribution indistinguishable from the source
+model's. Its collapse guard does exactly what it promises, and prevention is all
+it delivers. So the claim is not that every published method fails here. It is
+that \emph{three of the five prior configurations degrade a state-of-the-art
+detector at deployment prevalence, the fourth avoids damage only by reverting
+its own updates, and none of them improves it.}
 
 Replacing the symmetric budget by Eq.~\eqref{eq:budget} with a label-free prior
 estimate reverses the sign. BBSE returns $\hat\pi_{\mathrm{fake}}{=}0.9715$
