@@ -472,3 +472,48 @@ assumption, and every assumption is a version of the same one:
 
 $^\ddagger$ EER computed over a pool that is $>93\%$ one tied score; read the AUC
 column instead.
+
+### Stage 1, fourth arm: SAR does not fail — it declines to adapt
+
+I predicted SAR would land near ETA, since it layers sharpness-aware
+minimisation on the same entropy filter that had just proved inert. It did not.
+
+SAR: EER $4.510\!\to\!4.472$, AUC $.9923\!\to\!.9923$ (unchanged to four
+decimals), accuracy $98.87\!\to\!98.88$. Score resolution is essentially the
+source model's ($2{,}779$ distinct values vs $2{,}762$; largest tie $9.56\%$ vs
+$9.82\%$). The logs say why: **308 model-recovery resets over 2,500 batches**,
+each reverting to the pre-adaptation snapshot, with the reliability filter again
+nearly inert (admit rate $0.988$).
+
+So SAR is the one modern baseline that does not damage the checkpoint, and it
+achieves that by **not moving it**. Its collapse guard does exactly what SAR
+claims for it — prevention — and prevention is all that is delivered: a
+$0.04$-point EER change with an identical AUC is not adaptation.
+
+**This is partly my own doing and must be stated as such.** SAR's published
+recovery trigger $e_0{=}0.2$ sits inside the $C{=}2$ reliable band and would
+have reverted on essentially every batch; I re-derived it as
+$e_0=(0.2/\ln 1000)\ln C = 0.020$ to keep its relative position. The conclusion
+survives either constant — at $0.2$ SAR is inert by construction, at $0.020$ it
+is inert by measurement — but the reader is entitled to know the threshold was
+ours to choose.
+
+### Stage 1 complete: the honest claim
+
+Not "all four fail". The accurate statement, on the official DF eval at $97.2\%$
+spoof against a released $4.51\%$-EER checkpoint:
+
+| method | EER | AUC | acc | verdict |
+|---|---|---|---|---|
+| source | 4.51 | .9923 | 98.87 | — |
+| Tent | 4.06$^\ddagger$ | .9765 | 98.52 | degrades ranking; EER flatters it |
+| ETA | 7.44$^\ddagger$ | .9288 | 98.93 | worst ranking damage; filter inert |
+| SHOT | 6.38 | .9725 | 77.64 | degrades both; explicit $\pi{=}\tfrac12$ |
+| SAR | 4.47 | .9923 | 98.88 | **safe, but inert** (308 resets) |
+| symmetric-$q$ TTA | 5.84 | .9846 | 62.96 | degrades both |
+| **ours** | **4.02** | **.9931** | **98.95** | improves both |
+
+**Three of five published/prior configurations degrade a state-of-the-art
+detector at deployment prevalence; the fourth avoids damage only by reverting
+its own updates. None of them improves it. Ours does.** That is a weaker
+sentence than "all four fail" and a much more defensible one.

@@ -2,6 +2,7 @@ ckpt,arm,n,eer,auc,n_unique,pct_at_max,pct_at_min,largest_tie_pct
 deepfense_w2v2_aasist_s2,eta,400435,7.444,0.9288,1235,97.71,0.0,96.65
 deepfense_w2v2_aasist_s2,ours_bbse,400435,4.02,0.9931,1764,0.25,0.0,26.64
 deepfense_w2v2_aasist_s2,ours_fixed,400435,5.836,0.9846,8170,0.0,0.0,0.26
+deepfense_w2v2_aasist_s2,sar,400435,4.472,0.9923,2779,0.0,0.0,9.56
 deepfense_w2v2_aasist_s2,shot,400435,6.375,0.9725,6973,0.0,0.0,2.46
 deepfense_w2v2_aasist_s2,source,400435,4.51,0.9923,2762,0.0,0.0,9.82
 deepfense_w2v2_aasist_s2,tent,400435,4.062,0.9765,1247,98.07,0.0,93.02
