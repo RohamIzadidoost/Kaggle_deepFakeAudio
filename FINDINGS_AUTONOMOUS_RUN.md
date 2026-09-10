@@ -773,3 +773,79 @@ ranking it degrades -- **and breaks where the method has a ranking to work
 with**: given the precondition, adaptation does something threshold-free
 (sharpens the boundary within each attack family), which is the paper's answer
 to "why not just move the threshold". `r2_vuln1_subpop.py`.
+
+---
+
+# Addendum 7 -- dynamic q on unbalanced pools, and Protocol A (2026-09-10)
+
+The user's actual ask for V2: not just recover the *threshold* label-free (BBSE,
+Addendum 6), but make the *self-training* work on skewed pools -- i.e. make
+`q=0.3` dynamic. `adapt_dynq()` (adaptive_pipeline.py) = the published `adapt()`
+with the confident-tail budget split by a BBSE prevalence estimate
+(`AT.tail_budget(0.3, 1-pi_fake)`, `pi_fake` from `p = M^-T q`, M a balanced
+source-pool slice, q the target prediction rate). Nothing else changed; on a
+balanced pool BBSE ~= 0.5 and it is byte-identical to `adapt()`.
+
+## dynq recovers the fixed-q degradation under skew (stages V, V2, Y)
+
+Four EER targets, controlled skew, source / fixed q=0.3 / dynq (BBSE) / gmmq
+(GMM-fed dynamic q, the existing arm):
+
+| target | skew | source | fixed q=0.3 | **dynq** | dynq vs fixed | n |
+|---|---|---|---|---|---|---|
+| ASVspoof2019 | 0.70 | 4.89 | 4.08 | **3.06** | -1.02, p=0.016 | 7 |
+| ASVspoof2019 | 0.90 | 4.89 | 5.34 | **3.52** | -1.83, **p=0.004** | 10 |
+| ASVspoof2019 | 0.95 | 4.62 | 6.11 | **3.75** | -2.37 (n=3) | 3 |
+| In-the-Wild | 0.70 | 11.53 | 11.00 | 10.63 | -0.37, ns | 7 |
+| In-the-Wild | 0.90 | 11.81 | 13.30 | **11.61** | -1.69, **p=0.006** | 10 |
+| In-the-Wild | 0.95 | 13.61 | 16.42 | **14.43** | -1.99 (n=3) | 3 |
+| arabic | 0.90 | 20.84 | 21.27 | 20.27 | -1.00, p=0.064 | 10 |
+| dataset2 | any | ~35 | ~35 | ~35 | flat | 7-10 |
+
+**Monotone in skew:** the worse the skew, the more fixed-q degrades (In-the-Wild
+11.0 -> 13.3 -> 16.4 at 70/90/95% fake) and the more dynq recovers it (11.6 ->
+14.4). On the two strong-ranking targets dynq is significant at n=10 and beats
+source outright on ASVspoof2019. dataset2 (source AUC 0.71) does not respond --
+the same ranking precondition that governs the whole paper: the confident tails
+have to be pure enough to self-train on.
+
+gmmq (GMM prevalence) is comparable to dynq on these well-calibrated own-model
+checkpoints -- the BBSE-vs-GMM gap only bites where the score distribution is
+degenerate (Protocol A, below).
+
+So the class-balance limitation is now: **the threshold is recoverable
+label-free (BBSE), and a BBSE-weighted pseudo-label budget recovers the EER
+degradation on skewed pools where the source ranking is usable.** Not "the
+pseudo-labels stay noisy" -- that was the pre-dynq state.
+
+## Protocol A -- the guarded adaptive variant is safe, occasionally better (stage W)
+
+Official ASVspoof2021-DF (train on 2019-LA alone, 97%-spoof eval). Baseline
+recipe:
+
+| arm | EER | AUC | note |
+|---|---|---|---|
+| source | 26.33 | .870 | |
+| naive TTA (q=0.3) | 42.46 | .686 | the documented collapse |
+| GMM-prevalence budget (`ours_prior`) | 32.58 | .820 | recovers ~half, still < source |
+| BBSE-fixed budget (`ours_bbse`) | 32.32 | .823 | ties the GMM prior |
+| **guarded adaptive** (`ours_adaptive`), seed 0 / 1 / 2 | **24.40 / 26.33 / 26.33** | .865 / .870 / .870 | seed 0 beats source; seeds 1-2 the collapse guard reverted to source |
+| BBSE into the curriculum (`ours_bbse_adaptive`), s0/1/2 | 26.33 / 26.60 / 26.33 | | |
+
+RawBoost recipe: **everything fails** (~42.5). That source model predicts 46% of
+a 97.5%-spoof pool as *real* -- M from clean source data (~identity) cannot
+explain that, so BBSE returns pi_real ~= 0.457 (true 0.028). Beyond label shift;
+the source model itself is broken on the shifted pool.
+
+**Honest statement:** the guarded adaptive variant (q-curriculum + collapse
+detection) makes 97%-skew adaptation *safe* -- it never reproduces the naive
+collapse, reverting to source-only when its collapse detector fires (2/3 seeds)
+and improving to 24.4% EER when it does not (1/3). It does not *reliably* beat
+source. This is a step up from the paper's current "recovers none of it" (which
+was a RawBoost-recipe statement), not a full solution. `protocol_a.py`,
+`results_protocol_a.csv`.
+
+## GPU cost of this pass
+
+Stages S/T/R2/U (Addenda 5-6) + V/V2/W/Y (this addendum): ~40 GPU-h, 0 real
+failures (one smoke job OOM'd on a handoff, harmless).

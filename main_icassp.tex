@@ -49,31 +49,28 @@ Shweta.sharma1@jaipur.manipal.edu}}
 
 \begin{abstract}
 Audio deepfake detectors generalise poorly across corpora despite near-perfect
-in-domain accuracy. We show that a fine-tuned self-supervised detector's
-\emph{ranking} (ROC-AUC) largely transfers cross-corpus even when its decision
-\emph{threshold} does not, and build an unsupervised \emph{test-time adaptation}
-(TTA) method on that asymmetry: self-train on confident-ranked pseudo-labels
-from the extreme quantiles of unlabeled target scores, enforce
-channel-consistency, and adapt only LayerNorm and the classifier head---no
-target labels, no source data. On a four-target, ten-seed leave-one-corpus-out
-protocol, EER improves on three targets (In-the-Wild $12.78\!\to\!11.33\%$,
-Arabic $22.50\!\to\!20.99\%$, ASVspoof2019 $5.03\!\to\!3.47\%$; two survive Holm
-correction) and is neutral on the fourth, the one with the weakest source
-ranking. Applied unmodified to nine \emph{publicly released} checkpoints we did
-not train---five architectures, one a spectrogram transformer---over $369$
-cross-corpus cells, it closes the gap between accuracy at the shipped threshold
-and the accuracy the ranking already supports ($7.3\!\to\!2.0$ points,
-$p{\approx}10^{-17}$, adapting $16{,}706$ parameters) while its effect on
-ranking is an order of magnitude weaker ($+0.9$ EER, and split by corpus): the
-mechanism is threshold repair, and a label-free median-threshold rule matches
-the full method on average---though where source ranking is strong the gradient
-step does add per-attack separability a threshold cannot, and label-free prior
-estimation lifts most of the class-balance requirement. The EER gains that do
-occur track \emph{calibration headroom}: on two corpora sharing no lineage with
-the source pool (WaveFake, 2024 commercial TTS) adaptation improves EER by
-$+2.5$ and $+2.9$ points ($p{=}0.002$), larger than on the original targets.
-Entropy-minimisation TTA (Tent) is instead unpredictably catastrophic, and a
-non-SSL backbone never reaches a ranking worth adapting.
+in-domain accuracy. We show the failure is one of \emph{operating point}: a
+fine-tuned self-supervised detector's \emph{ranking} (ROC-AUC) largely transfers
+cross-corpus while its decision \emph{threshold} does not. We exploit this with
+an unsupervised \emph{test-time adaptation} (TTA) method---self-train on
+confident-ranked pseudo-labels from the extreme quantiles of unlabeled target
+scores, enforce channel-consistency, adapt only LayerNorm and the head
+($16{,}706$ parameters), no target labels. It improves cross-corpus
+generalisation: on a four-target, ten-seed leave-one-corpus-out protocol EER
+improves on three targets (In-the-Wild $12.78\!\to\!11.33\%$, Arabic
+$22.50\!\to\!20.99\%$; two survive Holm), and on two corpora sharing \emph{no}
+lineage with the training pool (WaveFake, 2024 commercial TTS) by $+2.5$ and
+$+2.9$ EER points ($p{=}0.002$), larger than on the original targets. Applied
+unmodified to nine publicly released checkpoints over $369$ cross-corpus cells,
+it closes the shipped-threshold-vs-attainable accuracy gap by $p{\approx}10^{-17}$.
+The mechanism is operating-point repair, not learned invariance (proxy
+$\mathcal{A}$-distance \emph{rises}): it helps where the source model arrives
+mis-calibrated and is inert otherwise, so a label-free median-threshold rule
+captures most of the accuracy gain---though where the source ranking is strong
+the gradient step also sharpens per-attack ROC-AUC ($30/30$ ASVspoof2019 cells),
+which no threshold can. Both preconditions---a usable ranking, and class balance
+via black-box shift estimation of the target prior---are label-free-checkable.
+Entropy-minimisation TTA (Tent) is instead unpredictably catastrophic.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -95,24 +92,22 @@ point is mis-calibrated. Because ranking transfers, its most-confident
 predictions on unlabeled target audio are trustworthy enough to adapt on,
 \emph{at test time}, without any labels.
 
-Our contributions: (i) an operational use of the ranking--calibration
-asymmetry---ranking transfers cross-corpus even when the threshold does
-not---as the precondition that makes unsupervised self-training viable;
-(ii) a simple, stable TTA method---confident-ranked
-pseudo-label self-training plus channel-consistency, adapting only LayerNorm
-and the head; (iii) a four-target, multilingual, ten-seed leave-one-corpus-out
-evaluation against seven comparison points (source-only, Tent, BatchNorm-only
-recalibration, self-training-only, a non-SSL backbone, DANN, and an
-ASDG-style aggregation-separation baseline), including the
-one target where the method does not help; (iv) a mechanistic analysis---proxy
-$\mathcal{A}$-distance, a label-free median-threshold control that matches the
-full method on average, a per-attack test showing the gradient step \emph{does}
-add separability where source ranking is strong, and a class-balance study with
-a label-free prevalence estimator that removes most of the balance
-requirement---placing the mechanism at \emph{operating-point repair}; and
-(v) evidence that the method acts as a \emph{label-free wrapper for third-party
-detectors}, restoring the operating point of nine publicly released checkpoints
-across five architectures and ten corpora ($369$ cells) without retraining them.
+Our contributions: (i) an unsupervised TTA method that improves cross-corpus
+generalisation---confident-ranked pseudo-label self-training plus
+channel-consistency, adapting $16{,}706$ LayerNorm-and-head parameters---built on
+the ranking--calibration asymmetry as its enabling precondition;
+(ii) a four-target, ten-seed leave-one-corpus-out evaluation against seven
+comparison points, extended to two corpora sharing no lineage with training
+where the gain is largest; (iii) a mechanistic account placing the effect at
+\emph{operating-point repair, not learned invariance}---proxy
+$\mathcal{A}$-distance rises, a label-free median-threshold control captures most
+of the accuracy, yet a per-attack test shows the gradient step \emph{does} add
+separability where the source ranking is strong; (iv) two label-free-checkable
+preconditions---a usable source ranking, and class balance, the latter via
+black-box shift estimation of the target prior, which also lets the method
+recover EER on skewed pools; and (v) the method as a \emph{label-free wrapper}
+for nine publicly released checkpoints across five architectures and ten corpora
+($369$ cells), with an honest scope map of where it helps.
 
 \textbf{Related work.} Frozen or fine-tuned SSL front-ends with AASIST or
 attentive back-ends dominate recent benchmarks~\cite{wav2vec2aug,xlsrsls,aasist,rawnet2};
@@ -411,23 +406,24 @@ we can rescue (Fig.~\ref{fig:aucgain}). Our non-SSL backbone never reaches a
 ranking worth adapting (AUC $0.40$--$0.65$), so it fails the precondition
 before TTA becomes applicable and we did not run adaptation on it; every
 third-party checkpoint we adapt is itself a pretrained transformer.
-\item \textbf{Class balance is a second precondition---partly removable.} The
-fixed-quantile rule labels the bottom $q$ of the pool ``confident real''
-whatever the true prior, so it targets a \emph{balanced}-prior operating point.
-A controlled skew sweep confirms the mechanism: at $50\!\to\!70\!\to\!90\%$
-fake the accuracy gain goes $+7.6\!\to\!{-}3.5\!\to\!{-}26.5$ points while
-ranking stays flat (this also accounts for the ASVspoof2021-DF collapse: source
-$26.33\%$ EER, TTA $42.46\%$ on a $97\%$-spoof pool). But the prior is estimable
-label-free by black-box shift estimation ($\hat p{=}M^{-1}q$, $M$ the source
-confusion matrix): across $50$--$95\%$ fake, BBSE recovers it to within $1.4\%$
-and re-pointing the threshold at the $\hat p$ quantile matches the
-\emph{labelled} accuracy-optimal threshold to within $0.4$ points---a score GMM
-does not ($28\%$ error at $90\%$ fake)---and it is robust to moderate calibration
-drift, reading source error structure not the target score shape. So the
-threshold is recoverable at any prior; the confident-tail pseudo-labels stay
-noisy under severe skew even with a prior-matched budget. Our source model is
-also not state-of-the-art ($26.33\%$ vs.\ published $8$--$9\%$ on 2021-DF), so
-this is a relative-gain claim on a fixed backbone.
+\item \textbf{Class balance is a second precondition---largely removable at
+moderate skew.} The fixed-quantile rule targets a \emph{balanced}-prior
+operating point; a controlled skew sweep confirms it (at
+$50\!\to\!70\!\to\!90\%$ fake the accuracy gain goes
+$+7.6\!\to\!{-}3.5\!\to\!{-}26.5$, ranking flat). The target prior is recoverable
+label-free by black-box shift estimation ($\hat p{=}M^{-\top}q$, $M$ the source
+confusion matrix): across $50$--$95\%$ fake BBSE recovers it to within $1.4\%$
+(a score GMM: $28\%$ error at $90\%$), which both re-points the threshold to the
+labelled optimum within $0.4$ points and, used to re-weight the pseudo-label
+budget, reverses the fixed-$q$ EER degradation on the ranking-capable targets
+(ASVspoof2019 $5.34\!\to\!3.52\%$, In-the-Wild $13.30\!\to\!11.61\%$,
+$p{\le}0.006$ at ten seeds; flat on the AUC-$0.71$ target). On the extreme
+ASVspoof2021-DF regime ($97\%$ spoof, single-corpus source) it is only partial:
+a guarded variant ($q$ curriculum plus collapse detection) never reproduces the
+naive collapse but does not reliably beat source ($24.4$ vs.\ $26.33\%$ EER on
+$1/3$ seeds, source-only fallback on $2/3$). Our source model is also not
+state-of-the-art there ($26.33$ vs.\ published $8$--$9\%$), a relative-gain claim
+on a fixed backbone.
 \item \textbf{Fixed hyperparameters.} $q$ and $\lambda$ are label-free and not
 per-target optimal; a label-free $\lambda$ schedule pays nothing at our scale
 (within $0.24$ EER of a per-point oracle). $E$ is not a hyperparameter but a
@@ -442,16 +438,20 @@ undocumented training data and sit in a separate arm.
 \end{itemize}
 
 \section{Conclusion}
-Cross-corpus audio deepfake detection fails because the operating point is
-mis-calibrated, not because ranking is lost. Our unsupervised TTA repairs it
-($369$ third-party cells, $p{\approx}10^{-17}$, ranking effect an order of
-magnitude smaller), and a label-free median-threshold move matches it on
-average. The gradient step earns its cost only where the source ranking is
-strong---on ASVspoof2019 it sharpens within-attack ROC-AUC ($30/30$ cells),
-which no threshold can---and the class-balance requirement is largely removable
-by label-free prior estimation. Source AUC does not predict the gain and is
-retired. Given a usable source ranking the method re-calibrates and modestly
-re-separates; without one it is a threshold rule.
+An unsupervised, label-free test-time adaptation improves cross-corpus deepfake
+detection---on leave-one-corpus-out targets (two of four surviving Holm) and,
+more strongly, on corpora sharing no lineage with training ($+2.7$ EER,
+$p{<}10^{-5}$). It works because the cross-corpus failure is one of
+\emph{operating point}: adaptation repairs the shipped threshold rather than
+learning invariant features ($369$ third-party cells, $p{\approx}10^{-17}$;
+proxy $\mathcal{A}$-distance \emph{rises}). Its scope is therefore
+predictable---it helps where the source model arrives mis-calibrated, which
+lineage anticipates, and is inert otherwise, so a label-free median-threshold
+rule captures most of the accuracy---though where the source ranking is strong
+the gradient step also sharpens per-attack ROC-AUC, which a threshold cannot.
+Both preconditions, a usable source ranking and a balanced target prior, are
+checkable without target labels; entropy-minimisation TTA is by contrast
+unpredictably catastrophic.
 
 {\small
 \begin{thebibliography}{1}

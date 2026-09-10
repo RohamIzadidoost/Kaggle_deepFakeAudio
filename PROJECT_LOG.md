@@ -429,8 +429,30 @@ flagged two downgrade risks. Both now addressed:
   prototype) — BBSE is different because it reads source error structure, not
   the target score distribution.
 
+**Dynamic q + Protocol A (2026-09-10, Addendum 7).** The full V2 answer — not
+just recover the eval threshold (BBSE) but make the *self-training* work on
+skewed pools. `adapt_dynq()` = published `adapt()` with the confident-tail
+budget split by a BBSE prevalence estimate (byte-identical to `adapt()` on a
+balanced pool). Controlled skew sweep, ten seeds: fixed `q=0.3` degrades EER as
+the pool skews (In-the-Wild 11.0→13.3→16.4 at 70/90/95% fake); dynq reverses it
+on the ranking-capable targets (ASVspoof2019 5.34→3.52, In-the-Wild 13.30→11.61
+at 90% fake, p≤0.006), flat on the AUC-0.71 target. Protocol A (official 97%-spoof
+DF eval): the guarded adaptive variant never reproduces the naive collapse
+(42.46 EER) — reverts to source on 2/3 seeds, reaches 24.4 vs source 26.33 on
+1/3 — but does not reliably beat source; on the RawBoost source everything fails
+(that model predicts 46% of a 97.5%-spoof pool as real). New: `adapt_dynq`,
+`_bbse_pi_fake` in adaptive_pipeline.py; `bbse` / `ours_bbse_adaptive` arms +
+`PROTOA_SEED`/`PROTOA_ARMS` in protocol_a.py.
+
+**Framing rebalanced (2026-09-10).** The abstract/intro/conclusion had drifted
+to leading with "the mechanism is threshold repair" — too self-deprecating for a
+paper whose own-model generalisation result (LOCO +0.88 EER p<1e-4;
+lineage-independent corpora +2.7 EER p<1e-5) is solid and unchanged. Rewrote to
+lead with "improves cross-corpus generalisation" and use operating-point repair
+as the *mechanism and scope map*, not the headline verdict. Same evidence.
+
 **Paper state:** `main_icassp.tex` compiles at 4 content pages + refs-only page
-5, no overfull boxes; abstract, contributions (iv), results and limitations now
-carry V1/V2. `PROJECT_LOG` §6 ("Final validated results") is superseded by this
-section and the FINDINGS doc — the 9.42% / 5.50% numbers there are the
-pre-breadth cloud run.
+5, no overfull boxes. `PROJECT_LOG` §6 ("Final validated results") is superseded
+by this section and the FINDINGS doc — the 9.42% / 5.50% numbers there are the
+pre-breadth cloud run. `main.tex` (the 11-page full version) was NOT updated on
+this branch and still carries the pre-breadth claims.

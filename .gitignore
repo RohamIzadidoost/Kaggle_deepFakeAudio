@@ -89,3 +89,5 @@ run_log_*.txt
 *.bbl
 *.blg
 build_jasmp/
+
+results_protocol_a_smoke.csv

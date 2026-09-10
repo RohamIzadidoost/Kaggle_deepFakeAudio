@@ -69,12 +69,32 @@ gracefully but stays bounded under severe skew. The paper states it this way.
 | `r2_vuln2_prevalence_cpu.py` / `.csv` / `.out` | V2 BBSE/GMM prevalence + drift (CPU) |
 | `analyze_stage_r2.py`, `analyze_stage_t.py` | R2 / T analysis helpers |
 
+## Update 2026-09-10 — dynamic q, done (stages V/V2/Y)
+
+The "GPU confirmation" above is done and it is a **full result, not just a
+confirmation**. `adapt_dynq()` (adaptive_pipeline.py): published `adapt()` with
+the confident-tail budget split by a BBSE prevalence estimate. Controlled skew
+sweep, ten seeds:
+
+| target | skew | fixed q=0.3 | **dynq** | p (dynq vs fixed) |
+|---|---|---|---|---|
+| ASVspoof2019 | 0.90 | 5.34 | **3.52** | 0.004 |
+| In-the-Wild  | 0.90 | 13.30 | **11.61** | 0.006 |
+| ASVspoof2019 | 0.70 | 4.08 | 3.06 | 0.016 |
+| arabic | 0.90 | 21.27 | 20.27 | 0.064 |
+| dataset2 (AUC 0.71) | any | ~35 | ~35 | ns |
+
+Fixed q=0.3 degrades EER under skew; dynq reverses it on the targets with a
+usable source ranking (monotone in skew — the worse the skew, the more it
+helps). Flat on the low-AUC target, same precondition as the whole paper.
+`r2_vuln1_subpop` was V1; dynq is the V2 self-training fix. Both folded into
+`main_icassp.tex`. Protocol A (97%-spoof): partial — a guarded variant is safe
+but does not reliably beat source (`FINDINGS` Addendum 7).
+
 ## Not done / possible next
 
-* A GPU confirmation run wiring BBSE into `adapt()`'s threshold + `tail_budget`
-  on the stage-P skew pools (the CPU result already shows the threshold half;
-  this would confirm the end-to-end adapted model under skew).
+* Protocol A at a stronger / better-calibrated single-corpus source model
+  (the 97%-skew case only failed where the source model was itself broken).
 * V1 on more targets with generator labels (only asvspoof2019 + dataset2 have
   usable sub-populations locally; in_the_wild / arabic are single-generator).
-* The stuck scheduled session (`icassp-r2-vulnerabilities`) was killed after
-  2.5 h hung on a permission prompt with nothing written; it auto-disabled.
+* `main.tex` (11-page full version) still has the pre-breadth claims.
