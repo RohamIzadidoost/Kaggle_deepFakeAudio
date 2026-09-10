@@ -294,7 +294,7 @@ Source (as released) & 4.51 & .9923 & 98.87 & $-3.38$ \\
 \;+ median-threshold rule & 4.51$^\dagger$ & .9923$^\dagger$ & 59.06 & --- \\
 \;+ Tent~\cite{tent} & 4.06$^\ddagger$ & .9765 & 98.52 & $-2.58$ \\
 \;+ SHOT~\cite{shot} & 6.38 & .9725 & 77.64 & $+15.99$ \\
-\;+ ETA~\cite{eata} & \PENDING{stage 1} & & & \\
+\;+ ETA~\cite{eata} & 7.44$^\ddagger$ & .9288 & 98.93 & $-6.37$ \\
 \;+ SAR~\cite{sar} & \PENDING{stage 1} & & & \\
 \;+ TTA, fixed confidence $0.95$ & \PENDING{8b} & & & \\
 \;+ TTA, symmetric $q{=}0.3$ & 5.84 & .9846 & 62.96 & $+31.20$ \\
@@ -311,10 +311,11 @@ Wav2DF-TSL $1.95$; SSL$+$SLS $2.87$;}\\
 \footnotesize $^\dagger$ A threshold cannot change EER or AUC; both are computed
 from the score ROC. The median rule is a control for the \emph{accuracy} claim
 and is by construction incapable of producing any EER result in this paper.
-$^\ddagger$ Not a ranking improvement: Tent saturates $98.07\%$ of the
-$400{,}435$ scores to exactly $1.0$, leaving $1{,}247$ distinct values, so this
-EER is a statement about ROC tie-breaking. AUC, which tie-breaking cannot
-rescue, falls $.9923\!\to\!.9765$.
+$^\ddagger$ EER computed over a pool that is more than $93\%$ a single tied
+score --- Tent saturates $98.07\%$ of the $400{,}435$ scores to exactly $1.0$
+($1{,}247$ distinct values left) and ETA $97.71\%$ --- so these EERs are
+statements about ROC tie-breaking. Read the AUC column, which tie-breaking
+cannot rescue.
 \end{table}
 
 \subsection{The class prior is the hidden variable}
@@ -335,6 +336,16 @@ probability mass into the bona fide class --- and it degrades the checkpoint
 accordingly ($4.51\!\to\!6.38\%$ EER, accuracy $77.64\%$, with no score
 saturation to blame). The regulariser introduced to \emph{cure} Tent-style
 collapse encodes the balanced-pool assumption more literally than Tent does.
+
+ETA fails differently and more instructively. Its reliability filter exists to
+discard the high-entropy samples that destabilise entropy minimisation; on this
+pool it admitted $99.8\%$ of them, leaving ETA to reduce to Tent and land worse
+(AUC $.9288$, the largest ranking loss of any arm). That is structural, not an
+implementation detail: an entropy-keyed filter separates confident from
+uncertain, not \emph{confident-and-right} from \emph{confident-and-wrong}, and
+mis-calibration under corpus shift manufactures exactly the latter. A TTA
+safeguard keyed on the model's own confidence inherits the broken calibration it
+is meant to guard against.
 
 Replacing the symmetric budget by Eq.~\eqref{eq:budget} with a label-free prior
 estimate reverses the sign. BBSE returns $\hat\pi_{\mathrm{fake}}{=}0.9715$
