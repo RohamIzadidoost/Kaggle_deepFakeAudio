@@ -764,3 +764,35 @@ prediction-rate-gap column so both monitors are visible per arm. Refitting to
 came from float spacing (`\textfloatsep`, `\intextsep`, caption skips) rather
 than from cutting further content. Discussion and Conclusion are now one
 section. Seven `\PENDING` cells remain, all queued.
+
+### Stage 3: the two-sided test, and a caveat to declare
+
+`ssl_aasist_wavefake` on the complete In-the-Wild benchmark (31,779 clips,
+prior $0.372$ — skewed the *opposite* way to DF's $0.972$):
+
+| | EER | AUC | acc | deficit |
+|---|---|---|---|---|
+| source | 5.06 | .9854 | 78.24 | **+16.70** |
+| symmetric $q{=}0.3$ | **4.55** | **.9882** | **95.38** | **+0.06** |
+
+Two separable findings.
+
+1. **The calibration-repair mechanism is confirmed quantitatively.** Where there
+   *is* a deficit, adaptation closes it almost exactly: $16.70 \to 0.06$ points.
+   On DF every deficit was negative and adaptation had nothing to repair. The
+   scope map holds on both sides.
+2. **The symmetric budget is harmless here.** At a prior of $0.372$ it is not
+   badly mis-specified, and it improves EER, AUC and accuracy together. The same
+   configuration that destroys three checkpoints at $0.972$ is fine at $0.372$,
+   so the failure tracks *distance from $\tfrac12$* rather than the method's
+   identity. That makes the paper's claim falsifiable rather than rhetorical,
+   and it is the control the DF result needs.
+
+**Caveat that must be declared in the paper.** BBSE needs a labelled sample of
+the checkpoint's own training distribution. For the three DeepFense checkpoints
+we have exactly that (ASVspoof2019-LA train, the documented training set). For
+`ssl_aasist` we have *a* WaveFake mirror (`data/hf_wavefake`, 6k real / 6k fake
+from a HuggingFace redistribution), not verifiably the same split the authors
+trained on. The confusion matrix $M$ for that checkpoint is therefore measured
+on an approximation of its source distribution, and the ITW BBSE row should say
+so rather than imply the same provenance as the DF rows.
