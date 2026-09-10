@@ -655,3 +655,48 @@ detects with room to spare, not because either is individually incomplete.
 
 Combined guard over 7 arms and 2 checkpoints: 5/5 harmful caught, 0 missed, 0
 false alarms, 2 clean arms kept.
+
+### The eighth arm settles the monitor question — against my previous correction
+
+`s42/ours_bbse` landed: EER $4.560\!\to\!\mathbf{3.290}$ ($-27.8\%$ relative),
+AUC $.9919\!\to\!.9958$, accuracy $98.78\!\to\!98.98$. The best result in the
+study, and the $\rho\ge0.85$ guard **rejected it** ($\rho{=}0.828$) --- a false
+alarm on our own headline.
+
+So the correction I made an hour ago ("$\rho$ alone is sufficient") was itself an
+artefact of a threshold fitted to seven points. Sweeping both thresholds over all
+eight arms:
+
+| guard | caught | missed | false alarms | kept |
+|---|---|---|---|---|
+| $\rho\ge0.85$ alone | 5/5 | 0 | **1** (our best arm) | 2 |
+| gap $\le0.05$ alone | 3/5 | **2** (ETA, Tent) | 0 | 3 |
+| $\rho\ge0.70$ alone | 3/5 | 2 | 0 | 3 |
+| $\rho\ge0.80$ alone | 4/5 | 1 | 0 | 3 |
+| **both, $\rho\ge0.70$--$0.80$ and gap $\le0.05$** | **5/5** | **0** | **0** | **3** |
+
+**Both monitors are necessary after all**, and the combined guard is exact over a
+$0.10$-wide plateau in $\rho$ rather than at a knife-edge. The single-monitor
+variants each fail in their own way: $\rho$ tight enough to catch the calibration
+collapses also rejects a beneficial arm; $\rho$ loose enough to keep the
+beneficial arms misses the calibration collapses entirely; the gap is blind to
+ranking collapse.
+
+**What this episode actually shows, and the paper must say it.** Two thresholds
+were fitted on eight points, and the first threshold I fitted was falsified by
+the ninth cell to arrive. That is a small-sample warning, not a validated rule.
+The paper should present the guard as a *diagnostic with a demonstrated
+plateau*, report that the naive single-monitor version was falsified by our own
+data, and rest the claim on the queued leave-one-target-out validation rather
+than on these eight points.
+
+### The headline replicates across independently trained checkpoints
+
+| ckpt | source | symmetric-$q$ | **prior-corrected** | rel. gain |
+|---|---|---|---|---|
+| s2  | 4.510 | 5.836 | **4.020** | $-10.9\%$ |
+| s42 | 4.560 | 4.080 | **3.290** | $-27.8\%$ |
+
+AUC improves in both ($.9923\!\to\!.9931$, $.9919\!\to\!.9958$), and
+prior-correction beats the symmetric budget on both ($-1.82$, $-0.79$ EER).
+Disjoint/inductive rows track within $0.02$. s240 pending.
