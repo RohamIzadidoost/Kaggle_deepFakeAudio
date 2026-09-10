@@ -517,3 +517,23 @@ spoof against a released $4.51\%$-EER checkpoint:
 detector at deployment prevalence; the fourth avoids damage only by reverting
 its own updates. None of them improves it. Ours does.** That is a weaker
 sentence than "all four fail" and a much more defensible one.
+
+### Two framing corrections made before they became reviewer ammunition
+
+1. **"Deployment prevalence" was the wrong phrase and a soft target.** A
+   reviewer would object, correctly, that ASVspoof2021-DF's $97.2\%$ spoof rate
+   is itself a benchmark artefact --- a real moderation pipeline sees mostly
+   \emph{bona fide} audio, i.e. skew in the opposite direction. The claim is now
+   stated the way it is actually true and is stronger for it: **the target prior
+   is essentially never $\tfrac12$, in either direction.** DF is $0.972$,
+   In-the-Wild is $0.372$, a deployed pipeline is lower still, and the balanced
+   pools on which cross-corpus TTA is normally reported — this paper's own
+   earlier ones included — are balanced because an evaluation pipeline made them
+   so. Stage 3 (full In-the-Wild) is what turns that from a rhetorical point
+   into a two-sided measurement.
+2. **Baseline fairness now stated explicitly.** Every TTA arm adapts the same
+   16,706 parameters with the same lr, batch and pass count; no baseline was
+   tuned separately. The defence is not "we did our best" but a structural one:
+   selecting TTA hyper-parameters per target requires target labels, which is
+   precisely the resource the setting assumes absent. A matched budget is the
+   only comparison the setting admits.

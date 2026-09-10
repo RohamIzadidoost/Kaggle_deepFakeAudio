@@ -58,8 +58,10 @@ fine-tuned self-supervised detector's \emph{ranking} (ROC-AUC) largely transfers
 cross-corpus while its decision \emph{threshold} does not, so unlabeled target
 audio can be used to repair the operating point at test time. We further show
 that every confident-quantile test-time adaptation (TTA) recipe silently assumes
-a \emph{class-balanced} target pool---an assumption every TTA benchmark in this
-area satisfies and no deployment does. On the official ASVspoof2021-DF eval
+a \emph{class-balanced} target pool---an assumption that holds on the pools TTA
+is evaluated on and on essentially no real one, in either direction: the
+standard ASVspoof2021-DF benchmark is $97.2\%$ spoof, In-the-Wild is $37.2\%$,
+and a deployed moderation pipeline sees far less. On the official ASVspoof2021-DF eval
 partition ($400{,}435$ trials, $97.2\%$ spoof) the published symmetric-quantile
 configuration \emph{damages} a state-of-the-art released checkpoint, driving
 accuracy $98.87\!\to\!62.96\%$ and EER $4.51\!\to\!5.84\%$. Correcting the
@@ -71,7 +73,7 @@ both EER and AUC improve, no re-thresholding rule can account for the gain; the
 one-line median-threshold control that appears competitive on balanced pools
 loses $40$ accuracy points at this benchmark's real prior. We add a label-free
 stopping rule based on rank agreement with the source model, and compare against
-Tent, SHOT, ETA/EATA and SAR at both balanced and deployment prevalence.
+Tent, SHOT, ETA/EATA and SAR at balanced and at both directions of skew.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -268,6 +270,13 @@ freezing the model at its initial weights (verified: $32$ resets in $32$ steps,
 zero net movement); we keep its relative position,
 $e_0=(0.2/\ln 1000)\ln C=0.020$.
 
+\textbf{Baseline fairness.} Every TTA arm adapts the \emph{same} parameter set
+($16{,}706$ LayerNorm-and-head parameters) with the same learning rate, batch
+size and number of passes. We did not tune each baseline separately, and could
+not have: selecting TTA hyper-parameters per target needs target labels, which
+is the resource the entire setting assumes is unavailable. A matched budget is
+therefore the only comparison the setting admits, and it is the one we report.
+
 \textbf{Implementation.} 16\,kHz audio, top-4-layer XLS-R fine-tuning for our own
 source models (Adam, lr\,$2{\times}10^{-4}$, batch 32, 8 epochs). Adaptation:
 lr\,$1{\times}10^{-4}$, $E{=}4$ passes, batch $32$ (third-party crops matched to
@@ -356,8 +365,8 @@ four decimals, and a score distribution indistinguishable from the source
 model's. Its collapse guard does exactly what it promises, and prevention is all
 it delivers. So the claim is not that every published method fails here. It is
 that \emph{three of the five prior configurations degrade a state-of-the-art
-detector at deployment prevalence, the fourth avoids damage only by reverting
-its own updates, and none of them improves it.}
+detector at the standard benchmark's own prevalence, the fourth avoids damage
+only by reverting its own updates, and none of them improves it.}
 
 Replacing the symmetric budget by Eq.~\eqref{eq:budget} with a label-free prior
 estimate reverses the sign. BBSE returns $\hat\pi_{\mathrm{fake}}{=}0.9715$
@@ -515,8 +524,9 @@ per-target optimal; a label-free $\lambda$ schedule pays nothing at our scale
 Cross-corpus audio deepfake detection fails at the operating point, not in the
 representation, and the repair can be done at test time without labels. But the
 recipe the field uses to do it assumes a class-balanced target pool --- an
-assumption its benchmarks satisfy and its deployments do not. On the official
-ASVspoof2021-DF protocol at its real $97.2\%$ spoof prior, that assumption turns
+assumption that holds where TTA is measured and essentially nowhere else, in
+either direction of skew. On the official ASVspoof2021-DF protocol at its real
+$97.2\%$ spoof prior, that assumption turns
 the published configuration into a $1.3$-point EER \emph{regression} on a
 state-of-the-art released checkpoint; a label-free estimate of the prior turns
 it into an $11\%$ relative improvement. Because both EER and AUC move, the
