@@ -625,3 +625,33 @@ the monitor reduces to *prediction-rate drift from the source*. That is still
 the right quantity and still label-free, but the paper must not dress it up as
 requiring the shift estimator — the source row's gap of $0.000$ is true by
 construction.
+
+### Correction to the two-monitor claim above
+
+I wrote that a $\rho$-only guard "would have passed" s2's symmetric-$q$ arm at
+$\rho{=}0.816$. That is wrong: $0.816 < 0.85$, so $\rho$ aborts it too. Running
+the combined guard properly:
+
+* **$\rho$ alone at $\tau{=}0.85$ catches all five harmful arms.** It is
+  sufficient on this set.
+* **The prior gap alone misses ETA and Tent** (gaps $0.007$ and $0.013$) --- they
+  destroy the ranking without moving the operating point.
+
+So the second monitor is not *necessary* here, and the paper must not say it is.
+What is true, and still worth reporting, is that the two are decisive on
+different failures and each is weak on the other's:
+
+| failure | $\rho$ margin below $0.85$ | gap margin above $0.05$ |
+|---|---|---|
+| ranking collapse (ETA, Tent) | $0.54$, $0.41$ — decisive | $-0.04$, $-0.04$ — blind |
+| operating-point collapse (s2 fixed-$q$) | $0.034$ — **marginal** | $0.32$ — decisive |
+| operating-point collapse (s42 fixed-$q$) | $0.25$ | $0.34$ — decisive |
+
+$\rho$ catches the s2 calibration collapse by a $0.034$ margin on a threshold
+fitted to these same seven points --- that is not a margin to ship a safety rule
+on. The gap catches the same failure at $0.372$ against a $0.05$ threshold. The
+honest recommendation is to run both because each has one failure mode it
+detects with room to spare, not because either is individually incomplete.
+
+Combined guard over 7 arms and 2 checkpoints: 5/5 harmful caught, 0 missed, 0
+false alarms, 2 clean arms kept.
