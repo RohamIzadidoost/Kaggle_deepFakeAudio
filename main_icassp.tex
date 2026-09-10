@@ -284,7 +284,7 @@ the threshold does not deliver.}
 \midrule
 Source (as released) & 4.51 & .9923 & 98.87 & $-3.38$ \\
 \;+ median-threshold rule & 4.51$^\dagger$ & .9923$^\dagger$ & 59.06 & --- \\
-\;+ Tent~\cite{tent} & \PENDING{stage 1} & & & \\
+\;+ Tent~\cite{tent} & 4.06$^\ddagger$ & .9765 & 98.52 & $-2.58$ \\
 \;+ SHOT~\cite{shot} & \PENDING{stage 1} & & & \\
 \;+ ETA~\cite{eata} & \PENDING{stage 1} & & & \\
 \;+ SAR~\cite{sar} & \PENDING{stage 1} & & & \\
@@ -302,6 +302,10 @@ Wav2DF-TSL $1.95$; SSL$+$SLS $2.87$;}\\
 \footnotesize $^\dagger$ A threshold cannot change EER or AUC; both are computed
 from the score ROC. The median rule is a control for the \emph{accuracy} claim
 and is by construction incapable of producing any EER result in this paper.
+$^\ddagger$ Not a ranking improvement: Tent saturates $98.07\%$ of the
+$400{,}435$ scores to exactly $1.0$, leaving $1{,}247$ distinct values, so this
+EER is a statement about ROC tie-breaking. AUC, which tie-breaking cannot
+rescue, falls $.9923\!\to\!.9765$.
 \end{table}
 
 \subsection{The class prior is the hidden variable}
@@ -396,15 +400,19 @@ Oracle (target-supervised) & 0.89 / .999 & 13.93 / .939 & 4.42 / .992 & 9.50 / .
 \end{tabular}}
 \end{table}
 
-\textbf{Tent is not merely unstable, it is unpredictably catastrophic.} On
-ASVspoof2019 its per-seed EER splits five seeds near source-only and four at or
-near chance with no warning sign (std $21.96$); on Arabic it is a
-\emph{consistent} chance-level failure ($9/10$ seeds). Ours shows no comparable
-collapse on any target (largest std $2.01$). The failure is a ranking failure
-first: run on the strongest and weakest public checkpoints, Tent collapses to
-chance on one ($16.41\!\to\!49.80\%$ EER, AUC $.918\!\to\!.502$) but only
-degrades AUC on the other ($.986\!\to\!.979$) --- an EER collapse appears only
-where there was AUC headroom to lose.
+\textbf{Tent is not merely unstable, it is unpredictably catastrophic --- and
+sometimes silently so.} On ASVspoof2019 its per-seed EER splits five seeds near
+source-only and four at or near chance with no warning sign (std $21.96$); on
+Arabic it is a \emph{consistent} chance-level failure ($9/10$ seeds). Ours shows
+no comparable collapse on any target (largest std $2.01$). The failure is a
+ranking failure first: run on the strongest and weakest public checkpoints, Tent
+collapses to chance on one ($16.41\!\to\!49.80\%$ EER, AUC $.918\!\to\!.502$) but
+only degrades AUC on the other ($.986\!\to\!.979$). On the DF pool it is worse
+than that, because the damage does not show in the field's headline metric: Tent
+returns a \emph{lower} EER than the source model ($4.06$ vs.\ $4.51$) while
+saturating $98\%$ of the pool to one tied score. A TTA study that reports EER
+without a score-resolution check can record an entropy-minimisation collapse as
+an improvement.
 
 \subsection{A label-free adaptation budget}
 \PENDING{stage 6/7: the stopping-rule table --- oracle vs. rank-agreement guard
