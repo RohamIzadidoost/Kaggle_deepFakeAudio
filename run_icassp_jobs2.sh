@@ -8,6 +8,18 @@ export CACHE_ON_CPU=1
 
 stage () { echo "=============== [$(date '+%F %T')] STAGE $* ==============="; }
 
+# --- 8a. The repo's own correctness gate ------------------------------------
+# verify_reduction.py asserts that adapt_adaptive() with both switches off is
+# bitwise identical to the published adapt(). If it fails, every
+# adaptive-vs-fixed comparison in the paper is confounded by a refactor. The
+# ICASSP pass added 242 lines to adaptive_pipeline.py; a diff against the last
+# validated commit shows every change is additive (the only deletions are a
+# stale comment and one `if` that became `elif`), so adapt/adapt_adaptive/
+# set_tta_params/score/tent are untouched -- but the gate is cheap and the repo
+# treats it as load-bearing, so run it rather than reason about it.
+stage "8a verify_reduction (correctness gate)"
+python verify_reduction.py || echo "!! VERIFY_REDUCTION FAILED -- adaptive results are confounded"
+
 # --- 8b. The prior-free alternative a reader will propose first -------------
 # A fixed CONFIDENCE threshold instead of a quantile needs no prior at all. It
 # trades one assumption for another, and the trade is the paper's own thesis:

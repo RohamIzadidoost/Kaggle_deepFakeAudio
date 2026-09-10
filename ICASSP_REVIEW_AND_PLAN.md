@@ -700,3 +700,32 @@ than on these eight points.
 AUC improves in both ($.9923\!\to\!.9931$, $.9919\!\to\!.9958$), and
 prior-correction beats the symmetric budget on both ($-1.82$, $-0.79$ EER).
 Disjoint/inductive rows track within $0.02$. s240 pending.
+
+### Audit: the validated adaptation path was not touched
+
+This pass added 242 lines to `adaptive_pipeline.py`. Diffing against the last
+validated commit (655dd2d), the only *deletions* are a stale three-line comment
+and one `if os.environ.get("DYNQ"):` that became an `elif` after the new
+env-gated branches were inserted above it. `adapt()`, `adapt_adaptive()`,
+`set_tta_params()`, `score()` and `tent()` are unchanged, so
+`verify_reduction.py`'s invariant --- adaptive-with-switches-off is bitwise
+identical to the published `adapt()` --- is structurally unaffected. It is run
+anyway as the first stage of the follow-up queue rather than reasoned about,
+since the repo treats it as load-bearing.
+
+It was deliberately NOT run mid-queue: the card has ~4 GB free while the
+official-DF stage is resident, and an OOM in the running job would cost more
+than the check is worth.
+
+### Symmetric-$q$ across all three checkpoints — the final form of the claim
+
+| ckpt | $\Delta$EER | accuracy | deficit |
+|---|---|---|---|
+| s2  | $+1.33$ worse | $98.87\to62.96$ | $+31.20$ |
+| s42 | $-0.48$ better | $98.78\to61.80$ | $+34.12$ |
+| s240 | $+0.84$ worse | $99.11\to65.24$ | $+30.10$ |
+
+Operating-point collapse replicates on all three (accuracy $62$--$65\%$, deficit
+$+30$ to $+34$, on a $97.2\%$-spoof pool). The EER effect does not (worse on two,
+better on one, mean $+0.56$). The paper claims the former and reports the latter
+as varying.
