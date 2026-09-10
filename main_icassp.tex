@@ -321,23 +321,27 @@ right control for a calibration claim. Resampling the same DF score
 distribution to a range of target priors shows why it was competitive and what
 it costs:
 
-\begin{center}\footnotesize
-\begin{tabular}{@{}lcccc@{}}
-\toprule
-target prior & $\tau{=}0.5$ & median rule & BBSE $\tau$ & oracle $\tau$ \\
-\midrule
-$0.50$ & 88.27 & \textbf{95.55} & 88.34 & 95.70 \\
-$0.70$ & 92.73 & 81.91 & 92.75 & 95.72 \\
-$0.90$ & 97.30 & 62.01 & 97.30 & 97.34 \\
-$0.9722$ (true) & 98.92 & 58.96 & 98.94 & 99.09 \\
-\bottomrule
-\end{tabular}
-\end{center}
+\begin{figure}[t]
+\centering
+\safefig{\columnwidth}{fig_prior_rules.png}
+\caption{The same official-DF score distribution, resampled to a range of
+target priors. \textbf{Left:} the median rule is the \emph{best} label-free
+operating-point rule at $50/50$ --- the only prevalence at which our earlier
+threshold-control experiments ever measured it, because the evaluation pipeline
+balanced every pool to $0.489$--$0.539$ --- and the worst by $40$ points at the
+benchmark's own prior. \textbf{Right:} what the two rules assume about the
+prior. The median rule's implicit estimate is a flat $0.5$; BBSE tracks the
+truth, with a positive bias that is largest at balanced priors (it assumes
+\emph{label} shift, and DF's codec conditions also shift covariates) and
+vanishes as the prior approaches the one the benchmark has.}
+\label{fig:prior}
+\end{figure}
 
-\noindent The median rule is the best rule at $50/50$ and the worst by $40$
-points at the benchmark's own prior --- that is its assumption, not an accident.
-Every cell on which it was previously evaluated had been balanced by the
-evaluation pipeline to a prevalence of $0.489$--$0.539$.
+\noindent Fig.~\ref{fig:prior} makes the shape of it plain: the median rule is
+the best rule at $50/50$ and the worst by $40$ points at the benchmark's own
+prior ($95.6$ vs.\ $59.0\%$ accuracy). That is its assumption, not an accident,
+and every cell on which it was previously evaluated satisfied that assumption
+by construction.
 
 \subsection{Cross-corpus, balanced pools}
 On the balanced leave-one-corpus-out protocol the prior correction is inert by
