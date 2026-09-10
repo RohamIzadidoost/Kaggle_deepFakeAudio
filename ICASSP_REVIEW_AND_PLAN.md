@@ -574,3 +574,54 @@ compressing the inherited breadth/mechanism material to a single paragraph, and
 tightening related work, setup, limitations and conclusion. The cross-corpus
 multi-baseline table was kept over the figures: a reviewer needs the baseline
 comparison more than a plot. `fig_prior_rules.png` remains in the repo.
+
+### s42 corrects the headline claim — and the correction is more on-thesis
+
+Second checkpoint, `deepfense_w2v2_aasist_s42`, official DF eval, symmetric-$q$
+arm:
+
+| ckpt | source EER | fixed-$q$ EER | source acc | fixed-$q$ acc | deficit |
+|---|---|---|---|---|---|
+| s2  | 4.51 | **5.84** (worse) | 98.87 | 62.96 | $+31.20$ |
+| s42 | 4.56 | **4.08** (better) | 98.78 | 61.80 | $+34.12$ |
+
+So **the EER effect of the published configuration is checkpoint-dependent** —
+it hurt s2 and helped s42 — while **the operating-point collapse replicates
+almost exactly**: accuracy $62.96$ vs $61.80$, deficit $+31.2$ vs $+34.1$,
+predicted fake rate $0.60$ vs $0.59$ on a pool that is $0.972$ fake.
+
+The manuscript currently leads on "EER $4.51\!\to\!5.84$". That is a single-cell
+claim and must be demoted. The replicated claim is the calibration one — which
+is *better*, because operating-point failure is this paper's entire thesis. The
+abstract and Table~I need rewriting around accuracy/deficit with the EER effect
+reported honestly as varying.
+
+### Two monitors, and they are complementary
+
+Adding prediction-rate drift alongside rank agreement, both label-free:
+
+| ckpt/arm | $\rho$ | prior gap | what it did | caught by |
+|---|---|---|---|---|
+| s2 ETA | 0.312 | 0.007 | AUC $-0.064$ | $\rho$ |
+| s2 Tent | 0.438 | 0.013 | AUC $-0.016$ | $\rho$ |
+| s2 SHOT | 0.767 | 0.225 | AUC $-0.020$, acc $-21$ | both |
+| s2 fixed-$q$ | 0.816 | **0.372** | acc $-35.9$ | prior gap |
+| s42 fixed-$q$ | 0.602 | **0.392** | acc $-37.0$ | both |
+| s2 prior-corrected | 0.866 | 0.007 | AUC $+0.001$ | — (keep) |
+| s2 SAR | 0.970 | 0.000 | inert | — (keep) |
+
+Combined guard — keep iff $\rho\ge0.85$ \emph{and} gap $\le0.05$ — is exact over
+two checkpoints and seven arms: five harmful arms caught, two clean ones kept.
+The two monitors catch **different** failures: $\rho$ sees ranking collapse
+(Tent, ETA destroy the ranking while leaving the operating point alone); the gap
+sees operating-point collapse (symmetric-$q$ leaves the ranking nearly intact
+and moves the predicted positive rate from $0.97$ to $0.59$). Neither alone is
+sufficient — $\rho$ would have passed s2's fixed-$q$ arm at $0.816$.
+
+**Honest note on the second monitor.** $\hat\pi$ is estimated by BBSE from the
+frozen source model, and on these well-separated checkpoints $M$ is near
+identity, so $\hat\pi\approx$ the source model's own predicted positive rate and
+the monitor reduces to *prediction-rate drift from the source*. That is still
+the right quantity and still label-free, but the paper must not dress it up as
+requiring the shift estimator — the source row's gap of $0.000$ is true by
+construction.
