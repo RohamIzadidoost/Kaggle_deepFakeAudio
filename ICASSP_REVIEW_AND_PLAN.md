@@ -191,3 +191,64 @@ experiments to defeat. It needs the paper to state what it already knows:
 So: median-rule demoted from rival to corollary; BBSE prior estimation promoted
 from limitation-section patch to the component that makes the calibration story
 survive contact with a deployment-realistic prior.
+
+### Job A1, first cell — official ASVspoof2021-DF eval, published checkpoint
+
+`deepfense_w2v2_aasist_s2` (XLS-R 300M + AASIST, trained on ASVspoof2019-LA
+train), scored over the official DF eval partition, 400,435 trials on disk,
+true spoof rate **97.22%**:
+
+| | value |
+|---|---|
+| EER | **4.51%** |
+| AUC | 0.9923 |
+| accuracy @ shipped tau=0.5 | **98.87%** |
+| accuracy @ **median rule** | **59.06%** |
+| calibration deficit (100-EER) - acc | **-3.38** |
+
+Three things this settles.
+
+1. **An absolute anchor at last.** 4.51% EER on the official protocol against
+   published Wav2Vec2-AASIST 8.54% and challenge-era DF top-1 ~15.6%. Every
+   claim we now make about adaptation is made on a detector that is
+   state-of-the-art on the benchmark, not on our own 26.33% model. W2 is
+   answered by substitution rather than by retraining.
+2. **The one-line median rule is destroyed at deployment prevalence.** 59.06%
+   vs the shipped 98.87%. The rule was only ever competitive because every pool
+   it was tested on had been balanced to ~50/50 by our own pipeline. W1 is
+   answered with data, on the field's standard benchmark.
+3. **This cell has no calibration deficit to repair** (deficit -3.38: the
+   shipped threshold is already *better* than the ranking's break-even). Our
+   own scope map predicts adaptation is inert here, so the TTA arms on this
+   corpus are a falsification test of the scope map, not a bid for a better
+   number. Reporting a predicted null on a SOTA checkpoint is worth more than
+   another gain on a weak one.
+
+### Job A1 continued — the DF arms are a headline, not a null
+
+Same checkpoint, same official 400,435-trial eval, adapting on an unlabelled
+20,000-clip subsample of it:
+
+| arm | EER | AUC | acc@0.5 | deficit |
+|---|---|---|---|---|
+| source | **4.510** | .9923 | **98.87** | -3.38 |
+| naive fixed-$q{=}0.3$ TTA (published config) | 5.836 | .9846 | **62.96** | **+31.20** |
+| median-threshold rule (label-free, no gradient) | 4.510 (unchanged, by construction) | — | **59.06** | — |
+
+The published configuration, applied unmodified to a state-of-the-art
+checkpoint on the field's standard benchmark, **damages it**: accuracy
+98.87 -> 62.96, EER 4.51 -> 5.84, and it manufactures a 31-point calibration
+deficit where there was none. The mechanism is exactly the one the prior
+argument predicts — symmetric $q{=}0.3$ labels the bottom 30% of a 97.2%-spoof
+pool "confidently real", so self-training is taught that a great deal of spoof
+is bona fide.
+
+And the prior estimate that fixes it lands: **BBSE $\hat\pi_{fake}$ = 0.9715 vs
+true 0.9708**, on a third-party checkpoint we did not train, at 97% skew, from
+$M=[[.997,.003],[0,1]]$ measured on the checkpoint's own training corpus. The
+budget becomes (0.017, 0.583) instead of (0.3, 0.3).
+
+This reframes the whole paper's contribution and is worth spending the two
+remaining seeds on: the class-balance assumption buried inside every
+confident-quantile TTA method is not a footnote, it is a *failure mode on the
+standard benchmark*, and a label-free prior estimate removes it.

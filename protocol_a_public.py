@@ -107,14 +107,61 @@ def log(msg):
 
 
 def record(**row):
-    pd.DataFrame([row]).to_csv(RESULTS_CSV, mode="a",
-                               header=not os.path.exists(RESULTS_CSV), index=False)
+    """Append one result row, reconciling the schema rather than appending blind.
+
+    Arms carry different extra columns (the BBSE arm reports its prior estimate
+    and tail budget; the source arm has none), so a plain `mode="a"` append
+    writes rows with more fields than the header the first row created --
+    producing a CSV that pandas cannot parse and, worse, one where a careless
+    reader silently mis-assigns values to columns. Rewriting the union schema
+    costs nothing at these row counts and makes the file always well-formed.
+    """
+    new = pd.DataFrame([row])
+    if os.path.exists(RESULTS_CSV):
+        try:
+            old = pd.read_csv(RESULTS_CSV)
+        except Exception:
+            old = _read_ragged(RESULTS_CSV)
+        new = pd.concat([old, new], ignore_index=True)
+    new.to_csv(RESULTS_CSV, index=False)
+
+
+# Extra columns each arm appends, in the order `main()` sets them. Used only to
+# repair a file written by the earlier append-blind version.
+_RAGGED_EXTRA = {
+    "ours_fixed": ["adapt_min"],
+    "ours_bbse": ["pi_fake_hat", "pi_fake_true", "lo_frac", "hi_frac", "adapt_min"],
+}
+
+
+def _read_ragged(path):
+    """Parse a results file written before record() reconciled schemas."""
+    lines = [l.rstrip("\n") for l in open(path) if l.strip()]
+    base = lines[0].split(",")
+    rows = []
+    for l in lines[1:]:
+        parts = l.split(",")
+        d = dict(zip(base, parts[:len(base)]))
+        for k, v in zip(_RAGGED_EXTRA.get(d.get("method", ""), []), parts[len(base):]):
+            d[k] = v
+        rows.append(d)
+    df = pd.DataFrame(rows)
+    for c in df.columns:
+        if c in ("ckpt", "method", "setting", "smoke"):
+            continue
+        conv = pd.to_numeric(df[c], errors="coerce")
+        if conv.notna().any():
+            df[c] = conv
+    return df
 
 
 def done_rows():
     if not os.path.exists(RESULTS_CSV):
         return set()
-    d = pd.read_csv(RESULTS_CSV)
+    try:
+        d = pd.read_csv(RESULTS_CSV)
+    except Exception:
+        d = _read_ragged(RESULTS_CSV)
     return set(zip(d.ckpt, d.method, d.setting))
 
 
