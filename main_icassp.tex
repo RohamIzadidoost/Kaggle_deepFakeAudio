@@ -178,6 +178,14 @@ estimated real fraction otherwise. The prior is estimated \emph{once}, from the
 frozen pre-adaptation model: re-estimating each epoch lets a drifting model
 reinforce its own mistakes.
 
+The obvious prior-free alternative is a fixed \emph{confidence} threshold
+($p\ge 0.95\Rightarrow$ fake) instead of a quantile. It does not remove the
+problem, it moves it: a quantile rule is calibration-free but assumes the prior,
+a confidence rule is prior-free but assumes calibration --- and calibration is
+exactly the property the first paragraph of this section measures as \emph{not}
+transferring across corpora. We run it as a baseline
+(Table~\ref{tab:protoa}) rather than argue about it.
+
 \textbf{(c) Objective.} With pseudo-labels $\tilde y$ from (b) on the confident
 set $\mathcal{C}$ and a stochastic channel perturbation $a(\cdot)$ (per-clip
 gain $g\sim\mathcal U(0.7,1.3)$ plus Gaussian noise $\sigma{=}0.005$),
@@ -288,6 +296,7 @@ Source (as released) & 4.51 & .9923 & 98.87 & $-3.38$ \\
 \;+ SHOT~\cite{shot} & \PENDING{stage 1} & & & \\
 \;+ ETA~\cite{eata} & \PENDING{stage 1} & & & \\
 \;+ SAR~\cite{sar} & \PENDING{stage 1} & & & \\
+\;+ TTA, fixed confidence $0.95$ & \PENDING{8b} & & & \\
 \;+ TTA, symmetric $q{=}0.3$ & 5.84 & .9846 & 62.96 & $+31.20$ \\
 \rowcolor{green!12}\;+ TTA, \textbf{prior-corrected} & \textbf{4.02} & \textbf{.9931} & \textbf{98.95} & $-2.97$ \\
 \;\;\;\;(disjoint/inductive half) & 4.03 & .9931 & 98.95 & \\
