@@ -796,3 +796,52 @@ from a HuggingFace redistribution), not verifiably the same split the authors
 trained on. The confusion matrix $M$ for that checkpoint is therefore measured
 on an approximation of its source distribution, and the ITW BBSE row should say
 so rather than imply the same provenance as the DF rows.
+
+### BBSE fails on In-the-Wild, and the reason indicts the method section
+
+`ssl_aasist_wavefake` on ITW, true $P(\text{fake}){=}0.3718$:
+
+| estimator | reads | $\hat\pi$ | error |
+|---|---|---|---|
+| BBSE | source $M$ + target *prediction rate* | 0.5996 | **$+0.228$** |
+| SLD/EM | source prior + target posteriors | 0.6141 | $+0.242$ |
+| mean predicted probability | target posteriors | 0.5954 | $+0.224$ |
+| **2-component GMM** | target score *histogram shape* | **0.4215** | **$+0.050$** |
+
+Every estimator that reads the model's *thresholded prediction rate* is off by
+$\approx0.23$; the one that reads the score histogram is off by $0.05$. The cause
+is visible in the numbers: the model predicts $58.9\%$ fake on a pool that is
+$37.2\%$ fake — that is the $+16.7$-point calibration deficit — and BBSE's
+$q$ vector is exactly that prediction rate, taken at $\tau{=}0.5$ on a
+mis-calibrated model. $M$ is near identity, so $\hat\pi \approx q$ and the
+deficit passes straight through.
+
+**This contradicts the method section as written.** I justified BBSE on the
+grounds that it "reads source error structure and the target prediction rate
+only — never the shape of the target score distribution, which is precisely what
+mis-calibration corrupts". That is backwards. The prediction rate is a
+*threshold-dependent* quantity, and thresholds are the one thing this paper
+measures as not transferring. **BBSE's accuracy depends on the very calibration
+whose failure the method exists to repair** — it is accurate on DF ($\hat\pi$
+$0.9715$ vs a true $0.9708$) precisely because that checkpoint arrives
+*well*-calibrated there (deficit $-3.4$), and inaccurate on ITW because that is
+where the deficit is large. It is reliable exactly where it is not needed.
+
+The GMM, which reads rank/shape rather than a thresholded count, is now better
+on both corpora tested (DF: $0.028$ vs $0.041$ mean error; ITW: $0.050$ vs
+$0.228$). The repo's original "BBSE $1.4\%$ vs GMM $28\%$" came from a
+degenerate-histogram case (the RawBoost Protocol-A model) and does not
+generalise.
+
+**Consequences.** (i) The method section's justification for BBSE must be
+rewritten, not softened. (ii) The default estimator should arguably be the GMM,
+with BBSE as the fallback for degenerate histograms — the reverse of what the
+manuscript says. (iii) The DF headline is unaffected: there $\hat\pi$ was right
+to $0.0007$ and the correction is what preserved the checkpoint. (iv) The
+practical damage on ITW is nil — with a prior wrong by $0.23$ the arm still
+scored $4.542$ vs source $5.060$, i.e. the correction degrades gracefully — but
+that is luck, not design.
+
+Queued to quantify: ITW arms with the GMM prior and with the *oracle* prior
+($0.3718$, budget $(0.377,0.223)$ against BBSE's $(0.240,0.360)$ — opposite
+direction), to measure what the estimation error actually cost.
