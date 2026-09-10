@@ -729,3 +729,38 @@ Operating-point collapse replicates on all three (accuracy $62$--$65\%$, deficit
 $+30$ to $+34$, on a $97.2\%$-spoof pool). The EER effect does not (worse on two,
 better on one, mean $+0.56$). The paper claims the former and reports the latter
 as varying.
+
+### Stage 2 complete — the three-checkpoint replication, and what it forced
+
+| ckpt | source | symmetric $q$ | prior-corrected |
+|---|---|---|---|
+| seed 2 | 4.51 / 98.87 | 5.84 / **62.96** | **4.02** / 98.95 |
+| seed 42 | 4.56 / 98.78 | 4.08 / **61.80** | **3.29** / 98.98 |
+| seed 240 | 3.82 / 99.11 | 4.66 / **65.24** | **3.80** / 98.74 |
+
+(EER\,\% / accuracy\,\%, official DF eval, 400,435 trials.)
+
+**Replicates on 3/3:** the operating-point collapse under a symmetric budget
+(accuracy $62$--$65\%$, deficit $+30$ to $+34$), and prior-correction beating the
+symmetric budget ($-1.82$, $-0.79$, $-0.86$ EER).
+
+**Does not replicate:** the symmetric budget's effect on *ranking* — EER worse on
+two checkpoints, better on one. And the size of prior-correction's gain over
+source varies enormously: $1.27$, $0.49$, $0.02$ EER points, with AUC up on two
+and flat on the third. Seed 240 is essentially a null.
+
+So the manuscript now claims the unanimous controlled comparison
+(prior-corrected vs symmetric budget, 3/3) and the replicated calibration
+collapse, and reports the against-source magnitudes as varying. The earlier
+"$11\%$ relative reduction" headline was a single cell and has been demoted
+everywhere including the abstract.
+
+### Manuscript rebuilt and refitted
+
+Abstract, Table~I, the replication block, the guard section, limitations and
+conclusion all rewritten around the three-checkpoint result. Table~I gained the
+prediction-rate-gap column so both monitors are visible per arm. Refitting to
+4 content pages + 1 references-only page took six trim passes; the last of it
+came from float spacing (`\textfloatsep`, `\intextsep`, caption skips) rather
+than from cutting further content. Discussion and Conclusion are now one
+section. Seven `\PENDING` cells remain, all queued.
