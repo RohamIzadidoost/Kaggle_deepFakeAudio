@@ -94,7 +94,9 @@ CKPTS = os.environ.get("PUBA_CKPTS",
 ARMS = os.environ.get("PUBA_ARMS", "source,ours_fixed,ours_bbse").split(",")
 
 if SMOKE:
-    ADAPT_N, MAX_EVAL, BBSE_N = 400, 2000, 200
+    ADAPT_N = int(os.environ.get("PUBA_ADAPT_N", "400"))
+    MAX_EVAL = int(os.environ.get("PUBA_MAX_EVAL", "2000"))
+    BBSE_N = int(os.environ.get("PUBA_BBSE_N", "200"))
     TTA_EPOCHS = 1
     CKPTS = CKPTS[:1]
 else:
@@ -332,7 +334,8 @@ def tail_budget(q_base, pi_real):
 
 
 # ------------------------------------------------------------------ adaptation
-def adapt(model, buf, crop, fake_col, lo_frac, hi_frac, epochs=TTA_EPOCHS, tag=""):
+def adapt(model, buf, crop, fake_col, lo_frac, hi_frac, epochs=TTA_EPOCHS,
+          use_cons=True, tag=""):
     """Confident-tail pseudo-label self-training + channel consistency.
 
     lo_frac/hi_frac are the pseudo-real / pseudo-fake budgets. (Q, Q) reproduces
@@ -378,10 +381,11 @@ def adapt(model, buf, crop, fake_col, lo_frac, hi_frac, epochs=TTA_EPOCHS, tag="
                 conf = bpl >= 0
                 if conf.any():
                     loss = loss + F.cross_entropy(lg[conf], bpl[conf])
-                lg_a = P.augment(x)
-                lga = model(lg_a)[0]
-                lga = lga if fake_col == 1 else lga.flip(1)
-                loss = loss + LAMBDA_CONS * F.mse_loss(torch.softmax(lga, 1), p.detach())
+                if use_cons:
+                    lga = model(P.augment(x))[0]
+                    lga = lga if fake_col == 1 else lga.flip(1)
+                    loss = loss + LAMBDA_CONS * F.mse_loss(
+                        torch.softmax(lga, 1), p.detach())
             if loss.requires_grad:
                 loss.backward()
                 opt.step()
@@ -469,6 +473,14 @@ def report(ckpt_name, method, setting, ev, scores, adapt_utts=None, extra=None):
     else:
         sub, sc = ev, scores
     y = sub.label.values.astype(int)
+    # A slice can be single-class -- the disjoint half of a small pool at 97%
+    # spoof easily contains no bona fide at all -- and then the ROC is
+    # undefined and compute_eer raises "All-NaN slice". One degenerate slice
+    # must cost that row, not the remaining hours of the stage.
+    if len(np.unique(y)) < 2:
+        log(f"  !! {ckpt_name} {method} [{setting}]: slice has one class only "
+            f"({len(sub)} clips, all label {int(y[0])}) -- no EER/AUC, row skipped")
+        return None
     eer, _ = compute_eer(y, sc)
     auc = float(roc_auc_score(y, sc))
     acc = float(accuracy_score(y, (sc >= 0.5).astype(int))) * 100
@@ -559,7 +571,7 @@ def main():
             extra = {}
             if arm == "ours_fixed":
                 lo, hi = Q, Q
-            elif arm == "ours_bbse":
+            elif arm in ("ours_bbse", "ours_bbse_nocons"):
                 src_kind = BBSE_SOURCE.get(name)
                 if src_kind not in bbse_pools:
                     log(f"  [{arm}] no labelled training corpus on disk for "
@@ -599,7 +611,12 @@ def main():
                 model = run_baseline(arm, model, abuf, crop, fake_col,
                                      tag=f"{arm} ")
             else:
-                model = adapt(model, abuf, crop, fake_col, lo, hi, tag=f"{arm} ")
+                # ours_bbse_nocons isolates which half of the objective produces
+                # the DF gain: same prior-corrected pseudo-label budget, no
+                # channel-consistency term.
+                model = adapt(model, abuf, crop, fake_col, lo, hi,
+                              use_cons=(arm != "ours_bbse_nocons"),
+                              tag=f"{arm} ")
             extra["adapt_min"] = round((time.time() - ta) / 60, 1)
             s = stream_score(model, ev.path.tolist(), crop, fake_col,
                              tag=f"{name}/{arm} ")
