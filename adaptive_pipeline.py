@@ -648,6 +648,208 @@ def adapt_dynq(model, idx, epochs=TTA_EPOCHS, seed=None, target=None, **_):
                 loss.backward(); opt.step()
     return model
 
+# --- modern TTA baselines (SHOT / ETA / EATA / SAR) -------------------------
+# The paper's only TTA comparison point was Tent (2021). Tent's collapse here is
+# a headline observation, but the literature already answered it: reliable-sample
+# filtering (ETA/EATA), sharpness-aware entropy (SAR), and information
+# maximisation with pseudo-labels (SHOT). Comparing only against the method that
+# is known to be unstable is the cheapest objection a reviewer can raise.
+# Implementations live in tta_baselines.py against a callback protocol so the
+# same code also runs on the third-party checkpoints.
+import tta_baselines as TB
+
+
+def _tb_forward(model, idx):
+    """Callback: pool indices -> logits in canonical [real, fake] order."""
+    def f(sel):
+        x, _ = get_batch(idx[sel], train=False)
+        return model(x)[0]
+    return f
+
+
+def shot_baseline(model, idx, epochs=TTA_EPOCHS, **_):
+    """SHOT: information maximisation + centroid pseudo-labels, head FROZEN.
+
+    SHOT's premise is that the source hypothesis (the classifier) is kept and
+    only the feature extractor moves -- the exact opposite of our method, which
+    adapts the head. Freezing the head here keeps that contrast real instead of
+    turning SHOT into a re-parameterisation of ours.
+    """
+    set_tta_params(model)
+    for head in (model.attn, model.proj, model.cls):
+        for p_ in head.parameters():
+            p_.requires_grad_(False)
+    params = trainable(model)
+    if not params:
+        log("  shot: empty trainable set after freezing the head -- skipping")
+        return model
+    return TB.shot(model, len(idx), _tb_forward(model, idx), params, amp, DEVICE,
+                   epochs=epochs, lr=TTA_LR, batch=BATCH, log=log)
+
+
+def eata_baseline(model, idx, epochs=TTA_EPOCHS, use_fisher=True, seed=None,
+                  target=None, **_):
+    """ETA (use_fisher=False) / EATA (True). Same trainable set as ours."""
+    set_tta_params(model)
+    params = trainable(model)
+    fisher = anchor_w = None
+    if use_fisher:
+        src_df = sample_source(pool[pool.corpus != target], 750,
+                               seed if seed is not None else 0)
+        src_idx = idx_of(src_df)
+        fisher = TB.compute_fisher(model, params, len(src_idx),
+                                   _tb_forward(model, src_idx), amp, DEVICE,
+                                   batch=BATCH, log=log)
+        anchor_w = [p_.detach().clone() for p_ in params]
+    return TB.eata(model, len(idx), _tb_forward(model, idx), params, amp, DEVICE,
+                   epochs=epochs, lr=TTA_LR, batch=BATCH, fisher=fisher,
+                   anchor=anchor_w, log=log)
+
+
+def sar_baseline(model, idx, epochs=TTA_EPOCHS, **_):
+    """SAR: reliable-sample entropy + SAM + model recovery."""
+    set_tta_params(model)
+    params = trainable(model)
+    return TB.sar(model, len(idx), _tb_forward(model, idx), params, amp, DEVICE,
+                  epochs=epochs, lr=TTA_LR, batch=BATCH,
+                  snapshot=lambda: _snapshot(model),
+                  restore=lambda sn: _restore(model, sn), log=log)
+
+
+# --- label-free budget selection -------------------------------------------
+# The manuscript concedes that E is "not a hyperparameter but a mis-specified
+# budget" and that its strongest numbers come from E=32, chosen post hoc. That
+# concession costs more than the result is worth unless the budget can be picked
+# without target labels. `adapt_traced` runs a long budget once and records, at
+# every epoch, both the (label-using) EER/AUC and a set of candidate label-free
+# monitors, so a selection rule can be fitted and validated leave-one-target-out
+# afterwards from the trace alone. The labels in the trace are ANALYSIS ONLY --
+# no monitor reads them.
+STOP_TRACE_CSV = f"stop_trace{SUFFIX}.csv"
+
+
+def _spearman(a, b):
+    """Rank correlation without scipy (numpy-only, ties averaged)."""
+    ra = pd.Series(a).rank().values
+    rb = pd.Series(b).rank().values
+    ra = ra - ra.mean()
+    rb = rb - rb.mean()
+    d = np.sqrt((ra ** 2).sum() * (rb ** 2).sum())
+    return float((ra * rb).sum() / d) if d > 0 else 0.0
+
+
+def _stop_monitors(s_now, s_prev, s_src, pi_hat):
+    """Label-free statistics computable at any point during adaptation.
+
+    * `rho_src`  -- Spearman correlation between the current scores and the
+      FROZEN source model's scores on the same pool. The paper's thesis is that
+      the source *ranking* is the asset that transfers; an adaptation that
+      destroys it has thrown away the only thing it was standing on. This is the
+      monitor that should catch a Tent-style collapse, because a collapse IS a
+      ranking collapse (AUC .918 -> .502).
+    * `prior_gap` -- |predicted fake rate - BBSE prior estimate|. BBSE gives a
+      label-free estimate of the target prior; a model drifting away from it is
+      re-labelling the pool, not re-calibrating on it.
+    * `churn`    -- fraction of the pool whose hard prediction flipped since the
+      previous epoch. The obvious convergence signal, included so that the
+      principled monitors have to beat it rather than merely exist.
+    * `conf`     -- mean max-probability. High confidence is what entropy
+      minimisation maximises, so it should be the monitor that fails.
+    """
+    pred = (s_now >= 0.5)
+    return dict(
+        rho_src=_spearman(s_now, s_src),
+        prior_gap=float(abs(pred.mean() - pi_hat)) if pi_hat is not None else np.nan,
+        pred_rate=float(pred.mean()),
+        churn=float(np.mean(pred != (s_prev >= 0.5))) if s_prev is not None else np.nan,
+        conf=float(np.mean(np.maximum(s_now, 1 - s_now))),
+        tail_gap=float(np.quantile(s_now, 1 - Q) - np.quantile(s_now, Q)),
+    )
+
+
+def _trace_row(**row):
+    pd.DataFrame([row]).to_csv(STOP_TRACE_CSV, mode="a",
+                               header=not os.path.exists(STOP_TRACE_CSV), index=False)
+
+
+def adapt_traced(model, idx, epochs=32, variant="ours", seed=None, target=None,
+                 use_bbse_budget=False, **_):
+    """One long adaptation run, fully instrumented per epoch.
+
+    `variant`: "ours" (confident-tail self-training + consistency) or "tent"
+    (entropy minimisation) -- the collapse case the monitor has to catch.
+    Returns the model at the FINAL epoch; every intermediate epoch's metrics are
+    in STOP_TRACE_CSV, which is what the selection analysis reads.
+    """
+    set_tta_params(model)
+    opt = torch.optim.Adam(trainable(model), lr=TTA_LR)
+    y_true, s_src = score(model, idx)          # frozen-source reference ranking
+    pi_hat = None
+    lo_frac = hi_frac = Q
+    if use_bbse_budget:
+        pi_hat = _bbse_pi_fake(model, idx, seed, target)
+        lo_frac, hi_frac = AT.tail_budget(Q, 1.0 - pi_hat)
+    else:
+        # a prior estimate is still recorded as a monitor even when the budget
+        # does not use it, so `prior_gap` is available on every arm
+        pi_hat = _bbse_pi_fake(model, idx, seed, target)
+    m0 = _stop_monitors(s_src, None, s_src, pi_hat)
+    _trace_row(seed=seed, target=target, variant=variant, epoch=0,
+               eer=eer(y_true, s_src) * 100,
+               auc=roc_auc_score(y_true, s_src),
+               acc=accuracy_score(y_true, (s_src >= 0.5).astype(int)) * 100,
+               pi_hat=pi_hat, n_conf=0, **m0)
+    # One scoring pass per epoch, not two: the scores measured at the END of
+    # epoch t are exactly the scores adapt() would compute at the START of
+    # epoch t+1 to build its pseudo-labels, so reusing them is semantically
+    # identical and halves the instrumentation cost (0.36 min per pass x 32
+    # epochs x 8 folds is 1.5 GPU-h of pure duplication).
+    s_prev, s = s_src, s_src
+    for ep in range(epochs):
+        pl = torch.full((len(idx),), -1, dtype=torch.long, device=DEVICE)
+        n_conf = 0
+        if variant == "ours":
+            if lo_frac > 0:
+                pl[torch.from_numpy(s <= np.quantile(s, lo_frac)).to(DEVICE)] = 0
+            if hi_frac > 0:
+                pl[torch.from_numpy(s >= np.quantile(s, 1 - hi_frac)).to(DEVICE)] = 1
+            n_conf = int((pl >= 0).sum())
+        model.train(); model.ssl.eval()
+        order = torch.randperm(len(idx), device=DEVICE)
+        for i in range(0, len(order), BATCH):
+            sel = order[i:i + BATCH]
+            x, _ = get_batch(idx[sel], train=False)
+            opt.zero_grad(set_to_none=True)
+            with amp():
+                logits, _ = model(x)
+                if variant == "tent":
+                    p = torch.softmax(logits, 1)
+                    loss = -(p * torch.log(p + 1e-8)).sum(1).mean()
+                else:
+                    bpl = pl[sel]
+                    p = torch.softmax(logits, 1)
+                    loss = torch.zeros((), device=DEVICE)
+                    conf = bpl >= 0
+                    if conf.any():
+                        loss = loss + F.cross_entropy(logits[conf], bpl[conf])
+                    loss = loss + LAMBDA_CONS * F.mse_loss(
+                        torch.softmax(model(augment(x))[0], 1), p.detach())
+            if loss.requires_grad:
+                loss.backward(); opt.step()
+        _, s_now = score(model, idx)
+        mon = _stop_monitors(s_now, s_prev, s_src, pi_hat)
+        _trace_row(seed=seed, target=target, variant=variant, epoch=ep + 1,
+                   eer=eer(y_true, s_now) * 100,
+                   auc=roc_auc_score(y_true, s_now),
+                   acc=accuracy_score(y_true, (s_now >= 0.5).astype(int)) * 100,
+                   pi_hat=pi_hat, n_conf=n_conf, **mon)
+        log(f"    trace {variant} ep{ep+1}: EER {eer(y_true, s_now)*100:.2f} "
+            f"AUC {roc_auc_score(y_true, s_now):.4f} rho_src {mon['rho_src']:.3f} "
+            f"prior_gap {mon['prior_gap']:.3f} churn {mon['churn']:.3f}")
+        s_prev, s = s, s_now
+    return model
+
+
 def tent(model, idx, epochs=TTA_EPOCHS):
     set_tta_params(model)
     opt = torch.optim.Adam(trainable(model), lr=TTA_LR)
@@ -901,6 +1103,34 @@ def run_grid():
                 "ours_fixed":    lambda m, i, **k: adapt(m, i),
                 "ours_adaptive": lambda m, i, **k: adapt_adaptive(m, i, True, True, **k),
             }
+            # TTA_BASELINES=1 replaces the arms with the modern TTA
+            # baselines the paper is missing. Ours and Tent are re-run in the
+            # same fold so the comparison is on identical pools and seeds
+            # rather than joined across runs.
+            # STOP_TRACE=1 runs one long instrumented budget per fold, for
+            # the label-free budget-selection analysis. The EER at every epoch
+            # is in the trace, so "what would the rule have picked" is answered
+            # without re-running anything.
+            if os.environ.get("STOP_TRACE"):
+                _e = int(os.environ.get("STOP_EPOCHS", "32"))
+                methods = {
+                    "source":       None,
+                    "traced_ours":  (lambda ee: (lambda m, i, **k: adapt_traced(
+                        m, i, epochs=ee, variant="ours", **k)))(_e),
+                    "traced_tent":  (lambda ee: (lambda m, i, **k: adapt_traced(
+                        m, i, epochs=ee, variant="tent", **k)))(_e),
+                }
+            elif os.environ.get("TTA_BASELINES"):
+                _e = int(os.environ.get("BASELINE_EPOCHS", TTA_EPOCHS))
+                methods = {
+                    "source":      None,
+                    "ours_fixed":  (lambda ee: (lambda m, i, **k: adapt(m, i, epochs=ee)))(_e),
+                    "tent":        (lambda ee: (lambda m, i, **k: tent(m, i, epochs=ee)))(_e),
+                    "shot":        (lambda ee: (lambda m, i, **k: shot_baseline(m, i, epochs=ee)))(_e),
+                    "eta":         (lambda ee: (lambda m, i, **k: eata_baseline(m, i, epochs=ee, use_fisher=False, **k)))(_e),
+                    "eata":        (lambda ee: (lambda m, i, **k: eata_baseline(m, i, epochs=ee, use_fisher=True, **k)))(_e),
+                    "sar":         (lambda ee: (lambda m, i, **k: sar_baseline(m, i, epochs=ee)))(_e),
+                }
             # DYNQ=1: the minimal dynamic-q arm -- published adapt() with the
             # confident-tail budget split by a BBSE prevalence estimate instead
             # of the fixed symmetric q=0.3, and nothing else changed (no q ramp,
@@ -909,7 +1139,7 @@ def run_grid():
             # r2_vuln2_prevalence_cpu.py shows is ~28% wrong at 90% skew. BBSE is
             # ~1.4% off there. Run with TARGET_SKEW to test whether a correct
             # prior makes dynamic q actually work on unbalanced pools.
-            if os.environ.get("DYNQ"):
+            elif os.environ.get("DYNQ"):
                 methods = {
                     "source":     None,
                     "ours_fixed": lambda m, i, **k: adapt(m, i),
@@ -951,6 +1181,8 @@ def run_grid():
                     methods[f"ours_E{_e}"] = (lambda ee: (lambda m, i, **k: adapt(m, i, epochs=ee)))(_e)
             if seed in ABLATION_SEEDS and not (os.environ.get("OUR_E_SWEEP")
                                                or os.environ.get("OUR_BASELINE_E")
+                                               or os.environ.get("TTA_BASELINES")
+                                               or os.environ.get("STOP_TRACE")
                                                or os.environ.get("DYNQ")):
                 methods["ours_aq"] = lambda m, i, **k: adapt_adaptive(m, i, True, False, **k)
                 methods["ours_ae"] = lambda m, i, **k: adapt_adaptive(m, i, False, True, **k)
@@ -988,6 +1220,7 @@ def run_grid():
             # Skipped during an E sweep -- it exercises adapt_adaptive(), which is
             # a different arm from the fixed-E adapt() the sweep is measuring.
             if not (os.environ.get("OUR_E_SWEEP") or os.environ.get("OUR_BASELINE_E")
+                    or os.environ.get("TTA_BASELINES") or os.environ.get("STOP_TRACE")
                     or os.environ.get("DYNQ")) \
                     and not done(seed, target, "ours_adaptive", "inductive"):
                 try:
