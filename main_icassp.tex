@@ -293,7 +293,7 @@ the threshold does not deliver.}
 Source (as released) & 4.51 & .9923 & 98.87 & $-3.38$ \\
 \;+ median-threshold rule & 4.51$^\dagger$ & .9923$^\dagger$ & 59.06 & --- \\
 \;+ Tent~\cite{tent} & 4.06$^\ddagger$ & .9765 & 98.52 & $-2.58$ \\
-\;+ SHOT~\cite{shot} & \PENDING{stage 1} & & & \\
+\;+ SHOT~\cite{shot} & 6.38 & .9725 & 77.64 & $+15.99$ \\
 \;+ ETA~\cite{eata} & \PENDING{stage 1} & & & \\
 \;+ SAR~\cite{sar} & \PENDING{stage 1} & & & \\
 \;+ TTA, fixed confidence $0.95$ & \PENDING{8b} & & & \\
@@ -325,6 +325,16 @@ accuracy $98.87\!\to\!62.96\%$, EER $4.51\!\to\!5.84\%$, and it manufactures a
 $31$-point calibration deficit where there was none. The mechanism is
 mechanical: $q{=}0.3$ labels the bottom $30\%$ of a $97.2\%$-spoof pool
 ``confidently bona fide''.
+
+The published TTA baselines are no better placed, and one of them states the
+assumption outright. SHOT minimises
+$\mathbb{E}[H(p)]-H(\mathbb{E}[p])$; the diversity term is maximised when the
+mean prediction over the pool is \emph{uniform}, which at $C{=}2$ is a hard-coded
+prior of $\tfrac12$, so on this pool it is asked to move $47$ points of
+probability mass into the bona fide class --- and it degrades the checkpoint
+accordingly ($4.51\!\to\!6.38\%$ EER, accuracy $77.64\%$, with no score
+saturation to blame). The regulariser introduced to \emph{cure} Tent-style
+collapse encodes the balanced-pool assumption more literally than Tent does.
 
 Replacing the symmetric budget by Eq.~\eqref{eq:budget} with a label-free prior
 estimate reverses the sign. BBSE returns $\hat\pi_{\mathrm{fake}}{=}0.9715$
