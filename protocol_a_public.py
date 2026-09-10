@@ -334,17 +334,31 @@ def tail_budget(q_base, pi_real):
 
 
 # ------------------------------------------------------------------ adaptation
+CONF_TAU = float(os.environ.get("PUBA_CONF_TAU", "0.95"))
+
+
 def adapt(model, buf, crop, fake_col, lo_frac, hi_frac, epochs=TTA_EPOCHS,
-          use_cons=True, tag=""):
+          use_cons=True, conf_thresh=False, tag=""):
     """Confident-tail pseudo-label self-training + channel consistency.
 
     lo_frac/hi_frac are the pseudo-real / pseudo-fake budgets. (Q, Q) reproduces
     the published fixed-q method exactly.
+
+    `conf_thresh=True` replaces the quantile rule with a fixed CONFIDENCE
+    threshold (p >= CONF_TAU -> fake, p <= 1-CONF_TAU -> real), which is the
+    obvious prior-free alternative and the first thing a reader will propose.
+    The two rules fail on opposite axes, which is the point of running both:
+    a quantile rule is calibration-free but assumes the prior; a confidence
+    rule is prior-free but assumes calibration -- and calibration is precisely
+    the property this paper's measurements say does NOT transfer across corpora.
     """
     trainable, info = P.set_tta_params(model)
     n_bn = P.freeze_batchnorm(model)
-    log(f"  {tag}trainable {info['n_trainable_params']:,} params; BN frozen {n_bn}; "
-        f"budget=(lo {lo_frac:.4f}, hi {hi_frac:.4f})")
+    rule = (f"confidence threshold {CONF_TAU:.2f}" if conf_thresh
+            else f"budget=(lo {lo_frac:.4f}, hi {hi_frac:.4f})")
+    log(f"  {tag}trainable {info['n_trainable_params']:,} params; "
+        f"BN frozen {n_bn}; {rule}"
+        f"{'' if use_cons else '; consistency term OFF'}")
     opt = torch.optim.Adam(trainable, lr=TTA_LR)
     n = len(buf)
     for ep in range(epochs):
@@ -358,10 +372,14 @@ def adapt(model, buf, crop, fake_col, lo_frac, hi_frac, epochs=TTA_EPOCHS,
                     s.append(torch.softmax(model(x)[0].float(), 1)[:, fake_col].cpu())
         s = torch.cat(s).numpy()
         pl = torch.full((n,), -1, dtype=torch.long)
-        if lo_frac > 0:
-            pl[torch.from_numpy(s <= np.quantile(s, lo_frac))] = 0
-        if hi_frac > 0:
-            pl[torch.from_numpy(s >= np.quantile(s, 1 - hi_frac))] = 1
+        if conf_thresh:
+            pl[torch.from_numpy(s <= 1.0 - CONF_TAU)] = 0
+            pl[torch.from_numpy(s >= CONF_TAU)] = 1
+        else:
+            if lo_frac > 0:
+                pl[torch.from_numpy(s <= np.quantile(s, lo_frac))] = 0
+            if hi_frac > 0:
+                pl[torch.from_numpy(s >= np.quantile(s, 1 - hi_frac))] = 1
         model.train()
         P.freeze_batchnorm(model)
         order = torch.randperm(n)
@@ -601,6 +619,10 @@ def main():
                 log(f"  BBSE pi_fake_hat={pi_fake:.4f} (true "
                     f"{adapt_df.label.mean():.4f})  M={M.round(3).tolist()} "
                     f"q={q.round(3).tolist()}")
+            elif arm == "ours_conf":
+                # prior-free: no quantiles at all, a fixed confidence threshold
+                lo = hi = None
+                extra = dict(conf_tau=CONF_TAU)
             elif arm in BASELINE_ARMS:
                 lo = hi = None
             else:
@@ -616,6 +638,7 @@ def main():
                 # channel-consistency term.
                 model = adapt(model, abuf, crop, fake_col, lo, hi,
                               use_cons=(arm != "ours_bbse_nocons"),
+                              conf_thresh=(arm == "ours_conf"),
                               tag=f"{arm} ")
             extra["adapt_min"] = round((time.time() - ta) / 60, 1)
             s = stream_score(model, ev.path.tolist(), crop, fake_col,

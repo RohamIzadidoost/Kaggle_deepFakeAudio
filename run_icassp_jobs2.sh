@@ -8,6 +8,18 @@ export CACHE_ON_CPU=1
 
 stage () { echo "=============== [$(date '+%F %T')] STAGE $* ==============="; }
 
+# --- 8b. The prior-free alternative a reader will propose first -------------
+# A fixed CONFIDENCE threshold instead of a quantile needs no prior at all. It
+# trades one assumption for another, and the trade is the paper's own thesis:
+# a quantile rule is calibration-free but prior-dependent; a confidence rule is
+# prior-free but calibration-dependent -- and calibration is exactly what our
+# measurements say does not transfer across corpora. Running it settles which
+# assumption costs more on a real deployment pool.
+stage "8b DF + In-the-Wild: fixed-confidence pseudo-labels  (~1.6 h)"
+PUBA_CKPTS=deepfense_w2v2_aasist_s2 PUBA_ARMS=ours_conf python protocol_a_public.py
+PUBA_CORPUS=itw PUBA_CKPTS=ssl_aasist_wavefake PUBA_ARMS=ours_conf \
+  python protocol_a_public.py
+
 # --- 9. Which half of the objective produces the DF gain? --------------------
 # Same prior-corrected pseudo-label budget, consistency term removed. The
 # fixed-q arm already shows the budget is what prevents the damage; this asks
