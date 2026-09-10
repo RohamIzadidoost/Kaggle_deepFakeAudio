@@ -112,9 +112,14 @@ N_HELDOUT_LANGS = 6         # MLAAD languages excluded from source, used only fo
 
 EER_TARGETS = ["asvspoof2019", "dataset2", "in_the_wild", "arabic"]
 
-# Only seeds 0-2 have local source checkpoints (ckpt_ext); the cloud run's seeds
-# 3-4 checkpoints were never saved, and retraining them is out of scope for the
-# adaptation-only comparison.
+# NOTE (2026-09-10): this comment was stale and the default below is now
+# deliberately conservative rather than forced. ckpt_ext holds all TEN seeds for
+# each of the four EER targets (checked: 10 files per target, 9.5 GB), not the
+# three the original comment claimed, so a run can be widened with OUR_SEEDS at
+# any time -- and the resume guard is keyed on (seed, target, method, setting),
+# so `OUR_SEEDS=3,4` after a 0-2 run simply ADDS those folds. The default stays
+# at 0-2 because a six-arm grid costs ~21 min per fold and 10 seeds x 4 targets
+# would be 14 GPU-h.
 if SMOKE:
     SEEDS, TARGETS = [0], ["in_the_wild"]
     TARGET_PER_CLASS, MAX_PER_CORPUS_CLASS = 64, 128

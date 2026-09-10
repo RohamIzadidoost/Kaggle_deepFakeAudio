@@ -362,3 +362,13 @@ four unrelated estimators is a property of the *shift*, not of any estimator:
 DF's codec conditions raise the detector's real-class error above its
 source-domain rate, and every one of these methods assumes that rate carries
 over.
+
+### Correction found while queueing: all ten seeds are available locally
+
+`adaptive_pipeline.py` carried a comment saying only seeds 0-2 have local source
+checkpoints. `ckpt_ext/` in fact holds **ten** seeds for each of the four EER
+targets (90 files, 9.5 GB). The default stays at 0-2 because the six-arm
+baseline grid costs ~21 min per fold, but the resume guard is keyed on
+(seed, target, method, setting), so `OUR_SEEDS=3,4` after the queue's stage 4
+simply adds those folds and lifts the baseline comparison to five seeds per
+target without redoing anything. Queued as follow-up work.
