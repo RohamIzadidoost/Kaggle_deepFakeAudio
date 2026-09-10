@@ -400,3 +400,36 @@ scores are more than half a single tied value.
 This also sharpens the manuscript's existing Tent narrative: on balanced pools
 Tent is unpredictably catastrophic; on the deployment-prevalence pool it is
 quietly destructive in a way the field's headline metric does not show.
+
+### Stage 1, second arm: SHOT damages it too — and its loss says why
+
+SHOT on the same checkpoint and official DF pool: EER $4.51\!\to\!6.38$,
+AUC $.9923\!\to\!.9725$, accuracy $98.87\!\to\!77.64$, deficit
+$-3.38\!\to\!+15.99$. No score saturation (6,973 distinct values, largest tie
+$2.5\%$), so unlike Tent this is a genuine ranking and calibration loss, not a
+tie-breaking artefact.
+
+The mechanism is not incidental, it is **written into the objective**. SHOT
+minimises $\mathbb{E}[H(p)] - H(\mathbb{E}[p])$; the second term is maximised
+when the *mean prediction over the pool is uniform*. On a two-class problem that
+is an explicit hard-coded prior of $0.5$. Running it on a $97.2\%$-spoof pool
+asks it to push $47$ points of probability mass into the bona fide class.
+
+That makes the paper's claim sharper than "these methods happen to assume
+balance". Two of the four modern TTA baselines assume it in different places:
+Tent implicitly (confident predictions on a skewed pool are all one class, so
+entropy minimisation saturates them), SHOT *explicitly*, in the diversity term
+it was given precisely to stop Tent-style collapse. The fix for Tent's collapse
+introduced the prior assumption in a more literal form.
+
+Running tally on the official DF eval, all label-free, same checkpoint and pool:
+
+| method | EER | AUC | acc@0.5 |
+|---|---|---|---|
+| source | 4.51 | .9923 | 98.87 |
+| Tent | 4.06$^\ddagger$ | .9765 | 98.52 |
+| SHOT | 6.38 | .9725 | 77.64 |
+| symmetric-$q$ TTA (published) | 5.84 | .9846 | 62.96 |
+| **prior-corrected TTA (ours)** | **4.02** | **.9931** | **98.95** |
+
+$^\ddagger$ tie-breaking artefact; 98.07% of scores saturate to 1.0.
