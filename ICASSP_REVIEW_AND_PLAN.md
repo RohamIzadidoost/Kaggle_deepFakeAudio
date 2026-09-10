@@ -372,3 +372,31 @@ baseline grid costs ~21 min per fold, but the resume guard is keyed on
 (seed, target, method, setting), so `OUR_SEEDS=3,4` after the queue's stage 4
 simply adds those folds and lifts the baseline comparison to five seeds per
 target without redoing anything. Queued as follow-up work.
+
+### Stage 1, first arm: Tent's DF number is a trap, and catching it is a result
+
+Tent on the official DF eval, same checkpoint and pool as the headline:
+
+| arm | EER | AUC | distinct scores | largest tied value |
+|---|---|---|---|---|
+| source | 4.510 | .9923 | 2,762 | 9.8% |
+| Tent | **4.062** | **.9765** | **1,247** | **93.0%** (98.07% sit at exactly 1.0) |
+| ours, prior-corrected | **4.020** | **.9931** | 1,764 | 26.6% |
+
+Read the EER column alone and Tent *improves* the checkpoint. It does not. It
+saturates $98.07\%$ of $400{,}435$ scores to the numerical ceiling, leaving
+$1{,}247$ distinct values in the entire pool, so its "EER" is a statement about
+how the ROC breaks ties rather than about ranking. AUC, which tie-breaking
+cannot rescue, falls $.9923\!\to\!.9765$.
+
+Two things follow. First, our arm beats Tent on both metrics, and decisively on
+the one that is well-defined. Second --- and this is the more useful point for
+the paper --- **an entropy-minimisation collapse can present as an EER
+improvement**, so a TTA study that reports EER without a resolution check can
+record a collapse as a win. `score_resolution.py` now computes distinct-score
+counts and largest-tie fraction for every cached arm and flags any arm whose
+scores are more than half a single tied value.
+
+This also sharpens the manuscript's existing Tent narrative: on balanced pools
+Tent is unpredictably catastrophic; on the deployment-prevalence pool it is
+quietly destructive in a way the field's headline metric does not show.
