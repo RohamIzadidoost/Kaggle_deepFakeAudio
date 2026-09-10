@@ -39,6 +39,7 @@ import torch.nn.functional as F
 from sklearn.metrics import accuracy_score, roc_auc_score
 
 import public_ckpt_tta as P
+import tta_baselines as TB
 from eval_protocol import DF_KEYS_DEFAULT, load_df_keys, score_official_df
 from metrics import compute_eer
 
@@ -66,6 +67,14 @@ LA19_FLAC = "data/asvspoof2019_LA/ASVspoof2019_LA_train/flac"
 # every pool at 6,000 clips, and a reviewer is entitled to the standard
 # benchmark at its published size.
 CORPUS = os.environ.get("PUBA_CORPUS", "df2021")
+
+# PUBA_SEED varies the adaptation RNG and the unlabelled adapt-pool draw, so the
+# headline can be given an error bar. PUBA_EVAL_SUB scores a fixed random subset
+# of the eval instead of all of it -- the SAME subset for every seed and arm, so
+# the comparison stays paired. Seed 0 with no subsample is the official-protocol
+# number; the subsampled seeds carry the variance.
+SEED = int(os.environ.get("PUBA_SEED", "0"))
+EVAL_SUB = int(os.environ.get("PUBA_EVAL_SUB", "0")) or None
 
 # Where each checkpoint's own labelled training data lives. BBSE needs the
 # source confusion matrix M, which is measured on data the deployer legitimately
@@ -162,7 +171,16 @@ def done_rows():
         d = pd.read_csv(RESULTS_CSV)
     except Exception:
         d = _read_ragged(RESULTS_CSV)
-    return set(zip(d.ckpt, d.method, d.setting))
+    if "seed" not in d:
+        d = d.assign(seed=0)
+    if "eval_sub" not in d:
+        d = d.assign(eval_sub=0)
+    return set(zip(d.ckpt, d.method, d.setting, d.seed.fillna(0).astype(int),
+                   d.eval_sub.fillna(0).astype(int)))
+
+
+def _key(ckpt, method, setting):
+    return (ckpt, method, setting, SEED, EVAL_SUB or 0)
 
 
 # ------------------------------------------------------------------ manifests
@@ -372,6 +390,77 @@ def adapt(model, buf, crop, fake_col, lo_frac, hi_frac, epochs=TTA_EPOCHS, tag="
     return model
 
 
+# ------------------------------------------------------- baseline TTA methods
+# The point of running Tent / SHOT / ETA / SAR *here*, rather than only on the
+# balanced leave-one-corpus-out grid, is that this is the pool that looks like
+# deployment: 97.2% spoof. Every one of these methods was developed and
+# evaluated on class-balanced benchmarks. If they degrade a state-of-the-art
+# detector at realistic prevalence while a prior-corrected variant does not,
+# then the balanced-pool assumption is a property of the *field's evaluation
+# practice*, not a quirk of our own recipe.
+def _canon_forward(model, buf, fake_col):
+    """Callback for tta_baselines: pool indices -> logits in [real, fake] order."""
+    def f(sel):
+        x = buf[sel.cpu()].to(DEVICE, non_blocking=True).float()
+        logits = model(x)[0]
+        return logits if fake_col == 1 else logits.flip(1)
+    return f
+
+
+def run_baseline(arm, model, buf, crop, fake_col, epochs=TTA_EPOCHS, tag=""):
+    params, info = P.set_tta_params(model)
+    if arm == "shot":
+        # SHOT keeps the source hypothesis and moves only the feature
+        # extractor. Freezing the head keeps that contrast real rather than
+        # turning SHOT into a re-parameterisation of ours.
+        frozen = 0
+        for mod_name, mod in model.named_modules():
+            if mod_name.split(".")[-1] in ("out_layer", "classifier", "projector"):
+                for q in mod.parameters():
+                    q.requires_grad_(False)
+                    frozen += 1
+        params = [q for q in model.parameters() if q.requires_grad]
+        log(f"  {tag}SHOT: head frozen ({frozen} tensors), {len(params)} left")
+    n_bn = P.freeze_batchnorm(model)
+    log(f"  {tag}{arm}: {sum(q.numel() for q in params):,} trainable params, "
+        f"BN frozen {n_bn}")
+    fwd = _canon_forward(model, buf, fake_col)
+    n = len(buf)
+    kw = dict(epochs=epochs, lr=TTA_LR, batch=BATCH, log=log)
+    if arm == "tent":
+        opt = torch.optim.Adam(params, lr=TTA_LR)
+        for ep in range(epochs):
+            model.train(); P.freeze_batchnorm(model)
+            order = torch.randperm(n)
+            for i in range(0, n, BATCH):
+                opt.zero_grad(set_to_none=True)
+                with P.amp_ctx(DEVICE):
+                    pr = torch.softmax(fwd(order[i:i + BATCH]).float(), 1)
+                    loss = -(pr * torch.log(pr + 1e-8)).sum(1).mean()
+                loss.backward(); opt.step()
+            log(f"  {tag}tent epoch {ep+1}/{epochs}")
+        return model
+    def mode_fn(train):
+        model.train() if train else model.eval()
+        P.freeze_batchnorm(model)      # never let BN statistics move
+
+    mode_fn(True)
+    if arm == "shot":
+        return TB.shot(model, n, fwd, params, lambda: P.amp_ctx(DEVICE), DEVICE,
+                       mode_fn=mode_fn, **kw)
+    if arm == "eta":
+        return TB.eata(model, n, fwd, params, lambda: P.amp_ctx(DEVICE), DEVICE, **kw)
+    if arm == "sar":
+        snap = {k: v.detach().clone() for k, v in model.state_dict().items()}
+        return TB.sar(model, n, fwd, params, lambda: P.amp_ctx(DEVICE), DEVICE,
+                      snapshot=lambda: snap,
+                      restore=lambda sn: model.load_state_dict(sn), **kw)
+    raise ValueError(arm)
+
+
+BASELINE_ARMS = ("tent", "shot", "eta", "sar")
+
+
 # ------------------------------------------------------------------ reporting
 def report(ckpt_name, method, setting, ev, scores, adapt_utts=None, extra=None):
     if setting == "disjoint_eval" and adapt_utts is not None:
@@ -386,6 +475,7 @@ def report(ckpt_name, method, setting, ev, scores, adapt_utts=None, extra=None):
     # label-free median-threshold control: what a one-line rule would deliver
     acc_med = float(accuracy_score(y, (sc >= np.median(sc)).astype(int))) * 100
     row = dict(ckpt=ckpt_name, method=method, setting=setting,
+               seed=SEED, eval_sub=EVAL_SUB or 0,
                eer=round(eer * 100, 3), auc=round(auc, 4), acc=round(acc, 3),
                acc_median_rule=round(acc_med, 3), n=len(sub),
                attainable=round(100 - eer * 100, 3),
@@ -402,8 +492,8 @@ def report(ckpt_name, method, setting, ev, scores, adapt_utts=None, extra=None):
 # ------------------------------------------------------------------ main
 def main():
     t0 = time.time()
-    log(f"=== published checkpoints on {CORPUS} | smoke={SMOKE} "
-        f"| ckpts={CKPTS} | arms={ARMS} ===")
+    log(f"=== published checkpoints on {CORPUS} | smoke={SMOKE} | seed={SEED} "
+        f"| eval_sub={EVAL_SUB} | ckpts={CKPTS} | arms={ARMS} ===")
     ev = build_eval()
     log(f"[{CORPUS}] eval clips on disk: {len(ev)}  "
         f"spoof {ev.label.mean()*100:.2f}%")
@@ -418,7 +508,14 @@ def main():
             log(f"BBSE source pool '{kind}': {len(pool_df)} clips "
                 f"({pool_df.label.value_counts().to_dict()})")
 
-    rng = np.random.RandomState(0)
+    if EVAL_SUB:
+        # fixed across seeds and arms, so every comparison stays paired
+        ev = ev.sample(min(EVAL_SUB, len(ev)), random_state=12345)
+        ev = ev.sort_values("utt").reset_index(drop=True)
+        log(f"PUBA_EVAL_SUB: scoring a fixed {len(ev)}-trial subset "
+            f"(spoof {ev.label.mean()*100:.2f}%) -- NOT the official pooled number")
+    torch.manual_seed(SEED)
+    rng = np.random.RandomState(SEED)
     adapt_idx = rng.choice(len(ev), min(ADAPT_N, len(ev)), replace=False)
     adapt_df = ev.iloc[np.sort(adapt_idx)].reset_index(drop=True)
     log(f"adapt pool (unlabeled) {len(adapt_df)} clips; "
@@ -433,7 +530,8 @@ def main():
         log(f"  loaded {nf} front-end + {nb} back-end tensors")
 
         # source scores over the full official eval (cached to disk)
-        spath = f"{SCORES_DIR}/{name}__source.npy"
+        stag = "" if (SEED == 0 and not EVAL_SUB) else f"__s{SEED}_e{EVAL_SUB or 0}"
+        spath = f"{SCORES_DIR}/{name}__source{stag}.npy"
         if os.path.exists(spath):
             s_src = np.load(spath)
             log(f"  reusing cached source scores {spath}")
@@ -441,13 +539,13 @@ def main():
             s_src = stream_score(base, ev.path.tolist(), crop, fake_col,
                                  tag=f"{name}/source ")
             np.save(spath, s_src)
-        if (name, "source", "official_eval") not in already and "source" in ARMS:
+        if _key(name, "source", "official_eval") not in already and "source" in ARMS:
             report(name, "source", "official_eval", ev, s_src)
             report(name, "source", "disjoint_eval", ev, s_src, set(adapt_df.utt))
 
         # decode the adapt pool once, reuse for every adaptation arm
         need_adapt = [a for a in ARMS if a != "source"
-                      and (name, a, "official_eval") not in already]
+                      and _key(name, a, "official_eval") not in already]
         if not need_adapt:
             del base
             torch.cuda.empty_cache()
@@ -491,15 +589,21 @@ def main():
                 log(f"  BBSE pi_fake_hat={pi_fake:.4f} (true "
                     f"{adapt_df.label.mean():.4f})  M={M.round(3).tolist()} "
                     f"q={q.round(3).tolist()}")
+            elif arm in BASELINE_ARMS:
+                lo = hi = None
             else:
                 raise ValueError(arm)
             log(f"  [{arm}] adapting ...")
             ta = time.time()
-            model = adapt(model, abuf, crop, fake_col, lo, hi, tag=f"{arm} ")
+            if arm in BASELINE_ARMS:
+                model = run_baseline(arm, model, abuf, crop, fake_col,
+                                     tag=f"{arm} ")
+            else:
+                model = adapt(model, abuf, crop, fake_col, lo, hi, tag=f"{arm} ")
             extra["adapt_min"] = round((time.time() - ta) / 60, 1)
             s = stream_score(model, ev.path.tolist(), crop, fake_col,
                              tag=f"{name}/{arm} ")
-            np.save(f"{SCORES_DIR}/{name}__{arm}.npy", s)
+            np.save(f"{SCORES_DIR}/{name}__{arm}{stag}.npy", s)
             report(name, arm, "official_eval", ev, s, extra=extra)
             report(name, arm, "disjoint_eval", ev, s, set(adapt_df.utt), extra=extra)
             del model

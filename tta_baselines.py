@@ -80,7 +80,7 @@ def _entropy(logits):
 
 # --------------------------------------------------------------------- SHOT
 def shot(model, n, forward, params, amp, device, epochs=4, lr=1e-4, batch=32,
-         beta=0.3, log=print):
+         beta=0.3, mode_fn=None, log=print):
     """Information maximisation + centroid pseudo-labels (SHOT).
 
     L = H(p) - H(E[p]) + beta * CE(p, centroid pseudo-labels)
@@ -93,8 +93,18 @@ def shot(model, n, forward, params, amp, device, epochs=4, lr=1e-4, batch=32,
     contrast rather than a re-parameterisation of ours.
     """
     opt = torch.optim.Adam(params, lr=lr)
+    # The per-epoch centroid pass must run with dropout OFF, or the pseudo-labels
+    # are drawn from a stochastic model -- our own adapt() scores in eval() for
+    # exactly this reason. `mode_fn(train)` lets the caller switch modes in a way
+    # that preserves any BatchNorm freezing it has applied (a bare model.train()
+    # would silently re-enable BN statistics updates, which is AdaBN, a
+    # different adaptation mechanism).
+    if mode_fn is None:
+        def mode_fn(train):
+            model.train() if train else model.eval()
     for ep in range(epochs):
         # centroid pseudo-labels over the whole pool, recomputed each epoch
+        mode_fn(False)
         with torch.no_grad():
             probs = []
             for i in range(0, n, batch):
@@ -108,6 +118,7 @@ def shot(model, n, forward, params, amp, device, epochs=4, lr=1e-4, batch=32,
         w = probs / (probs.sum(0, keepdim=True) + 1e-8)
         cent = (w * probs).sum(0)                       # (2,)
         pl = (probs - cent.unsqueeze(0)).abs().argmin(1).to(device)
+        mode_fn(True)
         order = torch.randperm(n, device=device)
         for i in range(0, n, batch):
             sel = order[i:i + batch]
