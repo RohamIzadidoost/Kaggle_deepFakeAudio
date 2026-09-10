@@ -48,15 +48,20 @@ import torch.nn.functional as F
 N_CLASSES = 2
 E0 = 0.4 * math.log(N_CLASSES)
 # EATA's redundancy threshold on cosine similarity. The published value (0.05)
-# is calibrated for C=1000: two confident ImageNet probability vectors for
-# different classes are near-orthogonal, so a similarity below 0.05 is common.
-# For C=2 the geometry makes it VACUOUS -- both vectors live on the positive
-# quadrant of the 1-simplex, so the minimum attainable cosine between two binary
-# probability vectors is ~0.12 (at p=0.01 vs an EMA of 0.9/0.1) and NOTHING ever
-# passes: after the first batch ETA silently becomes a no-op that reads as
-# "the baseline didn't help". We therefore run the reliability filter alone --
-# which is EATA's own published ablation (ETA without redundancy) -- rather than
-# invent a new threshold, and say so. Set use_redundancy=True to restore the
+# is calibrated for C=1000, where two confident probability vectors for different
+# classes are near-orthogonal and a similarity below 0.05 is common. At C=2 the
+# rule is degenerate in either of two ways, measured over the binary simplex:
+#   * if the running average is not itself near a vertex, NOTHING passes -- the
+#     minimum attainable cosine is 0.71 at an EMA of (.5,.5), 0.39 at (.7,.3) and
+#     0.11 at (.9,.1), all above 0.05 -- so ETA silently becomes a no-op after the
+#     first batch and reads as "the baseline didn't help";
+#   * once the EMA does reach a vertex (past ~(.97,.03), which a 97%-spoof pool
+#     drives it to), the only samples that pass are those of the MINORITY
+#     predicted class, so the filter stops meaning "non-redundant" and starts
+#     meaning "minority".
+# Neither is the mechanism the paper describes, so we run the reliability filter
+# alone -- which is EATA's own published ablation (ETA without redundancy) --
+# rather than invent a new threshold. Set use_redundancy=True to restore the
 # literal published rule.
 D_MARGIN = 0.05
 SAM_RHO = 0.05           # SAR / SAM neighbourhood radius

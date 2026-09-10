@@ -242,13 +242,19 @@ no gradient); Tent~\cite{tent}; SHOT~\cite{shot}; ETA and EATA~\cite{eata};
 SAR~\cite{sar}; AdaBN~\cite{adabn}; DANN~\cite{dann} (trained to convergence
 with the held-out target's unlabeled inputs --- more privileged access than
 ours); an ASDG-style aggregation--separation baseline~\cite{asdg}; and a
-target-supervised oracle. Two published constants in the modern TTA baselines
-are vacuous at $C{=}2$ and were re-derived rather than transplanted: EATA's
-redundancy threshold ($|\cos|{<}0.05$ is unreachable on the binary simplex,
-whose minimum attainable cosine is ${\approx}0.12$, so we run the reliability
-filter alone --- EATA's own published ablation) and SAR's recovery trigger
-($e_0{=}0.2$ sits \emph{inside} the $C{=}2$ reliable band $H{<}0.277$ and
-freezes the model; we keep its relative position, $e_0=(0.2/\ln 1000)\ln C$).
+target-supervised oracle. Two published constants in the modern TTA
+baselines are degenerate at $C{=}2$ and were re-derived rather than
+transplanted. EATA's redundancy filter ($|\cos(p,\bar p)|{<}0.05$) is calibrated
+for $C{=}1000$; on the binary simplex the minimum attainable cosine is $0.71$ at
+$\bar p{=}(.5,.5)$ and $0.11$ at $(.9,.1)$, so nothing passes until the running
+average itself reaches a vertex, after which only \emph{minority}-predicted
+samples pass --- neither is the stated mechanism, so we run the reliability
+filter alone, which is EATA's own published ablation. SAR's recovery trigger
+$e_0{=}0.2$ sits far below ImageNet's $E_0{=}0.4\ln 1000{=}2.76$ but
+\emph{inside} the $C{=}2$ reliable band $H{<}0.277$, firing on every batch and
+freezing the model at its initial weights (verified: $32$ resets in $32$ steps,
+zero net movement); we keep its relative position,
+$e_0=(0.2/\ln 1000)\ln C=0.020$.
 
 \textbf{Implementation.} 16\,kHz audio, top-4-layer XLS-R fine-tuning for our own
 source models (Adam, lr\,$2{\times}10^{-4}$, batch 32, 8 epochs). Adaptation:

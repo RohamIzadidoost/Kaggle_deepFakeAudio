@@ -301,3 +301,25 @@ threshold is already near-optimal, the BBSE *threshold* buys essentially nothing
 over $\tau{=}0.5$ (98.94 vs 98.92). The value of the prior estimate here is in
 the **pseudo-label budget**, not the threshold — which is exactly where the
 4.51 -> 4.02 came from, and is the claim the paper should make.
+
+### Self-audit of claims (no GPU)
+
+Checked every number in the v2 manuscript against a source in this repo. All
+carried over from v1 verify. Two corrections and one open item:
+
+* **Corrected (was over-stated).** I first wrote that EATA's redundancy filter
+  is "unreachable" at $C{=}2$. Measured: the minimum attainable cosine over the
+  binary simplex is $0.71$ at an EMA of $(.5,.5)$, $0.39$ at $(.7,.3)$, $0.11$
+  at $(.9,.1)$ — all above the published $0.05$ — but $0.031$ at $(.97,.03)$
+  and below. So it is not unreachable; it is degenerate in two different ways
+  depending on where the running average sits, and on a 97%-spoof pool the
+  second regime (admits only minority-predicted samples) is the live one.
+  Paper and code comment now say exactly that.
+* **OPEN, must be fixed before submission.** The published Protocol-A EER
+  figures used as the scale row of Table~I (Wav2DF-TSL 1.95, SSL+SLS 2.87,
+  Wav2Vec2-AASIST 8.54, challenge DF top-1 15.64) are carried over from
+  `protocol_a.py`'s docstring and are **not currently cited**. Each needs a
+  bibliography entry and a verification against the source paper. Do not submit
+  with an uncited comparison table.
+* The DF eval is 400,435 of 611,829 official trials (part03 absent locally).
+  Stated in the setup section with the uniformity check; keep it stated.
