@@ -433,3 +433,42 @@ Running tally on the official DF eval, all label-free, same checkpoint and pool:
 | **prior-corrected TTA (ours)** | **4.02** | **.9931** | **98.95** |
 
 $^\ddagger$ tie-breaking artefact; 98.07% of scores saturate to 1.0.
+
+### Stage 1, third arm: ETA, and why an entropy filter cannot save you here
+
+ETA on the same checkpoint and pool: EER $4.51\!\to\!7.44$, AUC
+$.9923\!\to\!.9288$ — the worst ranking damage of any arm — while accuracy at
+$\tau{=}0.5$ is *unchanged* ($98.93$). Score resolution: $97.71\%$ of scores
+saturate to exactly $1.0$, $1{,}235$ distinct values left, largest tie $96.65\%$.
+
+The logged reliable-sample rate is the tell: **0.996, 0.997, 0.998, 0.998**
+across the four epochs. ETA's reliability filter, whose whole job is to exclude
+the high-entropy samples that destabilise entropy minimisation, excluded
+essentially *nothing*. With the filter inert, ETA reduces to Tent — and lands
+worse.
+
+This is not an implementation problem, it is a structural one, and it is the
+paper's own thesis pointed at a baseline: **an entropy-based reliability filter
+cannot detect over-confidence, because over-confidence is low entropy.** It
+separates "confident" from "uncertain", not "confident and right" from
+"confident and wrong" — and mis-calibration under corpus shift manufactures
+precisely the latter. Any TTA safeguard keyed on the model's own confidence
+inherits the broken calibration it is supposed to protect against.
+
+### The taxonomy, now complete enough to state
+
+Four published approaches, one pool (official DF eval, 97.2% spoof), one
+released SOTA checkpoint. Every one degrades it, each through its own
+assumption, and every assumption is a version of the same one:
+
+| method | EER | AUC | acc | how it assumes the target distribution |
+|---|---|---|---|---|
+| source | 4.51 | .9923 | 98.87 | — |
+| Tent | 4.06$^\ddagger$ | .9765 | 98.52 | implicit: confident predictions on a skewed pool are all one class |
+| ETA | 7.44$^\ddagger$ | **.9288** | 98.93 | its entropy filter is inert against over-confidence (admit rate 0.998) |
+| SHOT | 6.38 | .9725 | **77.64** | explicit: the diversity term maximises $H(\mathbb{E}[p])$, a hard $\pi{=}\tfrac12$ |
+| symmetric-$q$ TTA | 5.84 | .9846 | **62.96** | the quantile budget is symmetric regardless of the prior |
+| **ours** | **4.02** | **.9931** | **98.95** | estimates the prior instead |
+
+$^\ddagger$ EER computed over a pool that is $>93\%$ one tied score; read the AUC
+column instead.
