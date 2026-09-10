@@ -323,3 +323,42 @@ carried over from v1 verify. Two corrections and one open item:
   with an uncited comparison table.
 * The DF eval is 400,435 of 611,829 official trials (part03 absent locally).
   Stated in the setup section with the uniformity check; keep it stated.
+
+### A claim of ours that this pass weakened, and a better one that replaces it
+
+`prior_estimators.py` compares four label-free prior estimators on the cached
+official-DF scores of `deepfense_w2v2_aasist_s2`, resampled to a range of
+priors. Mean absolute error over all priors:
+
+| estimator | needs | mean abs. error |
+|---|---|---|
+| 2-component GMM | nothing | **0.028** |
+| SLD/EM~(Saerens et al.) | only the *source prior* (a number on the model card) | 0.040 |
+| BBSE | labelled source-domain data | 0.041 |
+| mean predicted probability | nothing (assumes calibration) | 0.042 |
+
+**This does not reproduce the repo's earlier "BBSE 1.4% vs GMM 28%".** That
+comparison was measured on In-the-Wild scores plus synthetic ensembles and on
+the RawBoost Protocol-A model, whose score histogram is degenerate. On a
+checkpoint with AUC $.992$ the histogram is cleanly bimodal and the GMM has an
+easy job. Both results are real; they are about different score distributions.
+
+Two consequences, both improvements:
+
+1. **The paper should not claim BBSE is the best estimator.** It should claim
+   what is actually true and more useful: *any* prior estimate fixes the budget,
+   because at the real DF prior all four agree to within $0.02$ and give
+   effectively the same tail split. BBSE is the default because it is the one
+   that does not read the target score histogram, and so is the one that
+   survives a degenerate one — which is a statement about robustness, not
+   accuracy.
+2. **The "needs labelled source data" limitation is largely removable.** SLD/EM
+   needs only the source class balance, a number model cards state, and matches
+   BBSE here. That un-excludes the three undocumented-provenance checkpoints.
+
+All four estimators share the same bias pattern (over-estimating $P(\text{fake})$
+by ~0.11 at a true 0.50, converging to the truth at high skew). A bias common to
+four unrelated estimators is a property of the *shift*, not of any estimator:
+DF's codec conditions raise the detector's real-class error above its
+source-domain rate, and every one of these methods assumes that rate carries
+over.

@@ -154,10 +154,14 @@ $M[y,\hat y]=P_{\mathcal S}(\hat y\mid y)$ is the source confusion matrix
 measured on the model's own labelled training data and $q$ is the observed
 target prediction histogram. $M$ and $q$ read source error structure and target
 \emph{prediction rate} only---never the shape of the target score distribution,
-which is precisely what mis-calibration corrupts. That is why BBSE survives here
-where score-histogram estimators (a two-component GMM, Otsu, $k$-means) do not:
-on a controlled skew sweep BBSE tracks the prior to within $1.4\%$ where the GMM
-is $28\%$ off at $90\%$ fake.
+which is precisely what mis-calibration corrupts, so BBSE still works where a
+score-histogram estimator has a degenerate histogram to work from. On a
+well-separated checkpoint the choice of estimator does not matter: at the real
+DF prior a two-component GMM, an EM estimator that needs only the source class
+balance~\cite{sld}, and BBSE agree to within $0.02$ and produce effectively the
+same tail split (mean absolute error over a $0.5$--$0.97$ sweep: $0.028$,
+$0.040$, $0.041$). What matters is estimating the prior at all rather than
+assuming it is $\tfrac12$.
 
 \textbf{(b) Prior-corrected confident tails.} The standard rule takes the bottom
 $q$ and top $q$ of the target scores as pseudo-real and pseudo-fake. We split the
@@ -426,13 +430,14 @@ AUC-$0.71$ LibriSpeech-TTS there is nothing to sharpen and the effect is null.
 \section{Discussion and Limitations}
 \label{sec:lim}
 \begin{itemize}
-\item \textbf{BBSE assumes label shift; real corpora also shift covariates.}
-Its prior estimate carries a positive bias that is largest at balanced priors
-($\hat\pi{=}0.61$ at a true $0.50$ on the DF distribution) and shrinks toward the
-truth at high skew ($0.9738$ at $0.9722$), because the in-domain confusion
-matrix under-states target error under codec shift. The correction is therefore
-most accurate exactly where it matters most, but it is not a general prior
-estimator.
+\item \textbf{Prior estimation assumes label shift; real corpora also shift
+covariates.} Every estimator we tried carries the same positive bias --- largest
+at balanced priors ($\hat\pi{\approx}0.61$ at a true $0.50$) and vanishing at high
+skew ($0.974$ at $0.972$) --- because DF's codec conditions raise the detector's
+real-class error above its source-domain rate and all of them assume that rate
+carries over. A bias shared by four unrelated estimators is a property of the
+shift, not of the estimator. Fortunately the correction is most accurate exactly
+where it is most needed.
 \item \textbf{The prior fixes the budget, not the threshold.} On a checkpoint
 whose shipped threshold is already near-optimal, the BBSE \emph{threshold} buys
 nothing over $\tau{=}0.5$ ($98.94$ vs.\ $98.92$). The gain reported here comes
@@ -491,6 +496,9 @@ source data? Source hypothesis transfer for unsupervised domain adaptation,''
 in \emph{ICML}, 2020.
 \bibitem{bbse} Z.~Lipton, Y.-X. Wang, and A.~Smola, ``Detecting and correcting
 for label shift with black box predictors,'' in \emph{ICML}, 2018.
+\bibitem{sld} M.~Saerens, P.~Latinne, and C.~Decaestecker, ``Adjusting the
+outputs of a classifier to new a priori probabilities: A simple procedure,''
+\emph{Neural Computation}, vol.\ 14, no.\ 1, pp.\ 21--41, 2002.
 \bibitem{dann} Y.~Ganin and V.~Lempitsky, ``Unsupervised domain adaptation by
 backpropagation,'' in \emph{Proc.\ ICML}, 2015.
 \bibitem{adabn} Y.~Li \emph{et al.}, ``Revisiting batch normalization for
