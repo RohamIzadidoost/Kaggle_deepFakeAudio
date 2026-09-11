@@ -50,6 +50,14 @@ python verify_reduction.py || echo "!! VERIFY_REDUCTION FAILED -- adaptive resul
 stage "G In-the-Wild: tent / shot / eta / sar  (~1.7 h)"
 PUBA_CORPUS=itw PUBA_CKPTS=ssl_aasist_wavefake PUBA_ARMS=tent,shot,eta,sar \
   python protocol_a_public.py
+# Closes the single-checkpoint scope on the baseline claim: Tent/SHOT/ETA/SAR
+# were run on DF seed 2 only, so the abstract currently has to say "on the one
+# where we also ran them". Two more checkpoints makes it a three-checkpoint
+# claim, matching the symmetric/prior-corrected arms.
+stage "G2 DF: tent / shot / eta / sar on seeds 42 and 240  (~8 h)"
+PUBA_CKPTS=deepfense_w2v2_aasist_s42,deepfense_w2v2_aasist_s240 \
+  PUBA_ARMS=tent,shot,eta,sar python protocol_a_public.py
+
 stage "H leave-one-corpus-out baselines, seeds 3-4  (~2.8 h)"
 ADAPTIVE_SMOKE=0 TTA_BASELINES=1 OUR_SEEDS=3,4 python adaptive_pipeline.py
 stage "I stop-trace, seed 2  (~5.2 h)"
