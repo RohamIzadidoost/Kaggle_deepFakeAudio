@@ -69,8 +69,8 @@ $97.2\%$ spoof, In-the-Wild $37.2\%$ --- so at the published $q{=}0.3$ no model
 can exceed $9.3\%$ purity on DF. Empirically, on the official DF eval
 ($400{,}435$ trials) that configuration destroys the operating point of three
 released state-of-the-art checkpoints, driving accuracy from $98.8$--$99.1\%$ to
-$62$--$65\%$, and three of four modern TTA baselines degrade them too, each
-through its own version of the same assumption. Correcting the budget with a
+$62$--$65\%$; on the one where we also ran the published TTA baselines, three of
+four degrade it as well, each through its own version of the assumption. Correcting the budget with a
 label-free prior estimate ($\hat\pi{=}0.9715$ vs.\ a true $0.9708$) restores all
 three and beats the symmetric budget on every one; both EER and AUC move, so no
 re-thresholding rule accounts for it. The correction's boundary we measure
@@ -105,10 +105,9 @@ on the benchmarks the field uses and fatal on the pools it deploys to: that the
 target pool is roughly class-balanced. Take the top and bottom $30\%$ of a
 $97\%$-spoof pool and the ``confidently bona fide'' bucket is mechanically made
 of low-scoring \emph{spoof}. Self-training then teaches the detector that a
-great deal of spoof is genuine. This is not hypothetical: it is what happens to
-all three released state-of-the-art checkpoints we test on the official
-ASVspoof2021-DF protocol (Table~\ref{tab:protoa}), and to three of the four
-modern TTA baselines alongside them.
+great deal of spoof is genuine. This is not hypothetical: it is what happens to all three released
+state-of-the-art checkpoints we test on the official ASVspoof2021-DF protocol
+(Table~\ref{tab:protoa}), and to three of four modern TTA baselines.
 
 \textbf{Contributions.} (i) The ranking--calibration asymmetry as the mechanism
 of cross-corpus failure, over $369$ third-party cells and tested directly: a
@@ -285,9 +284,9 @@ each checkpoint's own training length). Code and manifests:
 
 \begin{table}[t]
 \centering
-\caption{Official ASVspoof2021-DF eval, $400{,}435$ trials, $97.22\%$ spoof, on a
-\emph{released} XLS-R+AASIST checkpoint~\cite{deepfensehf} we did not train; all
-adaptation is label-free. Deficit $\delta=(100{-}\mathrm{EER})-\mathrm{acc}@0.5$
+\caption{Official ASVspoof2021-DF eval, $400{,}435$ trials, $97.22\%$ spoof, on
+released XLS-R+AASIST checkpoint seed~2~\cite{deepfensehf}; baseline arms were
+run on this checkpoint only. All adaptation is label-free. Deficit $\delta=(100{-}\mathrm{EER})-\mathrm{acc}@0.5$
 is the accuracy the ranking supports but the threshold does not deliver. $\rho$
 and the prediction-rate gap are the label-free monitors of
 Sec.~\ref{sec:method}(d) --- computable at deployment, unlike every other
