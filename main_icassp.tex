@@ -165,43 +165,51 @@ the well-calibrated DF pool all three agree to within $0.02$
 near-identical budget there.
 
 \textbf{(b) The tail budget, and when it is valid.} The standard rule takes the
-bottom $q$ and top $q$ of the target scores as pseudo-real and pseudo-fake. Its validity has a characterisation that
-needs no model at all. A bucket of $qN$ clips can contain at most the pool's
-$\pi_{\mathrm{real}}N$ real clips, so \emph{for any detector whatsoever}
+bottom $q$ and top $q$ of the target scores as pseudo-real and pseudo-fake. Its
+validity has a characterisation that needs no model at all. A bucket of $q_cN$
+clips can contain at most the pool's $\pi_cN$ class-$c$ clips, so
+\emph{for any detector whatsoever}
 \begin{equation}
-\mathrm{purity}(q)\;\le\;\min\!\big(1,\ \pi_{\mathrm{real}}/q\big),
+\mathrm{purity}_c\;\le\;\min\!\big(1,\ \pi_c/q_c\big).
 \label{eq:purity}
 \end{equation}
-and symmetrically for the fake tail --- so the rule can be sound only while
+This is counting, not an approximation; what is empirical is its
+\emph{tightness}, which is where the ranking precondition enters --- across all
+seven (checkpoint, corpus) cells here the bound is never violated and is attained
+to within $0.025$, the slack tracking AUC ($0.000$ at AUC $.985$, $0.025$ at
+$.917$). Two consequences follow, and they are the whole story.
+
+The \emph{symmetric} rule sets $q_c{=}q$ and is therefore sound only while
 \begin{equation}
 q\;\le\;\min(\pi,\,1-\pi).
 \label{eq:valid}
 \end{equation}
-Eq.~\eqref{eq:purity} is counting, not an approximation; what is empirical is
-its \emph{tightness}, which is where the ranking precondition enters. Across all
-seven (checkpoint, corpus) cells here the bound is never violated and is attained
-to within $0.025$, the slack tracking AUC ($0.000$ at AUC $.985$, $0.025$ at
-$.917$). Eq.~\eqref{eq:valid} then accounts for every result we report: at
-$q{=}0.3$ In-the-Wild satisfies it ($.372{>}.3$, purity $.94$--$.99$) and the
-recipe repairs checkpoints, while on DF ($\pi_{\mathrm{real}}{=}.028$) no
-detector can exceed $9.3\%$ purity --- we measure $8.6\%$, i.e.\ $92\%$ of the
-``confidently bona fide'' labels are spoof --- and the recipe destroys them. The
-published configuration cannot work at that prevalence, whatever the model.
+In-the-Wild satisfies this at $q{=}0.3$ ($\min{=}.372$) and the recipe repairs
+checkpoints there; DF does not ($\min{=}.028$), where no detector can exceed
+$9.3\%$ pseudo-real purity --- we measure $8.6\%$ --- and the recipe destroys
+them. The damage is one-sided: DF's pseudo-\emph{fake} tail is $100\%$ pure at
+every $q$.
 
-Two fixes follow, and they differ in what they assume. Splitting the same budget
-$2q$ by an estimated prior,
-$q_{\mathrm{real}}{=}2q\hat\pi_{\mathrm{real}}$,
-$q_{\mathrm{fake}}{=}2q(1{-}\hat\pi_{\mathrm{real}})$, restores
-Eq.~\eqref{eq:valid} and is \emph{identical} to the symmetric rule at
-$\hat\pi{=}0.5$, so it is provably inert on balanced pools; but it needs $\pi$,
-which Sec.~\ref{sec:lim} shows is not identifiable. Alternatively $q$ is
-\emph{ours to choose} while $\pi$ is not: shrinking $q$ below the most skewed
-prior anticipated satisfies Eq.~\eqref{eq:valid} without estimating anything
-($q{=}0.02$ holds purity ${\ge}0.956$ on all seven cells). We report both.
-A fixed \emph{confidence} threshold is a third option that only moves the
-problem --- prior-free but calibration-dependent, and calibration is what this
-section measures as not transferring --- so we run it as a baseline rather than
-argue about it.
+The \emph{prior-split} rule, $q_c{=}2q\hat\pi_c$, restores
+Eq.~\eqref{eq:purity} for \emph{any} $q\le\tfrac12$ given a correct prior, and is
+identical to the symmetric rule at $\hat\pi{=}0.5$. With an estimate it needs
+\begin{equation}
+\hat\pi_c/\pi_c\;\le\;1/(2q)\quad\text{for both classes,}
+\label{eq:tol}
+\end{equation}
+i.e.\ at $q{=}0.3$ the estimate may overstate either class by at most $1.67\times$.
+This is why it works on DF ($\hat\pi_{\mathrm{real}}/\pi_{\mathrm{real}}{=}1.03$)
+and fails on In-the-Wild s42, where underestimating $\pi_{\mathrm{real}}$ inflates
+the \emph{fake} budget to $0.587$ against $\pi_{\mathrm{fake}}{=}0.372$
+($2.63\times$, bound $0.633$) and simply moves the impurity to the other tail.
+Across the seven adapted arms we ran, the worst-tail bound is $1.000$ for the
+five that came out intact ($82$--$99\%$ accuracy) and $0.093$ and $0.633$ for the
+two that collapsed ($62.96$, $47.99$). Since $q$ is ours to choose and $\pi$ is
+not (Sec.~\ref{sec:lim}), a third option is to shrink $q$ until
+Eq.~\eqref{eq:valid} holds for the most skewed prior anticipated --- at a
+supervision cost the prior-split budget avoids ($q{=}0.02$ labels $800$ of
+$20{,}000$ clips against $12{,}000$). A fixed confidence threshold is a fourth,
+prior-free but calibration-dependent. We report all four.
 
 \textbf{(c) Objective.} With pseudo-labels $\tilde y$ from (b) on the confident
 set $\mathcal{C}$ and a stochastic channel perturbation $a(\cdot)$ (per-clip
@@ -319,38 +327,36 @@ recovery resets in $2{,}500$ steps, AUC unchanged to four decimals.
 \end{table}
 
 \subsection{The class prior is the hidden variable}
-Table~\ref{tab:protoa} is the main result. Applied unmodified to a released
-checkpoint already better than the published Wav2Vec2-AASIST baseline here, the
-symmetric-quantile configuration \emph{damages} it: accuracy
+Table~\ref{tab:protoa} is the main result, and
+Eqs.~\eqref{eq:purity}--\eqref{eq:valid} anticipate it. Applied unmodified to a
+released checkpoint already better than the published Wav2Vec2-AASIST baseline
+here, the symmetric-quantile configuration \emph{damages} it: accuracy
 $98.87\!\to\!62.96\%$, EER $4.51\!\to\!5.84\%$, manufacturing a $31$-point deficit
-where there was none. Eqs.~\eqref{eq:purity}--\eqref{eq:valid} say why, and by how much.
+where there was none.
 
 The published baselines are no better placed, and each fails through its own
 version of the assumption. SHOT minimises
 $\mathbb{E}[H(p)]-H(\mathbb{E}[p])$, whose diversity term is maximised when the
-mean prediction is \emph{uniform} --- at $C{=}2$ a hard-coded prior of
-$\tfrac12$, asking it to move $47$ points of probability mass into the bona fide
-class: the regulariser introduced to \emph{cure} Tent-style collapse encodes the
-assumption more literally than Tent does. ETA fails more instructively still: its
+mean prediction is \emph{uniform} --- at $C{=}2$ a hard prior of $\tfrac12$,
+asking it to move $47$ points of probability mass into the bona fide class; the
+regulariser introduced to \emph{cure} Tent-style collapse encodes the assumption
+more literally than Tent does. ETA fails more instructively still: its
 reliability filter, meant to discard the high-entropy samples that destabilise
 entropy minimisation, admitted $99.8\%$ of them, so ETA reduced to Tent and
 landed worse. An entropy-keyed filter separates confident from uncertain, not
 \emph{confident-and-right} from \emph{confident-and-wrong}, and mis-calibration
-manufactures exactly the latter --- a safeguard keyed on the model's own
-confidence inherits the broken calibration it guards against.
-
-SAR is the exception that clarifies the rule: the only prior method that does
-not degrade the checkpoint, and it manages that by declining to move it ($308$
-model-recovery resets in $2{,}500$ steps, AUC unchanged to four decimals). Its
-guard does what it promises, and prevention is all it delivers. So the claim is not that every published method fails here. It is
-that \emph{three of the five prior configurations degrade a state-of-the-art
+manufactures exactly the latter. SAR is the exception that clarifies the rule:
+the only prior method that does not degrade the checkpoint, and it manages that
+by declining to move it ($308$ recovery resets in $2{,}500$ steps, AUC unchanged
+to four decimals). So the claim is not that every published method fails here,
+but that \emph{three of five prior configurations degrade a state-of-the-art
 detector at the standard benchmark's own prevalence, the fourth avoids damage
-only by reverting its own updates, and none of them improves it.}
+only by reverting its own updates, and none improves it.}
 
-the prior-split budget with a label-free prior estimate reverses this: BBSE
-returns $\hat\pi{=}0.9715$ against a true $0.9708$, the budget becomes
-$(0.017,0.583)$, and EER improves to $4.02\%$. The change between the two arms is
-one scalar. Over three independently trained checkpoints (EER\,\% / accuracy\,\%):
+The prior-split budget reverses this: BBSE returns $\hat\pi{=}0.9715$ against a
+true $0.9708$, comfortably inside Eq.~\eqref{eq:tol}, and EER improves to
+$4.02\%$. The change between the two arms is one scalar. Over three
+independently trained checkpoints (EER\,\% / accuracy\,\%):
 
 \begin{center}\footnotesize
 \begin{tabular}{@{}lccc@{}}
@@ -365,13 +371,14 @@ source & 4.51 / 98.87 & 4.56 / 98.78 & 3.82 / 99.11 \\
 \end{center}
 
 \noindent Two things replicate and one does not. The \emph{operating-point}
-collapse under a symmetric budget holds on all three (accuracy $62$--$65\%$,
-$\delta{+}30$ to ${+}34$), as does prior-correction beating that budget
-($-1.82$, $-0.79$, $-0.86$ EER). What does not replicate is the symmetric
-budget's effect on \emph{ranking} --- EER worse on two, better on one. A
-mis-specified prior reliably breaks the operating point, not the ranking. Gains
-over source-only vary widely ($1.27$, $0.49$, $0.02$ EER), so we rest on the
-unanimous controlled comparison.
+collapse under a symmetric budget holds on all three (accuracy $62$--$65\%$), as
+does prior-correction beating that budget ($-1.82$, $-0.79$, $-0.86$ EER). What
+does not replicate is the symmetric budget's effect on \emph{ranking} --- EER
+worse on two, better on one --- exactly as Eq.~\eqref{eq:purity} implies: a
+mis-specified budget corrupts the pseudo-labels and hence the operating point,
+while the ranking it inherits is the source model's. Gains over source-only vary
+widely ($1.27$, $0.49$, $0.02$ EER), so we rest on the unanimous controlled
+comparison.
 
 \begin{table}[t]
 \centering
@@ -407,12 +414,11 @@ disjoint half slightly better ($12.27$ / $.949$), so the ranking gain is not
 memorisation.
 
 \subsection{Why this is not a re-thresholding result}
-Both EER and AUC improve, and neither takes a threshold as input, so no
-operating-point rule can produce this gain. The cleanest form of that argument
-uses the \emph{same} prior estimate twice: re-point the threshold with it and
-take no gradient step, and accuracy moves $98.92\!\to\!98.94\%$ while EER stays
-at $4.51$ by construction; feed it to the pseudo-label budget instead and EER
-goes to $4.02$. The prior does its work in the budget, not at the threshold.
+Both EER and AUC improve, and neither takes a threshold as input. The cleanest
+form of that argument uses the \emph{same} prior estimate twice: re-point the
+threshold with it and take no gradient step, and accuracy moves
+$98.92\!\to\!98.94\%$ while EER stays at $4.51$ by construction; feed it to the
+budget instead and EER goes to $4.02$.
 
 On \emph{balanced} pools a one-line median-threshold rule is genuinely
 competitive with gradient adaptation on accuracy --- we reported it as such, and
@@ -475,18 +481,16 @@ result. Two thresholds on eight points is a diagnostic, not a rule;
 \PENDING{stage 6/7} gives the leave-one-target-out version.
 
 \subsection{Breadth, and the mechanism}
-Applied unmodified to nine released checkpoints across five architectures and
-ten corpora ($369$ cells), the consistent effect is \emph{re-calibration}:
-$\delta$ falls $7.29\!\to\!1.96$ ($248/369$, $p{=}2.2{\times}10^{-17}$), and
-where it lands barely depends on where it started
-($\mathrm{corr}{=}{+}0.17$). The mechanism is \emph{not} learned invariance: a
-proxy $\mathcal{A}$-distance and a linear domain-origin probe both \emph{rise}
-after adaptation (Arabic $1.545\!\to\!1.606$), the opposite of what
-domain-invariance predicts and consistent with DANN underperforming while
-optimising that very quantity. Beyond any threshold, the gradient step adds
-separability where the ranking is strong: on ASVspoof2019 within-attack-family
-AUC rises on all six families ($30/30$, $p{=}10^{-9}$), and on ITW/s42 AUC rises
-$.917\!\to\!.947$; on the AUC-$0.71$ target it is null.
+Over nine released checkpoints, five architectures and ten corpora ($369$
+cells), the consistent effect is \emph{re-calibration}: $\delta$ falls
+$7.29\!\to\!1.96$ ($248/369$, $p{=}2.2{\times}10^{-17}$), and where it lands
+barely depends on where it started ($\mathrm{corr}{=}{+}0.17$). The mechanism is
+\emph{not} learned invariance: a proxy $\mathcal{A}$-distance and a linear
+domain-origin probe both \emph{rise} after adaptation (Arabic
+$1.545\!\to\!1.606$), consistent with DANN underperforming while optimising that
+very quantity. Beyond any threshold the gradient step adds separability where
+the ranking is strong: within-attack-family AUC rises on all six ASVspoof2019
+families ($30/30$, $p{=}10^{-9}$); on the AUC-$0.71$ target it is null.
 
 \section{Limitations}
 \label{sec:lim}

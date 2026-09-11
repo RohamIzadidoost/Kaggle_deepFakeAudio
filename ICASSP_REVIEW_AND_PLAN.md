@@ -1121,3 +1121,47 @@ $\pi_{\mathrm{real}}{=}0.028$, $q{=}0.3$ caps pseudo-label purity at $9.3\%$ for
 any detector, however good.** We measure $8.6\%$. The published configuration
 cannot work at that prevalence, and that is a property of the protocol rather
 than of any model. Paper and abstract now say bound, not equality.
+
+### The theory is complete, and it predicts all seven arms
+
+The purity bound is per-\emph{tail}: purity$_c \le \min(1, \pi_c/q_c)$. Three
+consequences, and together they account for every result in this study with no
+free parameters.
+
+* **Symmetric rule** ($q_c{=}q$): sound only while $q \le \min(\pi, 1-\pi)$.
+* **Prior-split rule** ($q_c{=}2q\hat\pi_c$): sound for \emph{any} $q\le\frac12$
+  given a correct prior; with an estimate it needs
+  $\hat\pi_c/\pi_c \le 1/(2q)$ for both classes --- at $q{=}0.3$, the estimate may
+  overstate either class by at most $1.67\times$.
+* **The damage is one-sided.** On DF the pseudo-fake tail is $100\%$ pure at
+  every $q$; all of the harm comes from the minority tail.
+
+Applying the bound to the budgets actually logged:
+
+| cell | budget | worst-tail bound | accuracy after |
+|---|---|---|---|
+| DF s2 symmetric | (.30,.30) | **0.093** | **62.96** |
+| DF s2 prior-split | (.017,.583) | 1.000 | 98.95 |
+| ITW ssl symmetric | (.30,.30) | 1.000 | 95.38 |
+| ITW ssl prior-split | (.240,.360) | 1.000 | 95.20 |
+| ITW s2 prior-split | (.331,.269) | 1.000 | 87.13 |
+| ITW s42 symmetric | (.30,.30) | 1.000 | 82.39 |
+| ITW s42 prior-split | (.013,.587) | **0.633** | **47.99** |
+
+Exactly the two cells with a degraded bound are the two that collapsed. The ITW
+s42 failure is fully explained: BBSE *under*-estimated $\pi_{\mathrm{real}}$, which
+shrank the real tail (harmless) and inflated the \emph{fake} tail to $0.587$
+against $\pi_{\mathrm{fake}}{=}0.372$ --- $2.63\times$, outside
+Eq.~(4)'s $1.67\times$ tolerance. The impurity simply moved to the other tail.
+
+It also prices the prior-free alternative: $q{=}0.02$ is safe everywhere but
+labels $800$ of $20{,}000$ clips where the prior-split budget labels $12{,}000$.
+So the queued $q$-sweep has a **prediction to falsify**: small-$q$ symmetric
+should be safe on DF but weaker than prior-split, because it discards the
+$11{,}660$ perfectly-pure pseudo-fake labels to fix a problem confined to the
+other tail.
+
+**Process note.** Restoring Table II twice now --- the same span-replacement bug
+deleted it and the three-checkpoint replication block. LaTeX's undefined-reference
+warning caught it both times. Section-spanning replacements in this file are
+unsafe; anchor on unique short strings instead.
