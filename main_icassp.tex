@@ -370,15 +370,14 @@ source & 4.51 / 98.87 & 4.56 / 98.78 & 3.82 / 99.11 \\
 \end{tabular}
 \end{center}
 
-\noindent Two things replicate and one does not. The \emph{operating-point}
-collapse under a symmetric budget holds on all three (accuracy $62$--$65\%$), as
-does prior-correction beating that budget ($-1.82$, $-0.79$, $-0.86$ EER). What
-does not replicate is the symmetric budget's effect on \emph{ranking} --- EER
-worse on two, better on one --- exactly as Eq.~\eqref{eq:purity} implies: a
-mis-specified budget corrupts the pseudo-labels and hence the operating point,
-while the ranking it inherits is the source model's. Gains over source-only vary
-widely ($1.27$, $0.49$, $0.02$ EER), so we rest on the unanimous controlled
-comparison.
+\noindent Two things replicate and one does not. The operating-point collapse
+under a symmetric budget holds on all three, as does prior-correction beating
+that budget ($-1.82$, $-0.79$, $-0.86$ EER). What does not is the symmetric
+budget's effect on \emph{ranking} (EER worse on two, better on one) --- as
+Eq.~\eqref{eq:purity} implies, a mis-specified budget corrupts the pseudo-labels
+and hence the operating point, while the ranking is inherited. Gains over
+source-only vary widely ($1.27$, $0.49$, $0.02$), so we rest on the unanimous
+controlled comparison.
 
 \begin{table}[t]
 \centering
