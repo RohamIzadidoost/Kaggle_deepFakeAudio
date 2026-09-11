@@ -893,3 +893,65 @@ this --- and should not be credited with it. What produces it is the confident-
 tail self-training the paper already had. The prior correction's job is
 elsewhere: keeping that same machinery from destroying a checkpoint at prior
 $0.972$.
+
+### The prior correction actively harms a cell, and no estimator we have can tell
+
+`deepfense_s42` on In-the-Wild, continued:
+
+| arm | EER | AUC | acc | deficit |
+|---|---|---|---|---|
+| source | 16.47 | .9171 | 39.08 | $+44.45$ |
+| symmetric-$q$ | **12.58** | **.9473** | **82.39** | $+5.02$ |
+| prior-corrected (BBSE) | 14.51 | .9329 | **47.99** | $+37.50$ |
+
+BBSE returned $\hat\pi{=}0.9786$ against a true $0.3710$ --- an error of $+0.61$ ---
+because the checkpoint predicts $98.1\%$ of the pool fake ($q{=}[0.019,0.981]$)
+and $M$ is near identity, so the $44$-point calibration deficit passed straight
+into the prior. The budget became $(0.013,0.587)$ on a pool that is $62.9\%$
+real: exactly backwards. It cost $1.9$ EER points and $34$ accuracy points
+against the symmetric budget on the one cell where the symmetric budget worked
+best.
+
+**My proposed label-free detector for this failure is falsified.** I expected
+BBSE and a score mixture to disagree loudly when calibration breaks, giving a
+free trust signal. They do not:
+
+| ckpt (ITW) | deficit | BBSE err | GMM err | \|disagreement\| |
+|---|---|---|---|---|
+| `deepfense_s2` | $+2.05$ | $+0.074$ | $+0.001$ | 0.073 |
+| `ssl_aasist` | $+16.70$ | $+0.228$ | $+0.050$ | 0.178 |
+| `deepfense_s42` | $+44.45$ | $+0.607$ | $+0.539$ | **0.068** |
+
+On the catastrophic cell both estimators fail *together* (errors $+0.61$ and
+$+0.54$) and their disagreement is the *smallest* of the three. The GMM is not a
+rescue either: when the model puts $98\%$ of clips at high scores, the mixture's
+high-mean component simply has weight $0.91$. **Prior error grows with the
+calibration deficit for every estimator we have, and we have no label-free
+signal that says so.**
+
+### What this does to the paper
+
+The prior correction is not free insurance. Its value is conditional on an
+estimate whose accuracy degrades exactly as the operating point degrades:
+
+* DF, prior $0.972$, deficit $\approx-3$ (well-calibrated): $\hat\pi$ accurate to
+  $0.0007$, correction **essential** --- prevents a $31$--$34$ point accuracy
+  collapse on 3/3 checkpoints.
+* ITW, prior $0.372$, deficits $+2$ / $+17$ / $+44$: correction mildly harmful /
+  inert / **very harmful**, tracking the prior error.
+
+The two regimes happen to be disjoint here --- where the correction was needed it
+was accurate, where it was inaccurate it was not needed --- but that is an
+accident of these corpora, not a property of the method. A deployment pool can
+be both severely skewed *and* severely mis-calibrated, which is the case the
+method cannot serve and cannot detect.
+
+**So the headline should be the diagnosis, not the remedy.** The defensible
+paper is: a failure mode nobody has measured (every confident-quantile TTA
+recipe, and three of four modern TTA baselines, break a released SOTA detector
+at the standard benchmark's own prior), the natural fix, and the precise
+boundary of that fix. That is complete, fully supported by these runs, and does
+not require the remedy to be universal. The queued GMM-prior and oracle-prior
+arms now matter a great deal: the oracle arm prices what a *perfect* prior would
+have bought on s42, separating "the correction is wrong" from "the estimate is
+wrong".

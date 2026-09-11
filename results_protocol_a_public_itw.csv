@@ -5,3 +5,15 @@ ssl_aasist_wavefake,ours_fixed,official_eval,0,0,4.553,0.9882,95.384,86.859,3177
 ssl_aasist_wavefake,ours_fixed,disjoint_eval,0,0,4.636,0.9888,95.356,87.07,11779,95.364,0.008,False,22.9,,,,
 ssl_aasist_wavefake,ours_bbse,official_eval,0,0,4.542,0.9882,95.198,86.891,31779,95.458,0.26,False,22.9,0.6001,0.371,0.2399,0.3601
 ssl_aasist_wavefake,ours_bbse,disjoint_eval,0,0,4.543,0.9887,95.22,87.028,11779,95.457,0.236,False,22.9,0.6001,0.371,0.2399,0.3601
+deepfense_w2v2_aasist_s2,source,official_eval,0,0,9.644,0.966,88.304,84.795,31779,90.356,2.053,False,,,,,
+deepfense_w2v2_aasist_s2,source,disjoint_eval,0,0,9.73,0.965,88.352,84.786,11779,90.27,1.918,False,,,,,
+deepfense_w2v2_aasist_s2,ours_fixed,official_eval,0,0,9.707,0.966,85.692,84.858,31779,90.293,4.601,False,22.8,,,,
+deepfense_w2v2_aasist_s2,ours_fixed,disjoint_eval,0,0,9.787,0.9646,85.712,84.795,11779,90.213,4.501,False,22.8,,,,
+deepfense_w2v2_aasist_s2,ours_bbse,official_eval,0,0,9.892,0.965,87.133,84.666,31779,90.108,2.975,False,22.7,0.4479,0.371,0.3312,0.2688
+deepfense_w2v2_aasist_s2,ours_bbse,disjoint_eval,0,0,9.905,0.9636,87.35,84.566,11779,90.095,2.745,False,22.7,0.4479,0.371,0.3312,0.2688
+deepfense_w2v2_aasist_s42,source,official_eval,0,0,16.47,0.9171,39.082,78.099,31779,83.53,44.448,False,,,,,
+deepfense_w2v2_aasist_s42,source,disjoint_eval,0,0,16.426,0.9186,39.29,78.75,11779,83.574,44.284,False,,,,,
+deepfense_w2v2_aasist_s42,ours_fixed,official_eval,0,0,12.584,0.9473,82.394,81.252,31779,87.416,5.022,False,22.7,,,,
+deepfense_w2v2_aasist_s42,ours_fixed,disjoint_eval,0,0,12.266,0.949,82.24,81.501,11779,87.734,5.495,False,22.7,,,,
+deepfense_w2v2_aasist_s42,ours_bbse,official_eval,0,0,14.507,0.9329,47.994,80.094,31779,85.493,37.499,False,22.7,0.9786,0.371,0.0128,0.5872
+deepfense_w2v2_aasist_s42,ours_bbse,disjoint_eval,0,0,14.063,0.9349,48.069,80.61,11779,85.937,37.869,False,22.7,0.9786,0.371,0.0128,0.5872
