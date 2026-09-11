@@ -501,15 +501,15 @@ guarantee.
 size varies a great deal across checkpoints ($1.27$ to $0.02$ EER points).
 \item \textbf{Needs a reliable source ranking, and improves someone else's
 model.} A low-AUC start is not a regime we can rescue (the AUC-$0.71$ target is
-the one null in Table~\ref{tab:main}), and we did not train a
-Protocol-A-competitive detector ourselves ($26.33\%$ vs.\ a published $8.54\%$),
-so every claim is of the form ``this wrapper improves that detector''.
+the one null in Table~\ref{tab:main}); and since we did not train a
+Protocol-A-competitive detector, every claim here is of the form ``this wrapper
+improves that detector''.
 \end{itemize}
 
 \noindent Cross-corpus deepfake detection fails at the operating point, and the
 repair needs no labels --- but the recipes used to make it assume a
-class-balanced pool, which holds where TTA is measured and essentially nowhere
-else. A label-free prior estimate removes it, and is provably inert at
+class-balanced pool, which holds where TTA is measured and almost nowhere else.
+A label-free prior estimate removes that assumption and is inert at
 $\hat\pi{=}0.5$.
 
 {\small
