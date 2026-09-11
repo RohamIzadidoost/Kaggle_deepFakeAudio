@@ -1060,3 +1060,41 @@ found three places where the text had drifted ahead of the evidence:
 
 The lesson for the remaining edits: verify the rendered text against the runs,
 not the source against my memory of the runs.
+
+### The result this pass was missing: an exact validity condition
+
+Under a reliable ranking the bottom-$q$ pseudo-real bucket can contain at most
+the pool's real clips, so its precision is
+$$\mathrm{purity}(q)=\min(1,\ \pi_{\mathrm{real}}/q).$$
+Checked against labels on all seven (checkpoint, corpus) cells: predicted vs
+observed $r{=}0.9989$, mean absolute error $0.019$.
+
+| $q$ | DF predicted | DF observed |
+|---|---|---|
+| 0.01 | 1.000 | 0.997 |
+| 0.02 | 1.000 | 0.958 |
+| 0.05 | 0.556 | 0.509 |
+| 0.30 | 0.093 | **0.086** |
+
+At the published $q{=}0.3$, **$92\%$ of DF's "confidently bona fide" pseudo-labels
+are spoof**. The confident-quantile rule is therefore sound exactly while
+$$q \le \min(\pi,\,1-\pi),$$
+and that single inequality predicts every result in this study: In-the-Wild
+satisfies it ($\min(.372,.628){=}.372>0.3$) and the recipe repairs checkpoints
+there; DF violates it ($\min(.972,.028){=}.028\lll 0.3$) and the recipe destroys
+them. It also explains SHOT --- a hard uniform prior is free when the condition
+holds and fatal when it does not, which is exactly the balanced-vs-DF split we
+measured.
+
+**And it points past the remedy this pass was built around.** The
+identifiability result says $\pi$ cannot be estimated; but $q$ is *ours to
+choose* and $\pi$ is not. Shrinking $q$ below the most skewed prior anticipated
+satisfies the condition without estimating anything: $q{=}0.02$ holds purity
+$\ge0.956$ on all seven cells, spanning priors $0.372$ and $0.972$. If small-$q$
+symmetric matches prior-corrected TTA on DF, it is the better recommendation ---
+same benefit, no dependence on an unidentifiable quantity, one fewer moving
+part. Queued as stage 8z (sweep $q\in\{0.02,0.05,0.10\}$ on DF).
+
+Promoted into the abstract and contribution (ii); Secs. IV-A and IV-B now cite
+the two equations instead of re-explaining the mechanism in prose, which paid
+for the space.

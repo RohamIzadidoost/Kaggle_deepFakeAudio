@@ -60,11 +60,12 @@ Audio deepfake detectors generalise poorly across corpora despite near-perfect
 in-domain accuracy. We show the failure is one of \emph{operating point}: a
 fine-tuned self-supervised detector's \emph{ranking} (ROC-AUC) largely transfers
 cross-corpus while its decision \emph{threshold} does not, so unlabeled target
-audio can repair the operating point at test time. We further show that
-confident-quantile test-time adaptation (TTA) silently assumes a
-\emph{class-balanced} target pool --- an assumption that holds where TTA is
-measured and essentially nowhere else, in either direction: the standard
-ASVspoof2021-DF benchmark is $97.2\%$ spoof, In-the-Wild is $37.2\%$. On the
+audio can repair the operating point at test time. We further show that confident-quantile
+test-time adaptation (TTA) is sound only while its tail budget $q$ satisfies
+$q\le\min(\pi,1{-}\pi)$ --- pseudo-label purity is $\min(1,\pi_{\mathrm{real}}/q)$,
+predicted at $r{=}0.999$ over seven cells --- an assumption that holds where TTA
+is measured and essentially nowhere else: the standard ASVspoof2021-DF benchmark
+is $97.2\%$ spoof, In-the-Wild $37.2\%$. On the
 official DF eval ($400{,}435$ trials) the published symmetric-quantile
 configuration destroys the operating point of three independently trained
 state-of-the-art released checkpoints, driving accuracy from $98.8$--$99.1\%$ to
@@ -168,28 +169,42 @@ the well-calibrated DF pool all three agree to within $0.02$
 (Sec.~\ref{sec:lim}). We report DF with BBSE as run, a mixture prior giving a
 near-identical budget there.
 
-\textbf{(b) Prior-corrected confident tails.} The standard rule takes the bottom
-$q$ and top $q$ of the target scores as pseudo-real and pseudo-fake. We split the
-same total budget $2q$ by the estimated prior,
+\textbf{(b) The tail budget, and when it is valid.} The standard rule takes the
+bottom $q$ and top $q$ of the target scores as pseudo-real and pseudo-fake. Its
+validity has an exact characterisation that, as far as we know, has not been
+stated. Under a reliable ranking the bottom-$q$ bucket can contain at most the
+pool's real clips, so its precision is
 \begin{equation}
-q_{\mathrm{real}} = 2q\,\hat\pi_{\mathrm{real}},\qquad
-q_{\mathrm{fake}} = 2q\,(1-\hat\pi_{\mathrm{real}}),
-\label{eq:budget}
+\mathrm{purity}(q)\;=\;\min\!\big(1,\ \pi_{\mathrm{real}}/q\big),
+\label{eq:purity}
 \end{equation}
-which is \emph{identical} to the symmetric rule at $\hat\pi_{\mathrm{real}}=0.5$
---- so on a balanced pool the correction is provably inert and cannot be the
-source of any balanced-pool result --- and shrinks the pseudo-real bucket to the
-estimated real fraction otherwise. The prior is estimated \emph{once}, from the
-frozen pre-adaptation model: re-estimating each epoch lets a drifting model
-reinforce its own mistakes.
+and symmetrically for the fake tail --- so the rule is sound exactly while
+\begin{equation}
+q\;\le\;\min(\pi,\,1-\pi).
+\label{eq:valid}
+\end{equation}
+Across all seven (checkpoint, corpus) cells here,
+Eq.~\eqref{eq:purity} predicts observed purity at $r{=}0.999$ (mean abs.\ error
+$0.019$), and Eq.~\eqref{eq:valid} then predicts every result we report: at
+$q{=}0.3$ In-the-Wild satisfies it ($.372{>}.3$, purity $.94$--$.99$) and the
+recipe repairs checkpoints, while DF violates it ($.028{\ll}.3$) with purity
+$0.086$ --- $92\%$ of its ``confidently bona fide'' labels are spoof --- and the
+recipe destroys them.
 
-The obvious prior-free alternative is a fixed \emph{confidence} threshold
-($p\ge 0.95\Rightarrow$ fake) instead of a quantile. It does not remove the
-problem, it moves it: a quantile rule is calibration-free but assumes the prior,
-a confidence rule is prior-free but assumes calibration --- and calibration is
-exactly the property the first paragraph of this section measures as \emph{not}
-transferring across corpora. We run it as a baseline
-(Table~\ref{tab:protoa}) rather than argue about it.
+Two fixes follow, and they differ in what they assume. Splitting the same budget
+$2q$ by an estimated prior,
+$q_{\mathrm{real}}{=}2q\hat\pi_{\mathrm{real}}$,
+$q_{\mathrm{fake}}{=}2q(1{-}\hat\pi_{\mathrm{real}})$, restores
+Eq.~\eqref{eq:valid} and is \emph{identical} to the symmetric rule at
+$\hat\pi{=}0.5$, so it is provably inert on balanced pools; but it needs $\pi$,
+which Sec.~\ref{sec:lim} shows is not identifiable. Alternatively $q$ is
+\emph{ours to choose} while $\pi$ is not: shrinking $q$ below the most skewed
+prior anticipated satisfies Eq.~\eqref{eq:valid} without estimating anything
+($q{=}0.02$ holds purity ${\ge}0.956$ on all seven cells). We report both.
+A fixed \emph{confidence} threshold is a third option that only moves the
+problem --- prior-free but calibration-dependent, and calibration is what this
+section measures as not transferring --- so we run it as a baseline rather than
+argue about it.
 
 \textbf{(c) Objective.} With pseudo-labels $\tilde y$ from (b) on the confident
 set $\mathcal{C}$ and a stochastic channel perturbation $a(\cdot)$ (per-clip
@@ -308,12 +323,12 @@ recovery resets in $2{,}500$ steps, AUC unchanged to four decimals.
 
 \subsection{The class prior is the hidden variable}
 Table~\ref{tab:protoa} is the main result. Applied unmodified to a released
-checkpoint that is already better than the published Wav2Vec2-AASIST baseline
-on this protocol, the symmetric-quantile configuration \emph{damages} it:
-accuracy $98.87\!\to\!62.96\%$, EER $4.51\!\to\!5.84\%$, and it manufactures a
-$31$-point calibration deficit where there was none. The mechanism is
-mechanical: $q{=}0.3$ labels the bottom $30\%$ of a $97.2\%$-spoof pool
-``confidently bona fide''.
+checkpoint already better than the published Wav2Vec2-AASIST baseline here, the
+symmetric-quantile configuration \emph{damages} it: accuracy
+$98.87\!\to\!62.96\%$, EER $4.51\!\to\!5.84\%$, manufacturing a $31$-point deficit
+where there was none. Eq.~\eqref{eq:valid} says why, and Eq.~\eqref{eq:purity}
+says by how much: $q{=}0.3$ against $\min(\pi,1{-}\pi){=}0.028$ gives the
+pseudo-real bucket a purity of $0.086$.
 
 The published baselines are no better placed, and each fails through its own
 version of the assumption. SHOT minimises
@@ -321,26 +336,23 @@ $\mathbb{E}[H(p)]-H(\mathbb{E}[p])$, whose diversity term is maximised when the
 mean prediction is \emph{uniform} --- at $C{=}2$ a hard-coded prior of
 $\tfrac12$, asking it to move $47$ points of probability mass into the bona fide
 class: the regulariser introduced to \emph{cure} Tent-style collapse encodes the
-assumption more literally than Tent does. ETA fails more instructively still.
-Its reliability filter exists to discard the high-entropy samples that
-destabilise entropy minimisation; here it admitted $99.8\%$ of them, so ETA
-reduced to Tent and landed worse. That is structural: an entropy-keyed filter
-separates confident from uncertain, not \emph{confident-and-right} from
-\emph{confident-and-wrong}, and mis-calibration manufactures exactly the latter
---- a safeguard keyed on the model's own confidence inherits the broken
-calibration it guards against.
+assumption more literally than Tent does. ETA fails more instructively still: its
+reliability filter, meant to discard the high-entropy samples that destabilise
+entropy minimisation, admitted $99.8\%$ of them, so ETA reduced to Tent and
+landed worse. An entropy-keyed filter separates confident from uncertain, not
+\emph{confident-and-right} from \emph{confident-and-wrong}, and mis-calibration
+manufactures exactly the latter --- a safeguard keyed on the model's own
+confidence inherits the broken calibration it guards against.
 
-SAR is the exception that clarifies the rule. It is the only prior method here
-that does not degrade the checkpoint --- and it manages that by declining to
-move it: $308$ model-recovery resets in $2{,}500$ steps, an AUC unchanged to
-four decimals, and a score distribution indistinguishable from the source
-model's. Its collapse guard does exactly what it promises, and prevention is all
-it delivers. So the claim is not that every published method fails here. It is
+SAR is the exception that clarifies the rule: the only prior method that does
+not degrade the checkpoint, and it manages that by declining to move it ($308$
+model-recovery resets in $2{,}500$ steps, AUC unchanged to four decimals). Its
+guard does what it promises, and prevention is all it delivers. So the claim is not that every published method fails here. It is
 that \emph{three of the five prior configurations degrade a state-of-the-art
 detector at the standard benchmark's own prevalence, the fourth avoids damage
 only by reverting its own updates, and none of them improves it.}
 
-Eq.~\eqref{eq:budget} with a label-free prior estimate reverses this: BBSE
+the prior-split budget with a label-free prior estimate reverses this: BBSE
 returns $\hat\pi{=}0.9715$ against a true $0.9708$, the budget becomes
 $(0.017,0.583)$, and EER improves to $4.02\%$. The change between the two arms is
 one scalar. Over three independently trained checkpoints (EER\,\% / accuracy\,\%):
@@ -388,16 +400,16 @@ DeepFense s42 & $44.4$ & 16.47 / 39.1 & \textbf{12.58} / \textbf{82.4} & 14.51 /
 \end{table}
 
 \subsection{The failure, and where the recipe already works}
-Table~\ref{tab:itw} measures the opening claim at a \emph{mild} prior ($0.372$).
-DeepFense s42 --- the same checkpoint that scores $4.56\%$ on DF --- arrives on
-In-the-Wild ranking at AUC $0.917$ while being correct on $39.1\%$ of clips,
-fewer than a majority-class predictor. Confident-quantile self-training repairs
-exactly that: on the three checkpoints with a deficit it drives $\delta$ from
-$16.7$, $22.6$, $44.4$ to $0.1$, $2.9$, $5.0$, lifting accuracy by up to $43$
-points, while on the well-calibrated one it has nothing to repair and costs a
-little. On s42 it also raises \textbf{AUC $.917\!\to\!.947$} --- which no threshold
-can do --- and the disjoint half is slightly better ($12.27$ / $.949$), so the
-ranking gain is not memorisation.
+Table~\ref{tab:itw} is the same recipe at a prior that
+\emph{satisfies} Eq.~\eqref{eq:valid} ($0.372>0.3$). DeepFense s42 --- the
+checkpoint that scores $4.56\%$ on DF --- arrives here ranking at AUC $0.917$
+while correct on $39.1\%$ of clips, fewer than a majority-class predictor.
+Self-training repairs exactly that: on the three checkpoints with a deficit it
+drives $\delta$ from $16.7$, $22.6$, $44.4$ to $0.1$, $2.9$, $5.0$; on the
+well-calibrated one it has nothing to repair and costs a little. On s42 it also
+raises \textbf{AUC $.917\!\to\!.947$} --- which no threshold can do --- with the
+disjoint half slightly better ($12.27$ / $.949$), so the ranking gain is not
+memorisation.
 
 \subsection{Why this is not a re-thresholding result}
 Both EER and AUC improve, and neither takes a threshold as input, so no
@@ -456,19 +468,16 @@ $18.39$, and SAR is again exactly inert (pooled EER identical to source-only to
 two decimals).
 
 \subsection{Label-free guards}
-An adaptation that destroys the source ranking has discarded its own
-precondition, and that is visible without labels: $\rho$, the rank agreement
-with the frozen source model, together with the drift of the predicted positive
-rate from $\hat\pi$ (both in Table~\ref{tab:protoa}). Over the eight adapted DF arms
-they are complementary --- $\rho$ catches ranking collapse (ETA $0.31$, Tent
-$0.44$), the gap catches operating-point collapse ($0.37$, $0.39$, $0.23$) and is
-blind to the former --- and requiring both separates the five harmful arms from
-the three harmless ones exactly, for any $\tau\in[0.70,0.80]$. The plateau
-matters more than the exactness: an earlier $\rho$-only rule at $\tau{=}0.85$,
-fitted on seven arms, looked equally exact and was falsified by the eighth,
-rejecting the study's best result. Two thresholds on eight points is a
-diagnostic, not a rule; \PENDING{stage 6/7} gives the leave-one-target-out
-version.
+Whether to keep an adapted model is itself decidable without labels. Over the
+eight adapted DF arms, rank agreement $\rho$ and prediction-rate drift are
+complementary --- $\rho$ catches ranking collapse (ETA $0.31$, Tent $0.44$), the
+drift catches operating-point collapse ($0.37$, $0.39$, $0.23$) and is blind to
+the former --- and requiring both separates the five harmful arms from the three
+harmless ones exactly, for any $\tau\in[0.70,0.80]$. The plateau matters more
+than the exactness: a $\rho$-only rule at $\tau{=}0.85$, fitted on seven arms,
+looked equally exact and was falsified by the eighth, rejecting the study's best
+result. Two thresholds on eight points is a diagnostic, not a rule;
+\PENDING{stage 6/7} gives the leave-one-target-out version.
 
 \subsection{Breadth, and the mechanism}
 Applied unmodified to nine released checkpoints across five architectures and
