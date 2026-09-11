@@ -955,3 +955,45 @@ not require the remedy to be universal. The queued GMM-prior and oracle-prior
 arms now matter a great deal: the oracle arm prices what a *perfect* prior would
 have bought on s42, separating "the correction is wrong" from "the estimate is
 wrong".
+
+### The limitation is an identifiability result, not an engineering gap
+
+Two attempts at a label-free detector for the prior-estimation failure, both
+falsified:
+
+1. **BBSE-vs-mixture disagreement.** Falsified above: on the catastrophic cell
+   both estimators fail together and disagree *least*.
+2. **Where $\tau{=}0.5$ falls relative to the score mixture's crossover.** The
+   crossover sits at $0.9935$--$0.9952$ on all seven cells regardless of a
+   deficit spanning $-3.4$ to $+44.5$ ($r{=}{-}0.775$ driven entirely by
+   variation in the fourth decimal). These detectors are confident enough that
+   the mixture crossover is pinned near $1.0$ and carries no calibration
+   information.
+
+The reason neither works is structural, and stating it properly is better than
+either detector would have been. The only quantity a label-free method observes
+is the predicted positive rate,
+$$\Pr[\hat y{=}1] \;=\; \pi\,\mathrm{TPR}_{\mathcal T} \;+\; (1-\pi)\,\mathrm{FPR}_{\mathcal T},$$
+which is one equation in three unknowns. BBSE closes it by assuming
+$\mathrm{TPR}_{\mathcal T},\mathrm{FPR}_{\mathcal T}$ equal their source values ---
+the label-shift assumption. When the corpus also shifts covariates, that
+assumption is exactly what fails, and the system is underdetermined. The data
+show the collision directly:
+
+| cell | predicted positive rate | true prior | verdict |
+|---|---|---|---|
+| DF / s2 | 0.974 | 0.972 | estimate correct, no deficit |
+| ITW / s42 | 0.981 | 0.372 | estimate off by $0.61$, deficit $+44$ |
+
+**The same observable, opposite truths.** An extreme prior and an extreme
+calibration failure are indistinguishable from the model's outputs alone, so
+*estimating the prior* and *detecting that the estimate is wrong* are the same
+problem. That is why the error tracks the deficit at $r{=}0.998$: both are the
+same unidentifiability, measured two ways.
+
+This is the right form for the paper's limitation --- a statement about what is
+recoverable, with an empirical law attached --- rather than "our estimator
+sometimes fails". It also says precisely what would fix it: any side information
+that pins down one of the three unknowns (a handful of target labels, a known
+deployment prior, or a calibration set), none of which the strict label-free
+setting allows.
