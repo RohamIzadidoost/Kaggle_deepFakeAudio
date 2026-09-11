@@ -322,6 +322,23 @@ def bbse_pi_fake(model, crop, fake_col, la19, target_scores, seed=0):
     return float(p[1] / p.sum()), M, q
 
 
+def gmm_pi_fake(scores, seed=0):
+    """Target prior from a 2-component Gaussian mixture on the score histogram.
+
+    Reads the SHAPE of the target score distribution rather than a thresholded
+    count. That distinction turned out to matter: on In-the-Wild every
+    prediction-rate estimator (BBSE, SLD, mean-probability) is off by ~0.23
+    because the checkpoint predicts 58.9% fake on a 37.2%-fake pool -- which is
+    just its +16.7-point calibration deficit passing straight through -- while
+    this one is off by 0.05. A thresholded count inherits the broken
+    calibration; a histogram does not.
+    """
+    from sklearn.mixture import GaussianMixture
+    g = GaussianMixture(2, random_state=seed, n_init=3).fit(
+        np.asarray(scores).reshape(-1, 1))
+    return float(g.weights_[int(np.argmax(g.means_.flatten()))])
+
+
 def tail_budget(q_base, pi_real):
     """Split a total confident budget 2*q_base by the estimated prior.
 
@@ -589,6 +606,30 @@ def main():
             extra = {}
             if arm == "ours_fixed":
                 lo, hi = Q, Q
+            elif arm in ("ours_gmm", "ours_oracle"):
+                # Same machinery, different source of the prior, so the cost of
+                # the ESTIMATOR is isolated from the cost of the correction.
+                # ours_oracle uses the true labels of the adapt pool and is
+                # reported as an upper bound, never as a method.
+                with torch.no_grad():
+                    model.eval()
+                    s_pool = []
+                    for i in range(0, len(abuf), BATCH):
+                        x = abuf[i:i + BATCH].to(DEVICE).float()
+                        with P.amp_ctx(DEVICE):
+                            s_pool.append(torch.softmax(
+                                model(x)[0].float(), 1)[:, fake_col].cpu())
+                    s_pool = torch.cat(s_pool).numpy()
+                if arm == "ours_gmm":
+                    pi_fake = gmm_pi_fake(s_pool)
+                else:
+                    pi_fake = float(adapt_df.label.mean())
+                lo, hi = tail_budget(Q, 1.0 - pi_fake)
+                extra = dict(pi_fake_hat=round(pi_fake, 4),
+                             pi_fake_true=round(float(adapt_df.label.mean()), 4),
+                             lo_frac=round(lo, 4), hi_frac=round(hi, 4))
+                log(f"  [{arm}] pi_fake={pi_fake:.4f} "
+                    f"(true {adapt_df.label.mean():.4f}) budget=({lo:.3f},{hi:.3f})")
             elif arm in ("ours_bbse", "ours_bbse_nocons"):
                 src_kind = BBSE_SOURCE.get(name)
                 if src_kind not in bbse_pools:

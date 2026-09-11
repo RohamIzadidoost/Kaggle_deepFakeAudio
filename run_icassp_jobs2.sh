@@ -32,6 +32,18 @@ PUBA_CKPTS=deepfense_w2v2_aasist_s2 PUBA_ARMS=ours_conf python protocol_a_public
 PUBA_CORPUS=itw PUBA_CKPTS=ssl_aasist_wavefake PUBA_ARMS=ours_conf \
   python protocol_a_public.py
 
+# --- 8c. What did the prior ESTIMATOR cost? ---------------------------------
+# On In-the-Wild, BBSE returned pi_hat=0.600 against a true 0.372 (+0.228),
+# because its q vector is the checkpoint's prediction rate at tau=0.5 and that
+# checkpoint arrives with a +16.7-point calibration deficit -- so the deficit
+# passes straight into the prior. The GMM, which reads histogram shape rather
+# than a thresholded count, was off by 0.050. These arms price the difference:
+# same machinery, same budget rule, three different sources of the prior
+# (BBSE already run, GMM, and the true labels as an upper bound).
+stage "8c In-the-Wild: GMM prior and oracle prior  (~1.2 h)"
+PUBA_CORPUS=itw PUBA_CKPTS=ssl_aasist_wavefake PUBA_ARMS=ours_gmm,ours_oracle \
+  python protocol_a_public.py
+
 # --- 9. Which half of the objective produces the DF gain? --------------------
 # Same prior-corrected pseudo-label budget, consistency term removed. The
 # fixed-q arm already shows the budget is what prevents the damage; this asks
