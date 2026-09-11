@@ -859,3 +859,37 @@ list does that work.
 Headroom for the seven remaining `\PENDING` cells: most are table cells (neutral
 on length), so the two prose PENDINGs (Sec. IV-C baselines, Sec. IV-D
 out-of-sample guard validation) are the ones to watch on the next fit.
+
+### The single strongest cell in the study: s42 on In-the-Wild
+
+The same `deepfense_w2v2_aasist_s42` that scores $4.56\%$ EER on ASVspoof2021-DF
+arrives on In-the-Wild with its ranking intact and its operating point
+destroyed:
+
+| | EER | AUC | acc@$0.5$ | deficit |
+|---|---|---|---|---|
+| source | 16.47 | .9171 | **39.08** | **$+44.45$** |
+| median-threshold rule (no gradient) | 16.47 | .9171 | 78.10 | — |
+| symmetric-$q$ TTA | **12.58** | **.9473** | **82.39** | $+5.02$ |
+| — same model, disjoint/inductive half | **12.27** | **.9490** | 82.24 | $+5.50$ |
+
+Accuracy $39.08\%$ against an attainable $83.53$: the detector is correct on
+fewer clips than a majority-class predictor while still ranking at AUC $.917$.
+This is "ranking transfers, thresholds don't" in its purest observed form, on a
+released checkpoint, and it is the cleanest illustration the paper has.
+
+**Why this cell answers the reviewer objection that sank v1.** Adaptation here
+does three things at once: closes $39$ of the $44$ deficit points; beats the
+label-free median rule on accuracy ($82.39$ vs $78.10$); and raises **AUC from
+$.9171$ to $.9473$**. A threshold move cannot change AUC --- not by a little, but
+by construction --- so on the cell with the largest calibration failure in the
+study the gradient step did something no re-thresholding rule can do. And the
+inductive row is slightly *better* than the transductive one ($12.27$/$.9490$
+vs $12.58$/$.9473$), so the ranking gain is not memorisation of the adapt pool.
+
+Note this is the \emph{symmetric-$q$} arm. On a pool at prior $0.372$ the
+symmetric budget is close to right, so the prior correction is not what produces
+this --- and should not be credited with it. What produces it is the confident-
+tail self-training the paper already had. The prior correction's job is
+elsewhere: keeping that same machinery from destroying a checkpoint at prior
+$0.972$.
