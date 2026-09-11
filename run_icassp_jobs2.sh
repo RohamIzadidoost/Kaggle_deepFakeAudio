@@ -20,6 +20,23 @@ stage () { echo "=============== [$(date '+%F %T')] STAGE $* ==============="; }
 stage "8a verify_reduction (correctness gate)"
 python verify_reduction.py || echo "!! VERIFY_REDUCTION FAILED -- adaptive results are confounded"
 
+# --- 8z. The tail budget is the whole story: sweep it ------------------------
+# Under a good ranking the bottom-q pseudo-real bucket can hold at most the
+# pool's real clips, so its purity is min(1, pi_real/q) -- verified against
+# labels at r=0.9989 (mean abs err 0.019). The symmetric rule is therefore valid
+# exactly while q <= min(pi, 1-pi). ITW satisfies it (.372 > .3) and the recipe
+# repairs checkpoints there; DF violates it (.028 << .3), purity collapses to
+# .086, and the recipe destroys them. That single inequality predicts every
+# result in this study, and it implies a PRIOR-FREE fix: shrink q below the most
+# skewed prior you expect. q=0.02 keeps purity >= 0.956 on all seven cells we
+# have. If small-q symmetric matches prior-corrected TTA on DF, it is the better
+# recommendation -- it needs no estimate of a quantity we proved unidentifiable.
+stage "8z DF: symmetric tail budget sweep q in {0.02, 0.05, 0.10}  (~3 h)"
+for qq in 0.02 0.05 0.10; do
+  PUBA_Q=$qq PUBA_CKPTS=deepfense_w2v2_aasist_s2 PUBA_ARMS=ours_fixed \
+    python protocol_a_public.py
+done
+
 # --- 8b. The prior-free alternative a reader will propose first -------------
 # A fixed CONFIDENCE threshold instead of a quantile needs no prior at all. It
 # trades one assumption for another, and the trade is the paper's own thesis:

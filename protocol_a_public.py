@@ -52,7 +52,15 @@ SR = 16000
 BATCH = int(os.environ.get("PUBA_BATCH", "32"))
 DECODE_WORKERS = 16
 
-Q, LAMBDA_CONS, TTA_LR = 0.3, 0.3, 1e-4
+# Q is the symmetric tail budget. The published value is 0.3, which is valid
+# only while q <= min(pi, 1-pi): under a good ranking the bottom-q bucket can
+# hold at most the pool's real clips, so its purity is min(1, pi_real/q) --
+# verified against labels at r=0.9989, mean abs error 0.019. ITW satisfies it
+# (min(.372,.628)=.372 > .3, purity .94-.99); DF violates it badly
+# (min(.972,.028)=.028 << .3, purity .086) and that single inequality is why the
+# published configuration destroys a checkpoint there. PUBA_Q sweeps it.
+Q = float(os.environ.get("PUBA_Q", "0.3"))
+LAMBDA_CONS, TTA_LR = 0.3, 1e-4
 TTA_EPOCHS = int(os.environ.get("PUBA_EPOCHS", "4"))
 
 DF_PARTS = "data/dataset_1/ASVspoof2021_DF_eval_part0*/**/*.flac"
@@ -177,12 +185,14 @@ def done_rows():
         d = d.assign(seed=0)
     if "eval_sub" not in d:
         d = d.assign(eval_sub=0)
+    if "q" not in d:
+        d = d.assign(q=0.3)
     return set(zip(d.ckpt, d.method, d.setting, d.seed.fillna(0).astype(int),
-                   d.eval_sub.fillna(0).astype(int)))
+                   d.eval_sub.fillna(0).astype(int), d.q.fillna(0.3).round(3)))
 
 
 def _key(ckpt, method, setting):
-    return (ckpt, method, setting, SEED, EVAL_SUB or 0)
+    return (ckpt, method, setting, SEED, EVAL_SUB or 0, round(Q, 3))
 
 
 # ------------------------------------------------------------------ manifests
@@ -522,7 +532,7 @@ def report(ckpt_name, method, setting, ev, scores, adapt_utts=None, extra=None):
     # label-free median-threshold control: what a one-line rule would deliver
     acc_med = float(accuracy_score(y, (sc >= np.median(sc)).astype(int))) * 100
     row = dict(ckpt=ckpt_name, method=method, setting=setting,
-               seed=SEED, eval_sub=EVAL_SUB or 0,
+               seed=SEED, eval_sub=EVAL_SUB or 0, q=Q,
                eer=round(eer * 100, 3), auc=round(auc, 4), acc=round(acc, 3),
                acc_median_rule=round(acc_med, 3), n=len(sub),
                attainable=round(100 - eer * 100, 3),
@@ -577,7 +587,8 @@ def main():
         log(f"  loaded {nf} front-end + {nb} back-end tensors")
 
         # source scores over the full official eval (cached to disk)
-        stag = "" if (SEED == 0 and not EVAL_SUB) else f"__s{SEED}_e{EVAL_SUB or 0}"
+        stag = ("" if (SEED == 0 and not EVAL_SUB and abs(Q - 0.3) < 1e-9)
+                else f"__s{SEED}_e{EVAL_SUB or 0}_q{Q}")
         spath = f"{SCORES_DIR}/{name}__source{stag}.npy"
         if os.path.exists(spath):
             s_src = np.load(spath)
