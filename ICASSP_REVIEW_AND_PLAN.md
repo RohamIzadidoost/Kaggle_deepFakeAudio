@@ -1036,3 +1036,27 @@ manuscript's earlier 10-seed source-vs-ours numbers came from `extended_pipeline
 with different pool sampling (source ITW $11.19$ here vs $12.78$ there). The
 two must not be mixed, and the paper now reports this run as its own internally
 consistent comparison.
+
+### Read-through caught three claims the experiments do not support
+
+A full front-to-back read of the rendered PDF, after this much span-editing,
+found three places where the text had drifted ahead of the evidence:
+
+1. **The abstract oversold the remedy.** It was written before the In-the-Wild
+   failure and claimed the correction "preserves accuracy and improves EER"
+   without qualification. It now states the boundary as a result: the prior is
+   not identifiable from a model's own outputs, the estimate degrades as the
+   operating point does ($r{=}0.998$), and on a badly mis-calibrated checkpoint a
+   wrong prior is worse than none. Contribution (iii) carries the same
+   qualification.
+2. **Method (d) claimed a per-step stopping rule we never ran.** The guard is
+   used *post hoc*, as a keep/abort decision on a completed adaptation. The text
+   now says exactly that and explicitly declines to claim the per-step version.
+   It also now names both monitors, not just $\rho$.
+3. **Setup claimed ten seeds per target.** True of the older `extended_pipeline`
+   numbers, but Sec. IV-D is a three-seed `adaptive_pipeline` run and every
+   ten-seed number has been removed from the paper. Setup now states the twelve
+   folds actually used, and the dangling reference to the ten-seed work is gone.
+
+The lesson for the remaining edits: verify the rendered text against the runs,
+not the source against my memory of the runs.
