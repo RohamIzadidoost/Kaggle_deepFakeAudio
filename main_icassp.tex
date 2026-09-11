@@ -240,8 +240,11 @@ In-the-Wild clips at their native $37.2\%$ fake rate --- skewed the
 \textbf{Comparison points.} Source-only; the median-threshold rule; Tent, SHOT,
 ETA/EATA, SAR; AdaBN~\cite{adabn}; DANN~\cite{dann} (trained to convergence with
 the held-out target's unlabeled inputs --- more privileged access than ours); an
-ASDG-style baseline~\cite{asdg}; and a target-supervised oracle. Two published
-constants in the modern TTA
+ASDG-style baseline~\cite{asdg}; and a target-supervised oracle. Every TTA arm adapts
+the same $16{,}706$ parameters with the same lr, batch and pass count; none was
+tuned separately, and none could be, since per-target TTA tuning needs the
+target labels the setting assumes absent. Two published constants in the modern
+TTA
 baselines are degenerate at $C{=}2$ and were re-derived rather than
 transplanted. EATA's redundancy filter ($|\cos(p,\bar p)|{<}0.05$) is calibrated
 for $C{=}1000$; on the binary simplex the minimum attainable cosine is $0.71$ at
@@ -254,11 +257,6 @@ $e_0{=}0.2$ sits far below ImageNet's $E_0{=}0.4\ln 1000{=}2.76$ but
 freezing the model at its initial weights (verified: $32$ resets in $32$ steps,
 zero net movement); we keep its relative position,
 $e_0=(0.2/\ln 1000)\ln C=0.020$.
-
-\textbf{Baseline fairness.} Every TTA arm adapts the same $16{,}706$ parameters
-with the same lr, batch and pass count. None was tuned separately, and none
-could be: per-target TTA tuning needs target labels, the one resource the
-setting assumes absent.
 
 \textbf{Implementation.} 16\,kHz audio, top-4-layer XLS-R fine-tuning for our own
 source models (Adam, lr\,$2{\times}10^{-4}$, batch 32, 8 epochs). Adaptation:
@@ -489,27 +487,24 @@ AUC-$0.71$ LibriSpeech-TTS it is null.
 
 \section{Limitations and Conclusion}
 \label{sec:lim}
-\begin{itemize}
-\item \textbf{Prior estimation is the weakest link, and it fails where it is
-most needed.} Estimators that read the thresholded prediction rate inherit the
-target's calibration error: on In-the-Wild BBSE is off by $+0.23$ and a score
-mixture by $+0.05$. The correction still did no harm there ($4.54$ vs a source
-$5.06$), so it degrades gracefully --- but that is a property of this pool, not a
-guarantee.
-\item \textbf{The prior fixes the budget, not the threshold}, and the gain's
-size varies a great deal across checkpoints ($1.27$ to $0.02$ EER points).
+\begin{itemize}\setlength{\itemsep}{1pt}\setlength{\parskip}{0pt}\setlength{\topsep}{2pt}
+\item \textbf{Prior estimation is the weakest link and fails where it is most
+needed.} Estimators reading the thresholded prediction rate inherit the target's
+calibration error: on In-the-Wild BBSE is off by $+0.23$, a score mixture by
+$+0.05$. The correction still did no harm there ($4.54$ vs a source $5.06$), but
+that is a property of this pool, not a guarantee. The prior also fixes the
+budget rather than the threshold, and the gain's size varies a great deal across
+checkpoints ($1.27$ to $0.02$ EER points).
 \item \textbf{Needs a reliable source ranking, and improves someone else's
 model.} A low-AUC start is not a regime we can rescue (the AUC-$0.71$ target is
 the one null in Table~\ref{tab:main}); and since we did not train a
 Protocol-A-competitive detector, every claim here is of the form ``this wrapper
 improves that detector''.
 \end{itemize}
-
-\noindent Cross-corpus deepfake detection fails at the operating point, and the
-repair needs no labels --- but the recipes used to make it assume a
-class-balanced pool, which holds where TTA is measured and almost nowhere else.
-A label-free prior estimate removes that assumption and is inert at
-$\hat\pi{=}0.5$.
+\vspace{-2pt}
+\noindent In sum: cross-corpus detection fails at the operating point, the
+repair needs no labels, and the recipes used assume a balance the benchmarks
+have and deployments lack.
 
 {\small
 \begin{thebibliography}{1}
