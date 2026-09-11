@@ -215,11 +215,12 @@ and keep the last step with $\rho_t\ge\tau$ (Sec.~\ref{sec:results}).
 
 \section{Experimental Setup}
 \textbf{Protocol A (published baselines exist).} The official ASVspoof2021-DF
-eval partition against the official CM keys: $400{,}435$ of $611{,}829$ trials
-are held locally and the missing part is uniform across codec, label and phase
-(verified $75$--$25$ in every stratum), so the pooled EER is unbiased; true spoof
-rate $97.22\%$. Because our own source model is not competitive here ($26.33\%$
-vs.\ a published $8.54\%$), we run the method on \emph{released} checkpoints:
+eval partition against the official CM keys; $400{,}435$ of $611{,}829$ trials are
+held locally, the missing part uniform across codec, label and phase (verified
+$75$--$25$ in every stratum), true spoof rate $97.22\%$. For scale, published pooled EERs on this protocol run from $1.95$
+(Wav2DF-TSL) and $2.87$ (SSL$+$SLS) through $8.54$ (Wav2Vec2-AASIST) to $15.64$
+(challenge DF top-1); our own source model reaches only $26.33$, so we run the
+method on \emph{released} checkpoints instead:
 DeepFense XLS-R\,300M\,+\,AASIST trained on ASVspoof2019-LA~\cite{deepfensehf}, at
 three independent training seeds. Adaptation uses an unlabelled $20{,}000$-clip
 subsample of the eval pool; we report the full official pooled EER and, as an
@@ -270,11 +271,10 @@ each checkpoint's own training length). Code and manifests:
 \begin{table}[t]
 \centering
 \caption{Official ASVspoof2021-DF eval, $400{,}435$ trials, $97.22\%$ spoof, on a
-\emph{released} XLS-R+AASIST checkpoint~\cite{deepfensehf} we did not train. All
-adaptation is label-free. ``Deficit'' is
-$(100{-}\mathrm{EER})-\mathrm{acc}@0.5$: the accuracy the ranking supports but the
-threshold does not deliver. $\rho$ (rank agreement with the frozen source
-model) and the prediction-rate gap are the two label-free monitors of
+\emph{released} XLS-R+AASIST checkpoint~\cite{deepfensehf} we did not train; all
+adaptation is label-free. Deficit $\delta=(100{-}\mathrm{EER})-\mathrm{acc}@0.5$
+is the accuracy the ranking supports but the threshold does not deliver. $\rho$
+and the prediction-rate gap are the label-free monitors of
 Sec.~\ref{sec:method}(d) --- computable at deployment, unlike every other
 column.}
 \label{tab:protoa}
@@ -293,11 +293,6 @@ Source (as released) & 4.51 & .9923 & 98.87 & $-3.38$ & 1.000 & .000 \\
 \rowcolor{green!12}\;+ TTA, \textbf{prior-corrected} & \textbf{4.02} & \textbf{.9931} & \textbf{98.95} & $-2.97$ & 0.867 & .007 \\
 \;\;\;\;(disjoint/inductive half) & 4.03 & .9931 & 98.95 & & & \\
 \;+ SAR~\cite{sar} & 4.47$^\S$ & .9923 & 98.88 & $-3.35$ & 0.970 & .000 \\
-\midrule
-\multicolumn{7}{@{}l@{}}{\emph{published Protocol-A systems, for scale:}
-Wav2DF-TSL $1.95$; SSL$+$SLS $2.87$; Wav2Vec2-AASIST $8.54$;}\\
-\multicolumn{7}{@{}l@{}}{challenge DF top-1 $15.64$;
-\emph{our own source model} $26.33$.}\\
 \bottomrule
 \end{tabular}}
 \\[2pt]
@@ -318,22 +313,20 @@ $31$-point calibration deficit where there was none. The mechanism is
 mechanical: $q{=}0.3$ labels the bottom $30\%$ of a $97.2\%$-spoof pool
 ``confidently bona fide''.
 
-The published baselines are no better placed, and one states the assumption
-outright: SHOT minimises $\mathbb{E}[H(p)]-H(\mathbb{E}[p])$, whose diversity
-term is maximised when the mean prediction is \emph{uniform} --- at $C{=}2$ a
-hard-coded prior of $\tfrac12$, asking it to move $47$ points of probability mass
-into the bona fide class. It degrades the checkpoint accordingly, with no score
-saturation to blame. The regulariser introduced to \emph{cure} Tent-style
-collapse encodes the assumption more literally than Tent does.
-
-ETA fails more instructively. Its reliability filter exists to discard the
-high-entropy samples that destabilise entropy minimisation; here it admitted
-$99.8\%$ of them, so ETA reduced to Tent and landed worse (AUC $.9288$, the
-largest ranking loss of any arm). That is structural: an entropy-keyed filter
+The published baselines are no better placed, and each fails through its own
+version of the assumption. SHOT minimises
+$\mathbb{E}[H(p)]-H(\mathbb{E}[p])$, whose diversity term is maximised when the
+mean prediction is \emph{uniform} --- at $C{=}2$ a hard-coded prior of
+$\tfrac12$, asking it to move $47$ points of probability mass into the bona fide
+class: the regulariser introduced to \emph{cure} Tent-style collapse encodes the
+assumption more literally than Tent does. ETA fails more instructively still.
+Its reliability filter exists to discard the high-entropy samples that
+destabilise entropy minimisation; here it admitted $99.8\%$ of them, so ETA
+reduced to Tent and landed worse. That is structural: an entropy-keyed filter
 separates confident from uncertain, not \emph{confident-and-right} from
-\emph{confident-and-wrong}, and mis-calibration manufactures exactly the latter.
-A safeguard keyed on the model's own confidence inherits the broken calibration
-it guards against.
+\emph{confident-and-wrong}, and mis-calibration manufactures exactly the latter
+--- a safeguard keyed on the model's own confidence inherits the broken
+calibration it guards against.
 
 SAR is the exception that clarifies the rule. It is the only prior method here
 that does not degrade the checkpoint --- and it manages that by declining to
@@ -345,14 +338,10 @@ that \emph{three of the five prior configurations degrade a state-of-the-art
 detector at the standard benchmark's own prevalence, the fourth avoids damage
 only by reverting its own updates, and none of them improves it.}
 
-Replacing the symmetric budget by Eq.~\eqref{eq:budget} with a label-free prior
-estimate reverses this. BBSE returns $\hat\pi_{\mathrm{fake}}{=}0.9715$ against a
-true $0.9708$, giving a budget of $(0.017,0.583)$ instead of $(0.3,0.3)$, and EER
-improves to $4.02\%$ --- with no target labels and no retraining. The change
-between the two arms is one scalar.
-
-\textbf{Replication over three independently trained checkpoints.} EER\,\% and
-accuracy at $\tau{=}0.5$, same protocol, same pool:
+Eq.~\eqref{eq:budget} with a label-free prior estimate reverses this: BBSE
+returns $\hat\pi{=}0.9715$ against a true $0.9708$, the budget becomes
+$(0.017,0.583)$, and EER improves to $4.02\%$. The change between the two arms is
+one scalar. Over three independently trained checkpoints (EER\,\% / accuracy\,\%):
 
 \begin{center}\footnotesize
 \begin{tabular}{@{}lccc@{}}
@@ -366,17 +355,47 @@ source & 4.51 / 98.87 & 4.56 / 98.78 & 3.82 / 99.11 \\
 \end{tabular}
 \end{center}
 
-\noindent Two things replicate and one does not, and the distinction is the
-thesis restated. The \emph{operating-point} collapse under a symmetric budget
-replicates on all three (accuracy $62$--$65\%$, deficit $+30$ to $+34$), and
-prior correction beats the symmetric budget on all three ($-1.82$, $-0.79$,
-$-0.86$ EER). What does \emph{not} replicate is that budget's effect on
-\emph{ranking} --- EER worsens on two checkpoints and improves on one. A
-mis-specified prior reliably breaks the operating point, not the ranking.
-Against source-only, prior correction improves EER on $3/3$ but by very
-different amounts ($1.27$, $0.49$, $0.02$; AUC up on two, flat on the third), so
-we rest on the unanimous controlled comparison and report the against-source
-magnitudes as varying.
+\noindent Two things replicate and one does not. The \emph{operating-point}
+collapse under a symmetric budget holds on all three (accuracy $62$--$65\%$,
+$\delta{+}30$ to ${+}34$), as does prior-correction beating that budget
+($-1.82$, $-0.79$, $-0.86$ EER). What does not replicate is the symmetric
+budget's effect on \emph{ranking} --- EER worse on two, better on one. A
+mis-specified prior reliably breaks the operating point, not the ranking. Gains
+over source-only vary widely ($1.27$, $0.49$, $0.02$ EER), so we rest on the
+unanimous controlled comparison.
+
+\begin{table}[t]
+\centering
+\caption{The complete In-the-Wild benchmark ($31{,}779$ clips, prior $0.372$),
+four released checkpoints ordered by source calibration deficit $\delta$.
+EER\,\% / accuracy\,\%. The symmetric budget repairs every checkpoint that has a
+deficit; the prior-corrected one does not, and its shortfall grows with $\delta$
+--- which is what corrupts the prior estimate (Sec.~\ref{sec:lim}).}
+\label{tab:itw}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+checkpoint & $\delta_{\mathrm{src}}$ & source & symmetric $q$ & prior-corrected \\
+\midrule
+DeepFense s2 & $2.1$ & 9.64 / 88.3 & 9.71 / 85.7 & 9.89 / 87.1 \\
+ssl-aasist~\cite{shiftyspeech} & $16.7$ & 5.06 / 78.2 & \textbf{4.55} / \textbf{95.4} & 4.54 / 95.2 \\
+DeepFense s240 & $22.6$ & 8.47 / 68.9 & \textbf{8.33} / \textbf{88.8} & 8.48 / 77.0 \\
+DeepFense s42 & $44.4$ & 16.47 / 39.1 & \textbf{12.58} / \textbf{82.4} & 14.51 / 48.0 \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\subsection{The failure, and where the recipe already works}
+Table~\ref{tab:itw} measures the opening claim at a \emph{mild} prior ($0.372$).
+DeepFense s42 --- the same checkpoint that scores $4.56\%$ on DF --- arrives on
+In-the-Wild ranking at AUC $0.917$ while being correct on $39.1\%$ of clips,
+fewer than a majority-class predictor. Confident-quantile self-training repairs
+exactly that: on the three checkpoints with a deficit it drives $\delta$ from
+$16.7$, $22.6$, $44.4$ to $0.1$, $2.9$, $5.0$, lifting accuracy by up to $43$
+points, while on the well-calibrated one it has nothing to repair and costs a
+little. On s42 it also raises \textbf{AUC $.917\!\to\!.947$} --- which no threshold
+can do --- and the disjoint half is slightly better ($12.27$ / $.949$), so the
+ranking gain is not memorisation.
 
 \subsection{Why this is not a re-thresholding result}
 Both EER and AUC improve, and neither takes a threshold as input, so no
@@ -400,39 +419,21 @@ having been balanced to a prevalence of $0.489$--$0.539$ by the evaluation
 pipeline itself.
 
 \subsection{Cross-corpus, balanced pools}
-Here the prior correction is inert by construction ($\hat\pi{\approx}0.5$ returns
-the symmetric budget exactly), so Table~\ref{tab:main} measures the rest of the
-method. It wins on three of four targets ($10/10$ seeds on ASVspoof2019 and
-Arabic, $8/10$ on In-the-Wild) and is EER-neutral on LibriSpeech-TTS, the target
-with the lowest source AUC ($0.73$). Per-target Wilcoxon against source-only is
-significant on ASVspoof2019 and Arabic ($p{=}0.0020$, Holm $0.0078$) and nominal
-on In-the-Wild ($0.0293$, Holm $0.0586$). Against the modern TTA baselines,
-\PENDING{stage 4}.
-
-\begin{table}[t]
-\centering
-\caption{Cross-corpus EER\,\%\,/\,AUC, mean over 10 seeds (leave-one-corpus-out,
-balanced pools, transductive). Dropping the consistency term
-($\lambda{=}0$) gives $4.20/33.39/11.55/22.19$.}
-\label{tab:main}
-\resizebox{\columnwidth}{!}{%
-\begin{tabular}{@{}lcccc@{}}
-\toprule
-Method & ASVspoof2019 & LibriSpeech-TTS & In-the-Wild & Arabic \\
-\midrule
-Source-only & 5.03 / .989 & 33.54 / .727 & 12.78 / .945 & 22.50 / .843 \\
-Tent~\cite{tent} & 23.47$\pm$21.96 / .776 & 35.44 / .674 & 27.34$\pm$11.21 / .735 & 47.35$\pm$5.03 / .527 \\
-SHOT~\cite{shot} & \PENDING{s4} & \PENDING{s4} & \PENDING{s4} & \PENDING{s4} \\
-ETA~\cite{eata} & \PENDING{s4} & \PENDING{s4} & \PENDING{s4} & \PENDING{s4} \\
-SAR~\cite{sar} & \PENDING{s4} & \PENDING{s4} & \PENDING{s4} & \PENDING{s4} \\
-DANN~\cite{dann} & 7.35 / .966 & 34.43 / .717 & 13.34 / .924 & 28.53 / .759 \\
-ASDG~\cite{asdg} & 4.98 / .987 & \textbf{32.64} / .749 & 17.33 / .891 & 27.41 / .798 \\
-\rowcolor{green!12}\textbf{Ours} & \textbf{3.47} / .994 & 33.74 / .727 & \textbf{11.33} / .958 & \textbf{20.99} / .866 \\
-\midrule
-Oracle (target-supervised) & 0.89 / .999 & 13.93 / .939 & 4.42 / .992 & 9.50 / .968 \\
-\bottomrule
-\end{tabular}}
-\end{table}
+On the balanced leave-one-corpus-out protocol the prior correction is inert by
+construction ($\hat\pi{\approx}0.5$ returns the symmetric budget exactly), so this
+arm measures the rest of the method against the train-time and test-time
+baselines on our own source model, ten seeds per target. Source-only EERs are
+$5.03$ / $33.54$ / $12.78$ / $22.50$ on ASVspoof2019 / LibriSpeech-TTS /
+In-the-Wild / Arabic; ours gives $3.47$ / $33.74$ / $11.33$ / $20.99$, winning on
+three targets ($10/10$ seeds on two of them, $8/10$ on the third) and neutral on
+LibriSpeech-TTS, the target with the lowest source AUC ($0.73$). Per-target
+Wilcoxon against source-only is significant on ASVspoof2019 and Arabic
+($p{=}0.0020$, Holm $0.0078$) and nominal on In-the-Wild ($0.0293$). Ours beats
+DANN~\cite{dann} and an ASDG-style baseline~\cite{asdg} pooled over all $40$
+(target, seed) pairs ($30/40$ each) despite DANN seeing the target's unlabeled
+audio every training step. Against the modern TTA baselines on the same folds,
+\PENDING{stage 4}. Dropping the consistency term gives $4.20$ / $33.39$ /
+$11.55$ / $22.19$.
 
 \textbf{Tent is unpredictably catastrophic, and sometimes silently so.} On
 ASVspoof2019 its per-seed EER splits five seeds near source-only and four at or
@@ -447,60 +448,54 @@ saturating $98\%$ of the pool to one tied score. A TTA study reporting EER
 without a score-resolution check can record a collapse as an improvement.
 
 \subsection{Label-free guards}
-If the source \emph{ranking} is the asset adaptation exploits, an update that
-destroys it has discarded its own precondition --- and that is visible without
-labels, by comparing the adapted scores' \emph{order} against the frozen source
-model's ($\rho$, Table~\ref{tab:protoa}). A second monitor, the drift of the
-predicted positive rate from $\hat\pi$, sees the other failure. Over the eight adapted arms
-here the two are complementary and both are needed: $\rho$ catches ranking
-collapse decisively (ETA $0.31$, Tent $0.44$) but only marginally the
-operating-point ones, while the gap catches those decisively ($0.37$, $0.39$,
-$0.23$) and is blind to ranking collapse ($0.007$ for ETA). Requiring both ---
-$\rho\ge\tau$ and gap $\le0.05$ --- separates the five harmful arms from the three
-harmless ones exactly, for any $\tau\in[0.70,0.80]$.
-
-The plateau matters more than the exactness, which is fragile: an earlier
-$\rho$-only rule at $\tau{=}0.85$, fitted on the first seven arms, looked equally
-exact and was falsified by the eighth --- it rejected the best result in this
-study (seed 42, $\rho{=}0.828$, EER $4.56\!\to\!3.29$). Two thresholds fitted on
-eight points is a diagnostic, not a validated rule.
-\PENDING{stage 6/7} gives the out-of-sample version: per-epoch traces on the four
-leave-one-corpus-out targets, thresholds chosen leave-one-target-out against the
-oracle budget, with churn and confidence as controls.
+An adaptation that destroys the source ranking has discarded its own
+precondition, and that is visible without labels: $\rho$, the rank agreement
+with the frozen source model, together with the drift of the predicted positive
+rate from $\hat\pi$ (both in Table~\ref{tab:protoa}). Over the eight adapted DF arms
+they are complementary --- $\rho$ catches ranking collapse (ETA $0.31$, Tent
+$0.44$), the gap catches operating-point collapse ($0.37$, $0.39$, $0.23$) and is
+blind to the former --- and requiring both separates the five harmful arms from
+the three harmless ones exactly, for any $\tau\in[0.70,0.80]$. The plateau
+matters more than the exactness: an earlier $\rho$-only rule at $\tau{=}0.85$,
+fitted on seven arms, looked equally exact and was falsified by the eighth,
+rejecting the study's best result. Two thresholds on eight points is a
+diagnostic, not a rule; \PENDING{stage 6/7} gives the leave-one-target-out
+version.
 
 \subsection{Breadth, and the mechanism}
 Applied unmodified to nine released checkpoints across five architectures and
 ten corpora ($369$ cells), the consistent effect is \emph{re-calibration}:
-$\delta$ falls $7.29\!\to\!1.96$ points ($248/369$,
-$p{=}2.2{\times}10^{-17}$), with
-$\mathrm{corr}(\delta_{\text{before}},\delta_{\text{after}}){=}{+}0.17$ --- where
-it lands barely depends on where it started --- and the same rule designed
-against XLS-R re-calibrates a mel-spectrogram transformer~\cite{ast} unchanged
-($39/39$, $p{=}5{\times}10^{-8}$). The mechanism is \emph{not} learned
-invariance: a proxy $\mathcal{A}$-distance and a linear domain-origin probe both
-\emph{rise} after adaptation (Arabic $1.545\!\to\!1.606$), the opposite of what
+$\delta$ falls $7.29\!\to\!1.96$ ($248/369$, $p{=}2.2{\times}10^{-17}$), and
+where it lands barely depends on where it started
+($\mathrm{corr}{=}{+}0.17$). The mechanism is \emph{not} learned invariance: a
+proxy $\mathcal{A}$-distance and a linear domain-origin probe both \emph{rise}
+after adaptation (Arabic $1.545\!\to\!1.606$), the opposite of what
 domain-invariance predicts and consistent with DANN underperforming while
-optimising that very quantity. What the gradient adds beyond any threshold is
-separability where the ranking is strong: on ASVspoof2019 it raises
-within-attack-family AUC on all six families ($30/30$, $p{=}10^{-9}$); on
-AUC-$0.71$ LibriSpeech-TTS it is null.
+optimising that very quantity. Beyond any threshold, the gradient step adds
+separability where the ranking is strong: on ASVspoof2019 within-attack-family
+AUC rises on all six families ($30/30$, $p{=}10^{-9}$), and on ITW/s42 AUC rises
+$.917\!\to\!.947$; on the AUC-$0.71$ target it is null.
 
 \section{Limitations}
 \label{sec:lim}
-\begin{itemize}\setlength{\itemsep}{1pt}\setlength{\parskip}{0pt}\setlength{\topsep}{2pt}
-\item \textbf{Prior estimation is the weakest link and fails where it is most
-needed.} Estimators reading the thresholded prediction rate inherit the target's
-calibration error: on In-the-Wild BBSE is off by $+0.23$, a score mixture by
-$+0.05$. The correction still did no harm there ($4.54$ vs a source $5.06$), but
-that is a property of this pool, not a guarantee. The prior also fixes the
-budget rather than the threshold, and the gain's size varies a great deal across
-checkpoints ($1.27$ to $0.02$ EER points).
-\item \textbf{Needs a reliable source ranking, and improves someone else's
-model.} A low-AUC start is not a regime we can rescue (the AUC-$0.71$ target is
-the one null in Table~\ref{tab:main}); and since we did not train a
-Protocol-A-competitive detector, every claim here is of the form ``this wrapper
-improves that detector''.
-\end{itemize}
+\textbf{The prior is not identifiable, which bounds the correction.} A
+label-free method sees only
+$\Pr[\hat y{=}1]=\pi\,\mathrm{TPR}_{\mathcal T}+(1{-}\pi)\mathrm{FPR}_{\mathcal T}$:
+one equation, three unknowns. BBSE closes it by assuming source error rates
+carry over --- what covariate shift breaks --- so an extreme prior and an extreme
+calibration failure look identical (DF/s2 predicts $97.4\%$ fake at a true
+$0.972$, ITW/s42 $98.1\%$ at a true $0.372$). The estimate therefore degrades exactly as the operating point does --- over
+seven cells and two corpora, $|\hat\pi-\pi|$ against the source deficit gives
+Pearson $r{=}0.998$ --- and a badly wrong prior is worse than none (ITW/s42
+$12.58\!\to\!14.51$ EER). Estimating the prior and detecting that the estimate is
+wrong are one problem; two label-free detectors for it are falsified in our
+release.
+
+
+\textbf{Scope.} The prior fixes the \emph{budget}, not the threshold; the gain
+varies ($1.27$ to $0.02$ EER across DF checkpoints); and a low-AUC start we
+cannot rescue at all.
+
 
 {\small
 \begin{thebibliography}{1}
