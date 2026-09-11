@@ -453,20 +453,19 @@ If the source \emph{ranking} is the asset adaptation exploits, an update that
 destroys it has discarded its own precondition --- and that is visible without
 labels, by comparing the adapted scores' \emph{order} against the frozen source
 model's ($\rho$, Table~\ref{tab:protoa}). A second monitor, the drift of the
-predicted positive rate from $\hat\pi$, sees the other failure. Over the eight
-adapted arms we ran on this pool the two are complementary and both are needed:
-$\rho$ catches ranking collapse decisively (ETA $0.31$, Tent $0.44$) but is blind
-or marginal on the operating-point collapses, while the gap catches those
-decisively ($0.37$, $0.39$, $0.23$) and is blind to ranking collapse ($0.007$ for
-ETA). Requiring both --- $\rho\ge\tau$ and gap $\le0.05$ --- separates the five
-harmful arms from the three harmless ones exactly, for any $\tau$ in
-$[0.70,0.80]$.
+predicted positive rate from $\hat\pi$, sees the other failure. Over the eight adapted arms
+here the two are complementary and both are needed: $\rho$ catches ranking
+collapse decisively (ETA $0.31$, Tent $0.44$) but only marginally the
+operating-point ones, while the gap catches those decisively ($0.37$, $0.39$,
+$0.23$) and is blind to ranking collapse ($0.007$ for ETA). Requiring both ---
+$\rho\ge\tau$ and gap $\le0.05$ --- separates the five harmful arms from the three
+harmless ones exactly, for any $\tau\in[0.70,0.80]$.
 
-That plateau matters more than the exactness, because the exactness is fragile:
-an earlier $\rho$-only rule at $\tau{=}0.85$, fitted on the first seven arms,
-looked equally exact and was then falsified by the eighth --- it rejected the
-best result in this study (seed 42, $\rho{=}0.828$, EER $4.56\!\to\!3.29$). Two
-thresholds fitted on eight points is a diagnostic, not a validated rule.
+The plateau matters more than the exactness, which is fragile: an earlier
+$\rho$-only rule at $\tau{=}0.85$, fitted on the first seven arms, looked equally
+exact and was falsified by the eighth --- it rejected the best result in this
+study (seed 42, $\rho{=}0.828$, EER $4.56\!\to\!3.29$). Two thresholds fitted on
+eight points is a diagnostic, not a validated rule.
 \PENDING{stage 6/7} gives the out-of-sample version: per-epoch traces on the four
 leave-one-corpus-out targets, thresholds chosen leave-one-target-out against the
 oracle budget, with churn and confidence as controls.
