@@ -418,34 +418,40 @@ which it was previously evaluated satisfied that assumption by construction,
 having been balanced to a prevalence of $0.489$--$0.539$ by the evaluation
 pipeline itself.
 
-\subsection{Cross-corpus, balanced pools}
-On the balanced leave-one-corpus-out protocol the prior correction is inert by
-construction ($\hat\pi{\approx}0.5$ returns the symmetric budget exactly), so this
-arm measures the rest of the method against the train-time and test-time
-baselines on our own source model, ten seeds per target. Source-only EERs are
-$5.03$ / $33.54$ / $12.78$ / $22.50$ on ASVspoof2019 / LibriSpeech-TTS /
-In-the-Wild / Arabic; ours gives $3.47$ / $33.74$ / $11.33$ / $20.99$, winning on
-three targets ($10/10$ seeds on two of them, $8/10$ on the third) and neutral on
-LibriSpeech-TTS, the target with the lowest source AUC ($0.73$). Per-target
-Wilcoxon against source-only is significant on ASVspoof2019 and Arabic
-($p{=}0.0020$, Holm $0.0078$) and nominal on In-the-Wild ($0.0293$). Ours beats
-DANN~\cite{dann} and an ASDG-style baseline~\cite{asdg} pooled over all $40$
-(target, seed) pairs ($30/40$ each) despite DANN seeing the target's unlabeled
-audio every training step. Against the modern TTA baselines on the same folds,
-\PENDING{stage 4}. Dropping the consistency term gives $4.20$ / $33.39$ /
-$11.55$ / $22.19$.
+\subsection{Cross-corpus, balanced pools: where the advantage disappears}
+Here the prior correction is inert by construction, so this arm asks what the
+rest of the method is worth when the assumption everyone makes happens to hold.
+All seven arms were run on identical folds (four leave-one-corpus-out targets,
+three seeds, twelve folds), mean EER over folds:
 
-\textbf{Tent is unpredictably catastrophic, and sometimes silently so.} On
-ASVspoof2019 its per-seed EER splits five seeds near source-only and four at or
-near chance with no warning sign (std $21.96$); on Arabic it is a consistent
-chance-level failure ($9/10$ seeds). Ours shows no comparable collapse anywhere
-(largest std $2.01$). The failure is a ranking failure first: on the strongest
-and weakest public checkpoints Tent collapses to chance on one
-($16.41\!\to\!49.80\%$ EER, AUC $.918\!\to\!.502$) but only degrades AUC on the
-other. On the DF pool the damage does not show in the field's headline metric at
-all --- Tent returns a \emph{lower} EER than source ($4.06$ vs.\ $4.51$) while
-saturating $98\%$ of the pool to one tied score. A TTA study reporting EER
-without a score-resolution check can record a collapse as an improvement.
+\begin{center}\footnotesize
+\begin{tabular}{@{}lcccc|c@{}}
+\toprule
+ & ASV19 & LS-TTS & ITW & Arabic & pooled \\
+\midrule
+source & 4.77 & 35.88 & \textbf{11.19} & 21.04 & 18.39 \\
+Tent~\cite{tent} & 22.16 & \textbf{34.07} & 23.89 & 48.89 & 32.25 \\
+ETA~\cite{eata} & 7.66 & 35.23 & 32.02 & 43.26 & 29.54 \\
+EATA~\cite{eata} & 14.76 & 38.55 & 25.31 & 46.75 & 31.34 \\
+SAR~\cite{sar} & 4.71 & 34.48 & 12.54 & 21.84 & 18.39 \\
+SHOT~\cite{shot} & \textbf{3.64} & 34.41 & 11.52 & 21.47 & 17.76 \\
+\rowcolor{green!12}ours & 3.76 & 34.64 & 11.27 & \textbf{20.11} & \textbf{17.44} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent Paired over the twelve folds we beat source-only ($10/12$,
+$p{=}0.027$), Tent ($p{=}0.012$), ETA ($p{=}0.003$), EATA ($p{=}0.016$) and SAR
+($p{=}0.027$) --- but \textbf{not SHOT} ($17.44$ vs.\ $17.76$, $7/12$,
+$p{=}0.47$). On balanced pools SHOT is our peer, and on ASVspoof2019 it is
+better. That is the point rather than an embarrassment: SHOT's diversity term is
+a hard uniform prior, which costs nothing when the pool is balanced and
+destroys a released checkpoint when it is not ($6.38\%$ EER and $77.6\%$ accuracy
+on DF, against our $4.02$ and $98.95$). The separation between the two methods
+lives entirely in the regime the field does not test. Tent, ETA and EATA are
+meanwhile unstable even here, at $29$--$32\%$ pooled EER against a source-only
+$18.39$, and SAR is again exactly inert (pooled EER identical to source-only to
+two decimals).
 
 \subsection{Label-free guards}
 An adaptation that destroys the source ranking has discarded its own

@@ -997,3 +997,42 @@ sometimes fails". It also says precisely what would fix it: any side information
 that pins down one of the three unknowns (a handful of target labels, a known
 deployment prior, or a calibration set), none of which the strict label-free
 setting allows.
+
+### Stage 4: on balanced pools, SHOT is our peer — and that is the point
+
+All seven arms on identical folds (4 leave-one-corpus-out targets x 3 seeds =
+12 folds), mean EER:
+
+| method | ASV19 | LS-TTS | ITW | Arabic | pooled | paired vs ours |
+|---|---|---|---|---|---|---|
+| source | 4.77 | 35.88 | **11.19** | 21.04 | 18.39 | $10/12$, $p{=}0.027$ |
+| Tent | 22.16 | **34.07** | 23.89 | 48.89 | 32.25 | $9/12$, $p{=}0.012$ |
+| ETA | 7.66 | 35.23 | 32.02 | 43.26 | 29.54 | $10/12$, $p{=}0.003$ |
+| EATA | 14.76 | 38.55 | 25.31 | 46.75 | 31.34 | $9/12$, $p{=}0.016$ |
+| SAR | 4.71 | 34.48 | 12.54 | 21.84 | 18.39 | $10/12$, $p{=}0.027$ |
+| **SHOT** | **3.64** | 34.41 | 11.52 | 21.47 | **17.76** | **$7/12$, $p{=}0.47$** |
+| ours | 3.76 | 34.64 | 11.27 | **20.11** | **17.44** | — |
+
+**We do not beat SHOT on balanced pools**, and it is better than us on
+ASVspoof2019. Reported plainly rather than buried: the paper now says so in the
+section heading ("where the advantage disappears").
+
+This is the thesis demonstrated on a competitor rather than on ourselves.
+SHOT's diversity term $-H(\mathbb{E}[p])$ is a hard uniform prior; a uniform
+prior costs nothing on a balanced pool and destroys a released checkpoint on a
+skewed one. SHOT on DF: $6.38\%$ EER, $77.6\%$ accuracy. Ours: $4.02$, $98.95$.
+The entire separation between the two methods lives in the regime the field does
+not test.
+
+Two more things worth keeping. Tent, ETA and EATA are unstable even on balanced
+pools ($29$--$32\%$ pooled against a source-only $18.39$), so their DF failure is
+not purely a prior effect. And SAR's pooled EER is identical to source-only to
+two decimals --- inert on balanced pools exactly as it was on DF, which is now
+two independent confirmations that its recovery scheme buys safety by declining
+to adapt.
+
+**Caveat on seed counts.** These are 3 seeds on `adaptive_pipeline` pools; the
+manuscript's earlier 10-seed source-vs-ours numbers came from `extended_pipeline`
+with different pool sampling (source ITW $11.19$ here vs $12.78$ there). The
+two must not be mixed, and the paper now reports this run as its own internally
+consistent comparison.
