@@ -1098,3 +1098,26 @@ part. Queued as stage 8z (sweep $q\in\{0.02,0.05,0.10\}$ on DF).
 Promoted into the abstract and contribution (ii); Secs. IV-A and IV-B now cite
 the two equations instead of re-explaining the mechanism in prose, which paid
 for the space.
+
+### Correction to my own statement of the law
+
+I wrote purity$(q)=\min(1,\pi_{\mathrm{real}}/q)$ as an equality fitted at
+$r{=}0.9989$. It is not an equality, it is an **upper bound** --- and that makes
+it stronger, not weaker.
+
+A bucket of $qN$ clips can hold at most the pool's $\pi_{\mathrm{real}}N$ real
+clips. That is counting, true for *any* detector, no fit involved. Checked
+across all seven cells: the bound is **never violated** (max violation $0.000$)
+and is attained to within $0.025$, with the slack tracking AUC --- $0.000$ at
+AUC $.985$, $0.025$ at $.917$. So the empirical content is the *tightness*, which
+is exactly where the paper's other precondition (a usable ranking) enters. The
+two preconditions compose cleanly:
+
+* $q \le \min(\pi, 1-\pi)$ --- budget against prior, a hard bound;
+* a strong ranking --- how close to that bound you actually get.
+
+The consequence is a claim no experiment can overturn: **at DF's
+$\pi_{\mathrm{real}}{=}0.028$, $q{=}0.3$ caps pseudo-label purity at $9.3\%$ for
+any detector, however good.** We measure $8.6\%$. The published configuration
+cannot work at that prevalence, and that is a property of the protocol rather
+than of any model. Paper and abstract now say bound, not equality.

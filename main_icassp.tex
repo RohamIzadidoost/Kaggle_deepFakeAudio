@@ -60,28 +60,24 @@ Audio deepfake detectors generalise poorly across corpora despite near-perfect
 in-domain accuracy. We show the failure is one of \emph{operating point}: a
 fine-tuned self-supervised detector's \emph{ranking} (ROC-AUC) largely transfers
 cross-corpus while its decision \emph{threshold} does not, so unlabeled target
-audio can repair the operating point at test time. We further show that confident-quantile
-test-time adaptation (TTA) is sound only while its tail budget $q$ satisfies
-$q\le\min(\pi,1{-}\pi)$ --- pseudo-label purity is $\min(1,\pi_{\mathrm{real}}/q)$,
-predicted at $r{=}0.999$ over seven cells --- an assumption that holds where TTA
-is measured and essentially nowhere else: the standard ASVspoof2021-DF benchmark
-is $97.2\%$ spoof, In-the-Wild $37.2\%$. On the
-official DF eval ($400{,}435$ trials) the published symmetric-quantile
-configuration destroys the operating point of three independently trained
-state-of-the-art released checkpoints, driving accuracy from $98.8$--$99.1\%$ to
-$62$--$65\%$; three of four modern TTA baselines (Tent, SHOT, ETA) degrade them
-too, each through its own version of the same assumption, while SAR avoids
-damage only by reverting its own updates. Correcting the pseudo-label budget with a
-label-free estimate of the target prior ($\hat\pi{=}0.9715$ vs.\ a true $0.9708$)
-instead preserves accuracy and improves EER on all three, beating the symmetric
-budget on every one. Because EER and AUC both move, no re-thresholding rule
-accounts for it; the one-line median-threshold control that looks competitive on
-balanced pools loses $40$ accuracy points at this benchmark's real prior. The
-correction has a hard boundary, which we measure rather than assume: the prior
-is not identifiable from a model's own outputs, so the estimate degrades exactly
-as the operating point does ($r{=}0.998$ against the calibration deficit over
-seven cells), and on a badly mis-calibrated In-the-Wild checkpoint a wrong prior
-is worse than none.
+audio can repair the operating point at test time. We then show that
+confident-quantile test-time adaptation (TTA) can be sound only while its tail
+budget satisfies $q\le\min(\pi,1{-}\pi)$: a counting bound caps pseudo-label
+purity at $\min(1,\pi_{\mathrm{real}}/q)$ \emph{for any detector}. That holds
+where TTA is measured and essentially nowhere else --- ASVspoof2021-DF is
+$97.2\%$ spoof, In-the-Wild $37.2\%$ --- so at the published $q{=}0.3$ no model
+can exceed $9.3\%$ purity on DF. Empirically, on the official DF eval
+($400{,}435$ trials) that configuration destroys the operating point of three
+released state-of-the-art checkpoints, driving accuracy from $98.8$--$99.1\%$ to
+$62$--$65\%$, and three of four modern TTA baselines degrade them too, each
+through its own version of the same assumption. Correcting the budget with a
+label-free prior estimate ($\hat\pi{=}0.9715$ vs.\ a true $0.9708$) restores all
+three and beats the symmetric budget on every one; both EER and AUC move, so no
+re-thresholding rule accounts for it. The correction's boundary we measure
+rather than assume: the prior is not identifiable from a model's own outputs, so
+its estimate degrades exactly as the operating point does ($r{=}0.998$), and a
+wrong prior is worse than none. Since $q$ is ours to choose and $\pi$ is not,
+shrinking $q$ satisfies the condition without estimating anything.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -170,26 +166,28 @@ the well-calibrated DF pool all three agree to within $0.02$
 near-identical budget there.
 
 \textbf{(b) The tail budget, and when it is valid.} The standard rule takes the
-bottom $q$ and top $q$ of the target scores as pseudo-real and pseudo-fake. Its
-validity has an exact characterisation that, as far as we know, has not been
-stated. Under a reliable ranking the bottom-$q$ bucket can contain at most the
-pool's real clips, so its precision is
+bottom $q$ and top $q$ of the target scores as pseudo-real and pseudo-fake. Its validity has a characterisation that
+needs no model at all. A bucket of $qN$ clips can contain at most the pool's
+$\pi_{\mathrm{real}}N$ real clips, so \emph{for any detector whatsoever}
 \begin{equation}
-\mathrm{purity}(q)\;=\;\min\!\big(1,\ \pi_{\mathrm{real}}/q\big),
+\mathrm{purity}(q)\;\le\;\min\!\big(1,\ \pi_{\mathrm{real}}/q\big),
 \label{eq:purity}
 \end{equation}
-and symmetrically for the fake tail --- so the rule is sound exactly while
+and symmetrically for the fake tail --- so the rule can be sound only while
 \begin{equation}
 q\;\le\;\min(\pi,\,1-\pi).
 \label{eq:valid}
 \end{equation}
-Across all seven (checkpoint, corpus) cells here,
-Eq.~\eqref{eq:purity} predicts observed purity at $r{=}0.999$ (mean abs.\ error
-$0.019$), and Eq.~\eqref{eq:valid} then predicts every result we report: at
+Eq.~\eqref{eq:purity} is counting, not an approximation; what is empirical is
+its \emph{tightness}, which is where the ranking precondition enters. Across all
+seven (checkpoint, corpus) cells here the bound is never violated and is attained
+to within $0.025$, the slack tracking AUC ($0.000$ at AUC $.985$, $0.025$ at
+$.917$). Eq.~\eqref{eq:valid} then accounts for every result we report: at
 $q{=}0.3$ In-the-Wild satisfies it ($.372{>}.3$, purity $.94$--$.99$) and the
-recipe repairs checkpoints, while DF violates it ($.028{\ll}.3$) with purity
-$0.086$ --- $92\%$ of its ``confidently bona fide'' labels are spoof --- and the
-recipe destroys them.
+recipe repairs checkpoints, while on DF ($\pi_{\mathrm{real}}{=}.028$) no
+detector can exceed $9.3\%$ purity --- we measure $8.6\%$, i.e.\ $92\%$ of the
+``confidently bona fide'' labels are spoof --- and the recipe destroys them. The
+published configuration cannot work at that prevalence, whatever the model.
 
 Two fixes follow, and they differ in what they assume. Splitting the same budget
 $2q$ by an estimated prior,
@@ -326,9 +324,7 @@ Table~\ref{tab:protoa} is the main result. Applied unmodified to a released
 checkpoint already better than the published Wav2Vec2-AASIST baseline here, the
 symmetric-quantile configuration \emph{damages} it: accuracy
 $98.87\!\to\!62.96\%$, EER $4.51\!\to\!5.84\%$, manufacturing a $31$-point deficit
-where there was none. Eq.~\eqref{eq:valid} says why, and Eq.~\eqref{eq:purity}
-says by how much: $q{=}0.3$ against $\min(\pi,1{-}\pi){=}0.028$ gives the
-pseudo-real bucket a purity of $0.086$.
+where there was none. Eqs.~\eqref{eq:purity}--\eqref{eq:valid} say why, and by how much.
 
 The published baselines are no better placed, and each fails through its own
 version of the assumption. SHOT minimises
