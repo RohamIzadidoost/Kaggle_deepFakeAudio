@@ -1165,3 +1165,30 @@ other tail.
 deleted it and the three-checkpoint replication block. LaTeX's undefined-reference
 warning caught it both times. Section-spanning replacements in this file are
 unsafe; anchor on unique short strings instead.
+
+### Stage 5: the DF headline is significant at nine paired cells
+
+Three checkpoints x three seeds (seed 0 on the full 400,435-trial eval, seeds
+1--2 on a fixed 50k subset so the comparison stays paired). Seed-to-seed EER std
+$\le 0.14$; the source model is deterministic so its std is 0.
+
+| comparison | mean $\Delta$EER | better | Wilcoxon |
+|---|---|---|---|
+| prior-corrected vs symmetric | $+1.226$ | **9/9** | **$p{=}0.0039$** |
+| prior-corrected vs source | $+0.482$ | 8/9 | $p{=}0.027$ |
+| symmetric vs source | $-0.744$ | 3/9 | $p{=}0.055$ |
+
+Accuracy separates the arms with **no overlap**: source $98.8$--$99.1$,
+symmetric $61.6$--$65.2$, prior-corrected $98.7$--$99.0$. The controlled
+comparison --- same method, same budget size, one scalar different --- is
+unanimous and significant, which is the claim the paper rests on.
+
+### Note: the swap watcher died silently
+
+The background script armed to swap queues when stage 5 ended never ran (its
+process group was cleaned up when the spawning tool call returned), so the old
+queue started stage 6 instead. Caught it from the stage-transition notification
+and swapped manually within a minute; nothing was lost, since stage 5's rows
+were already written and every runner resumes. Lesson: a `nohup`'d watcher
+launched from a tool call is not reliable here --- check that a scheduled
+hand-off actually happened rather than assuming it.

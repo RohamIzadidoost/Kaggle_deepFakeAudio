@@ -66,13 +66,13 @@ budget satisfies $q\le\min(\pi,1{-}\pi)$: a counting bound caps pseudo-label
 purity at $\min(1,\pi_{\mathrm{real}}/q)$ \emph{for any detector}. That holds
 where TTA is measured and essentially nowhere else --- ASVspoof2021-DF is
 $97.2\%$ spoof, In-the-Wild $37.2\%$ --- so at the published $q{=}0.3$ no model
-can exceed $9.3\%$ purity on DF. Empirically, on the official DF eval
-($400{,}435$ trials) that configuration destroys the operating point of three
-released state-of-the-art checkpoints, driving accuracy from $98.8$--$99.1\%$ to
-$62$--$65\%$; on the one where we also ran the published TTA baselines, three of
-four degrade it as well, each through its own version of the assumption. Correcting the budget with a
-label-free prior estimate ($\hat\pi{=}0.9715$ vs.\ a true $0.9708$) restores all
-three and beats the symmetric budget on every one; both EER and AUC move, so no
+can exceed $9.3\%$ purity on DF. Empirically, on the official DF eval ($400{,}435$ trials) that
+configuration destroys the operating point of three released state-of-the-art
+checkpoints, driving accuracy from $98.8$--$99.1\%$ to $62$--$65\%$ across nine
+paired cells; three of four published TTA baselines degrade it as well, each
+through its own version of the assumption. Correcting the budget with a label-free prior estimate
+($\hat\pi{=}0.9715$ vs.\ a true $0.9708$) restores all of them and beats the
+symmetric budget on $9/9$ cells ($p{=}0.004$); both EER and AUC move, so no
 re-thresholding rule accounts for it. The correction's boundary we measure
 rather than assume: the prior is not identifiable from a model's own outputs, so
 its estimate degrades exactly as the operating point does ($r{=}0.998$), and a
@@ -370,14 +370,16 @@ source & 4.51 / 98.87 & 4.56 / 98.78 & 3.82 / 99.11 \\
 \end{tabular}
 \end{center}
 
-\noindent Two things replicate and one does not. The operating-point collapse
-under a symmetric budget holds on all three, as does prior-correction beating
-that budget ($-1.82$, $-0.79$, $-0.86$ EER). What does not is the symmetric
-budget's effect on \emph{ranking} (EER worse on two, better on one) --- as
-Eq.~\eqref{eq:purity} implies, a mis-specified budget corrupts the pseudo-labels
-and hence the operating point, while the ranking is inherited. Gains over
-source-only vary widely ($1.27$, $0.49$, $0.02$), so we rest on the unanimous
-controlled comparison.
+\noindent Over the nine paired cells (seed-to-seed EER std $\le0.14$),
+prior-correction beats
+the symmetric budget on \textbf{$9/9$} ($+1.23$ EER, Wilcoxon $p{=}0.004$) and
+source-only on $8/9$ ($+0.48$, $p{=}0.027$), while the symmetric budget is worse
+than source-only on $6/9$. Accuracy separates them with no overlap at all:
+$98.8$--$99.1\%$ (source), $61.6$--$65.2$ (symmetric), $98.7$--$99.0$
+(prior-corrected). What does \emph{not} replicate is the symmetric budget's
+effect on \emph{ranking} (EER worse on two checkpoints, better on one), as
+Eq.~\eqref{eq:purity} implies: a mis-specified budget corrupts the pseudo-labels
+and hence the operating point, while the ranking is inherited.
 
 \begin{table}[t]
 \centering
