@@ -845,3 +845,17 @@ that is luck, not design.
 Queued to quantify: ITW arms with the GMM prior and with the *oracle* prior
 ($0.3718$, budget $(0.377,0.223)$ against BBSE's $(0.240,0.360)$ — opposite
 direction), to measure what the estimation error actually cost.
+
+### Page fit resolved structurally
+
+Word-level trimming kept the manuscript three lines over for several passes. The
+fix was structural: the standalone Conclusion paragraph is gone and its one load-
+bearing sentence moved into the introduction, where the same claim was already
+being set up. Sections are now I Introduction, II Method, III Experimental
+Setup, IV Results, V Limitations, with references alone on page 5. A paper this
+dense does not need a conclusion that restates the abstract; the contributions
+list does that work.
+
+Headroom for the seven remaining `\PENDING` cells: most are table cells (neutral
+on length), so the two prose PENDINGs (Sec. IV-C baselines, Sec. IV-D
+out-of-sample guard validation) are the ones to watch on the next fit.
