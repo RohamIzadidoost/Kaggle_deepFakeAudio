@@ -158,19 +158,15 @@ about a prior, so we estimate the prior rather than assume it. Black-box shift
 estimation~\cite{bbse} gives $\hat p = M^{-\top}q$, where
 $M[y,\hat y]=P_{\mathcal S}(\hat y\mid y)$ is the source confusion matrix
 measured on the model's own labelled training data and $q$ is the observed
-target prediction histogram. Label-free prior estimators divide into two families, and the
-split matters more than we expected. BBSE and EM~\cite{sld} read the model's
-\emph{thresholded prediction rate} on the target; a two-component Gaussian
-mixture reads the \emph{shape} of the target score histogram. The first family inherits
-whatever calibration error the target induces --- exactly the quantity this paper
-says does not transfer. On In-the-Wild, where the checkpoint predicts $58.9\%$
-fake on a $37.2\%$-fake pool, BBSE returns $\hat\pi{=}0.600$ and EM $0.614$ while
-the mixture returns $0.422$; on the well-calibrated DF pool all three agree to
-within $0.02$. A prediction-rate estimator is accurate where the operating point
-is already sound and unreliable where it is not. We report DF with BBSE as run
-(a mixture prior gives a near-identical budget there); on a badly mis-calibrated
-pool the mixture is the safer default. What matters most is estimating the prior at all rather
-than assuming it is $\tfrac12$.
+target prediction histogram. Estimators split into two families and the split
+matters: BBSE and EM~\cite{sld} read the model's \emph{thresholded prediction
+rate}, a two-component Gaussian mixture reads the \emph{shape} of the score
+histogram. The first inherits whatever calibration error the target induces ---
+on In-the-Wild, where the checkpoint predicts $58.9\%$ fake on a $37.2\%$-fake
+pool, BBSE returns $0.600$ and EM $0.614$ while the mixture returns $0.422$; on
+the well-calibrated DF pool all three agree to within $0.02$
+(Sec.~\ref{sec:lim}). We report DF with BBSE as run, a mixture prior giving a
+near-identical budget there.
 
 \textbf{(b) Prior-corrected confident tails.} The standard rule takes the bottom
 $q$ and top $q$ of the target scores as pseudo-real and pseudo-fake. We split the
