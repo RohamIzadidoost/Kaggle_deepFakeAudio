@@ -155,16 +155,19 @@ about a prior, so we estimate the prior rather than assume it. Black-box shift
 estimation~\cite{bbse} gives $\hat p = M^{-\top}q$, where
 $M[y,\hat y]=P_{\mathcal S}(\hat y\mid y)$ is the source confusion matrix
 measured on the model's own labelled training data and $q$ is the observed
-target prediction histogram. $M$ and $q$ read source error structure and target
-\emph{prediction rate} only---never the shape of the target score distribution,
-which is precisely what mis-calibration corrupts, so BBSE still works where a
-score-histogram estimator has a degenerate histogram to work from. On a
-well-separated checkpoint the choice of estimator does not matter: at the real
-DF prior a two-component GMM, an EM estimator that needs only the source class
-balance~\cite{sld}, and BBSE agree to within $0.02$ and produce effectively the
-same tail split (mean absolute error over a $0.5$--$0.97$ sweep: $0.028$,
-$0.040$, $0.041$). What matters is estimating the prior at all rather than
-assuming it is $\tfrac12$.
+target prediction histogram. Label-free prior estimators divide into two families, and the
+split matters more than we expected. BBSE and EM~\cite{sld} read the model's
+\emph{thresholded prediction rate} on the target; a two-component Gaussian
+mixture reads the \emph{shape} of the target score histogram. The first family inherits
+whatever calibration error the target induces --- exactly the quantity this paper
+says does not transfer. On In-the-Wild, where the checkpoint predicts $58.9\%$
+fake on a $37.2\%$-fake pool, BBSE returns $\hat\pi{=}0.600$ and EM $0.614$ while
+the mixture returns $0.422$; on the well-calibrated DF pool all three agree to
+within $0.02$. A prediction-rate estimator is accurate where the operating point
+is already sound and unreliable where it is not. We report DF with BBSE as run
+(a mixture prior gives a near-identical budget there); on a badly mis-calibrated
+pool the mixture is the safer default. What matters most is estimating the prior at all rather
+than assuming it is $\tfrac12$.
 
 \textbf{(b) Prior-corrected confident tails.} The standard rule takes the bottom
 $q$ and top $q$ of the target scores as pseudo-real and pseudo-fake. We split the
@@ -488,16 +491,14 @@ AUC-$0.71$ LibriSpeech-TTS it is null.
 \section{Limitations and Conclusion}
 \label{sec:lim}
 \begin{itemize}
-\item \textbf{Prior estimation assumes label shift; corpora also shift
-covariates.} Every estimator we tried shares one positive bias --- $\hat\pi{\approx}0.61$
-at a true $0.50$, $0.974$ at a true $0.972$ --- because DF's codecs raise the
-detector's real-class error above its source-domain rate. A bias shared by four
-unrelated estimators belongs to the shift, not the estimator, and it is smallest
-where it matters most.
-\item \textbf{The prior fixes the budget, not the threshold.} Where a shipped
-threshold is near-optimal the BBSE threshold buys nothing over $\tau{=}0.5$
-($98.94$ vs.\ $98.92$); the gain comes from the budget, and its size varies a
-great deal across checkpoints ($1.27$ to $0.02$ EER points).
+\item \textbf{Prior estimation is the weakest link, and it fails where it is
+most needed.} Estimators that read the thresholded prediction rate inherit the
+target's calibration error: on In-the-Wild BBSE is off by $+0.23$ and a score
+mixture by $+0.05$. The correction still did no harm there ($4.54$ vs a source
+$5.06$), so it degrades gracefully --- but that is a property of this pool, not a
+guarantee.
+\item \textbf{The prior fixes the budget, not the threshold}, and the gain's
+size varies a great deal across checkpoints ($1.27$ to $0.02$ EER points).
 \item \textbf{Needs a reliable source ranking, and improves someone else's
 model.} A low-AUC start is not a regime we can rescue (the AUC-$0.71$ target is
 the one null in Table~\ref{tab:main}), and we did not train a
