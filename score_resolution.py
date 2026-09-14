@@ -1,12 +1,10 @@
 """Score-resolution diagnostics for every cached arm.
 
-Why this exists: on the official ASVspoof2021-DF eval, Tent returns an EER of
-4.06% -- apparently better than the 4.51% source model it started from. It is
-not. Tent saturates 98.07% of the 400,435 scores to exactly 1.0, leaving 1,247
-distinct values in the whole pool; the "EER" is then a property of how the ROC
-breaks ties, and AUC (which cannot be rescued by tie-breaking) falls .9923 ->
-.9765. Reporting EER alone would have recorded an entropy-minimisation collapse
-as an improvement.
+Near-ceiling scores and exact ties are different: the historical Tent run has
+98.07% of scores >= 1-1e-6, but its largest exact tie is 93.02%. AUC and EER
+summarize different parts of the ROC and can move in opposite directions.
+Report both, group exact ties, and never describe near-ceiling mass as an exact
+tie. metrics.compute_eer now interpolates the ROC crossing.
 
     python score_resolution.py [scores_dir] [--corpus df2021]
 """
@@ -46,6 +44,8 @@ def main():
             n_unique=int(len(np.unique(s))),
             pct_at_max=round(float(np.mean(s >= 1 - 1e-6)) * 100, 2),
             pct_at_min=round(float(np.mean(s <= 1e-6)) * 100, 2),
+            pct_exact_one=round(float(np.mean(s == 1.0)) * 100, 2),
+            pct_exact_zero=round(float(np.mean(s == 0.0)) * 100, 2),
             largest_tie_pct=round(float(pd.Series(s).value_counts().iloc[0]
                                         / len(s)) * 100, 2)))
     df = pd.DataFrame(rows).sort_values(["ckpt", "arm"])
@@ -55,8 +55,8 @@ def main():
     print(f"\nwrote {out}")
     bad = df[df.largest_tie_pct > 50]
     if len(bad):
-        print("\n!! arms whose scores are >50% a single tied value -- their EER "
-              "is a tie-breaking artefact and must not be read as a ranking:")
+        print("\nArms with >50% a single exact score. Report tie-aware ROC "
+              "metrics and distinguish exact from near-ceiling saturation:")
         print(bad[["ckpt", "arm", "eer", "auc", "largest_tie_pct", "n_unique"]]
               .to_string(index=False))
 

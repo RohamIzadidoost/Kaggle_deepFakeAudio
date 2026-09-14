@@ -27,17 +27,53 @@ from sklearn.metrics import (
 
 
 def compute_eer(labels, scores):
-    """Equal Error Rate: the operating point where FPR == FNR.
+    """EER at the linearly interpolated crossing of the empirical ROC.
 
-    Returns (eer, threshold). `labels`: 0/1 with 1=fake. `scores`: P(fake).
+    Equal scores are grouped by ``roc_curve`` rather than ordered arbitrarily.
+    Returns (eer, threshold). The threshold is the lower endpoint of the
+    crossing segment: with discrete scores no deterministic threshold need
+    attain the interpolated EER. Labels must contain both 0 and 1.
     """
     labels = np.asarray(labels)
     scores = np.asarray(scores)
-    fpr, tpr, thresholds = roc_curve(labels, scores, pos_label=1)
+    if labels.ndim != 1 or scores.shape != labels.shape or not len(labels):
+        raise ValueError("labels and scores must be nonempty, matching 1-D arrays")
+    if not np.array_equal(np.unique(labels), [0, 1]):
+        raise ValueError("EER requires both binary classes, encoded as 0 and 1")
+    if not np.isfinite(scores).all():
+        raise ValueError("scores must be finite")
+    fpr, tpr, thresholds = roc_curve(labels, scores, pos_label=1,
+                                    drop_intermediate=False)
     fnr = 1 - tpr
-    idx = np.nanargmin(np.abs(fnr - fpr))
-    eer = float((fpr[idx] + fnr[idx]) / 2)
+    delta = fpr - fnr
+    idx = int(np.flatnonzero(delta >= 0)[0])
+    if delta[idx] == 0:
+        return float(fpr[idx]), float(thresholds[idx])
+    weight = -delta[idx - 1] / (delta[idx] - delta[idx - 1])
+    eer = float(fpr[idx - 1] + weight * (fpr[idx] - fpr[idx - 1]))
     return eer, float(thresholds[idx])
+
+
+def threshold_diagnostics(labels, scores, threshold=0.5):
+    """Exact best-threshold accuracy and gap, for labelled diagnostics only.
+
+    Includes the all-negative and all-positive decisions. Ties move together;
+    no rounding, candidate subsampling, or label-dependent tie-breaking is used.
+    The oracle threshold is selected on these same labels and is NOT a
+    deployable label-free control or a held-out performance estimate.
+    """
+    labels, scores = np.asarray(labels), np.asarray(scores)
+    # Reuse the validation above.
+    compute_eer(labels, scores)
+    fpr, tpr, thresholds = roc_curve(labels, scores, pos_label=1,
+                                    drop_intermediate=False)
+    prior = float(labels.mean())
+    accs = prior * tpr + (1 - prior) * (1 - fpr)
+    best = int(np.argmax(accs))
+    fixed = float(np.mean((scores >= threshold) == labels))
+    return {"oracle_accuracy": float(accs[best]),
+            "oracle_threshold": float(thresholds[best]),
+            "threshold_gap": max(0.0, float(accs[best]) - fixed)}
 
 
 def evaluation_report(labels, scores, threshold=0.5, verbose=True):

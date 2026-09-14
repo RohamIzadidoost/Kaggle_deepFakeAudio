@@ -456,3 +456,24 @@ as the *mechanism and scope map*, not the headline verdict. Same evidence.
 by this section and the FINDINGS doc — the 9.42% / 5.50% numbers there are the
 pre-breadth cloud run. `main.tex` (the 11-page full version) was NOT updated on
 this branch and still carries the pre-breadth claims.
+
+## 2026-09-14 — User-requested ICASSP review correction
+
+Revised `main_icassp.tex` around the confident-tail counting constraint and
+recomputed all short-paper tables from 89 cached score arrays. The original
+short paper is preserved in `manuscript_audit/original/`; the detailed correction
+and remaining experiments are documented in `manuscript_audit/README.md`.
+
+The major audit findings were a phase-denominator mix-up (533,928 eval trials,
+not 611,829), near-one scores described incorrectly as exact ties, and the
+nearest-ROC-point EER approximation understating error on coarse/tied scores.
+`metrics.compute_eer` now interpolates the ROC crossing and has CPU regression
+tests. Historical CSVs are unchanged and still use the old estimator. Added
+exact oracle threshold diagnostics and frozen-source median/BBSE controls.
+
+The short-paper claims now distinguish damage prevention from source improvement,
+report balanced accuracy and disjoint results, qualify the prior-estimation and
+purity arguments, identify baseline variants accurately, and avoid significance
+claims from reused checkpoints/data. The earlier 369-cell deficit/guard claims
+are archived, not included in the revised short paper. No neural training or
+inference was performed, and no files were pushed or submitted.

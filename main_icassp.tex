@@ -1,548 +1,438 @@
-% =====================================================================
-%  ICASSP submission (5 pages: 4 content + 1 references-only).
-%  v2 -- restructured around the prior-correction result. The v1
-%  manuscript is preserved at main_icassp_v1_backup.tex and the reasoning
-%  behind the restructure is in ICASSP_REVIEW_AND_PLAN.md.
-% =====================================================================
-\documentclass[conference]{IEEEtran}
-
-\usepackage{cite}
-\usepackage{amsmath}
-\usepackage{amssymb}
-\usepackage{graphicx}
-\usepackage{booktabs}
-\usepackage[table]{xcolor}
-\usepackage{textcomp}
-\setlength{\textfloatsep}{4pt plus 1pt minus 1pt}
-\setlength{\intextsep}{4pt plus 1pt minus 1pt}
-\setlength{\dbltextfloatsep}{4pt plus 1pt minus 1pt}
-\setlength{\abovecaptionskip}{3pt}
-% ICASSP 2027 asks for nothing smaller than 9pt "throughout the paper,
-% including figure captions". IEEEtran's conference default typesets captions in
-% \footnotesize (8pt) small caps, whose lowercase glyphs render near 6.4pt. The
-% caption package lifts them to 9pt without disturbing the bibliography, which
-% stays at the size every IEEE paper uses for references.
-\usepackage[font=small,labelfont=small,textfont=small]{caption}
-\setlength{\belowcaptionskip}{1pt}
-\usepackage{algorithm}
-\usepackage{algpseudocode}
-
-% Denser float packing: keeps all content inside the 4-page limit.
-\renewcommand{\topfraction}{0.95}
-\renewcommand{\bottomfraction}{0.7}
-\renewcommand{\textfraction}{0.04}
-\renewcommand{\floatpagefraction}{0.85}
-\setcounter{topnumber}{3}
-\setcounter{totalnumber}{4}
-
-\newcommand{\safefig}[2]{%
-  \IfFileExists{#2}{\includegraphics[width=#1]{#2}}{%
-    \fbox{\parbox[c][2.2cm][c]{\dimexpr#1-2\fboxsep-2\fboxrule\relax}{%
-      \centering\ttfamily\detokenize{#2}\\[3pt]\normalfont(upload this figure)}}}%
-}
-% Visible marker for numbers still being produced by the running GPU queue.
-\newcommand{\PENDING}[1]{{\color{red}\textbf{[#1]}}}
-
+% Revised from cached-score audit. Regenerate tables with python audit_icassp.py.
+% Original manuscript is preserved in manuscript_audit/original/.
+\documentclass[10pt,letterpaper]{article}
+\usepackage{spconf}
+\usepackage{amsmath,amssymb,graphicx,booktabs,cite}
+\usepackage{balance}
+\usepackage[hidelinks]{hyperref}
+\usepackage{url}
+\urlstyle{same}
+\hypersetup{pdftitle={Class-Prior Constraints on Confident-Tail Test-Time Adaptation for Audio Deepfake Detection},
+pdfauthor={Roham Izadidoost, Sumit Srivastava, Shweta Sharma}}
+\makeatletter
+\newcommand{\tablerows}[1]{\@@input #1 }
+\makeatother
+\setlength{\textfloatsep}{10pt plus 2pt minus 2pt}
+\setlength{\dbltextfloatsep}{10pt plus 2pt minus 2pt}
+\title{Class-Prior Constraints on Confident-Tail Test-Time Adaptation\\
+for Audio Deepfake Detection}
+\name{Roham Izadidoost$^{1}$ \qquad Sumit Srivastava$^{2}$ \qquad Shweta Sharma$^{2}$}
+\address{$^{1}$Iran University of Science and Technology \qquad $^{2}$Manipal University Jaipur\\
+\small izadidoostroham@gmail.com, sumit.srivastava@jaipur.manipal.edu,\\
+\small Shweta.sharma1@jaipur.manipal.edu}
 \begin{document}
-
-\title{RANKING TRANSFERS, THRESHOLDS DON'T:\\
-PRIOR-CORRECTED TEST-TIME ADAPTATION FOR AUDIO DEEPFAKE DETECTION}
-
-\author{\IEEEauthorblockN{Roham Izadidoost}
-\IEEEauthorblockA{Iran University of Science and Technology \\
-izadidoostroham@gmail.com}
-\and
-\IEEEauthorblockN{Dr.~Sumit Srivastava}
-\IEEEauthorblockA{Manipal University Jaipur \\
-sumit.srivastava@jaipur.manipal.edu}
-\and
-\IEEEauthorblockN{Shweta Sharma}
-\IEEEauthorblockA{Manipal University Jaipur \\
-Shweta.sharma1@jaipur.manipal.edu}}
-
 \maketitle
 
 \begin{abstract}
-Audio deepfake detectors generalise poorly across corpora. We show the failure is
-one of \emph{operating point} --- ranking largely transfers while the decision
-threshold does not --- and that confident-quantile test-time adaptation (TTA)
-needs its tail budget to satisfy $q\le\min(\pi,1{-}\pi)$: a counting bound caps
-pseudo-label purity at $\min(1,\pi_{\mathrm{real}}/q)$ for \emph{any} detector.
-That holds where TTA is measured and almost nowhere else. On ASVspoof2021-DF
-($97.2\%$ spoof) the published $q{=}0.3$ therefore cannot exceed $9.3\%$ purity,
-and it drives three publicly released checkpoints from $98.8$--$99.1\%$ accuracy
-to $62$--$65\%$; three of four modern TTA baselines fail likewise, and resampling
-In-the-Wild's prevalence reproduces the collapse on demand. A label-free prior
-estimate restores all three ($9/9$ paired cells, $p{=}0.004$), but the prior is
-not identifiable from a model's own outputs, so its estimate degrades exactly as
-the operating point does ($r{=}0.997$) --- whereas shrinking $q$ needs no estimate.
+Confident-tail self-training assigns pseudo-labels to the lowest and highest
+scoring target examples. We study a limitation of this rule in audio deepfake
+detection: a selected class-$c$ bucket occupying fraction $b_c$ of a pool with
+class prior $\pi_c$ has purity at most $\min(1,\pi_c/b_c)$, regardless of the
+detector. For exact symmetric tails of size $q$, perfect purity therefore
+requires $q\leq\min(\pi,1-\pi)$; this is not a guarantee of successful
+adaptation. On 400,435 available ASVspoof2021-DF eval trials, three released
+checkpoints fall from 98.78--99.11\% accuracy to 61.80--65.24\% after adaptation
+with nominal $q=0.3$. Allocating the tails using a black-box label-shift estimate
+restores accuracy to 98.74--98.98\%, while improvements over the source vary by
+checkpoint and metric. Controlled prevalence resampling reproduces the large
+budget's degradation on In-the-Wild. Smaller tails avoid that large collapse
+without estimating a prior, whereas prior estimation itself can fail under
+corpus shift. Recomputed tie-aware metrics, threshold-only controls, and disjoint
+evaluation distinguish damage prevention from improved discrimination.
 \end{abstract}
-
-\begin{IEEEkeywords}
-audio deepfake detection, anti-spoofing, test-time adaptation, label shift,
-cross-corpus generalisation.
-\end{IEEEkeywords}
+\begin{keywords}
+audio deepfake detection, test-time adaptation, label shift, pseudo-labels
+\end{keywords}
 
 \section{Introduction}
-Self-supervised (SSL) front-ends such as wav2vec\,2.0 and XLS-R, paired with
-lightweight back-ends, reach very low in-domain error on standard anti-spoofing
-benchmarks~\cite{wav2vec2aug,xlsrsls,aasist}. Deployed on audio from a
-different source---new microphones, codecs, languages, or generators---accuracy
-drops steeply, a well-documented generalisation gap~\cite{asdg,crossdomain,itw}.
+\label{sec:intro}
+Self-supervised speech representations paired with anti-spoofing back-ends
+provide strong audio deepfake detectors~\cite{wav2vec2aug,aasist}, but transfer
+across recording conditions and synthesis systems remains difficult~\cite{itw}.
+A target-domain failure can involve both score ordering and the decision
+threshold. For example, a released detector in our In-the-Wild evaluation has
+ROC-AUC 0.9171 but only 39.08\% accuracy at threshold 0.5. This motivates
+examining adaptation and re-thresholding separately; it does not establish
+that ranking always transfers or that probabilities are calibrated.
 
-We start from a diagnostic measurement: a fine-tuned XLS-R detector evaluated on
-an unseen corpus keeps a high \textbf{ROC-AUC while its accuracy at a fixed
-threshold collapses}. It still \emph{ranks} clips correctly; its operating point
-is mis-calibrated. Because ranking transfers, the most-confident predictions on
-unlabeled target audio are trustworthy enough to adapt on at test time.
+Test-time adaptation (TTA) uses unlabeled target observations to update a source
+model. Entropy minimization~\cite{tent} and pseudo-label self-training can
+reinforce incorrect predictions. We examine a specific self-training rule:
+assign the bottom and top score quantiles to bona fide and spoof classes.
+With a fixed symmetric budget, the minority bucket can be much larger than the
+entire minority population. Even a perfect ranking cannot fill that bucket
+with correct pseudo-labels. This obstruction is especially relevant when
+benchmark pools and deployment pools have different class proportions.
 
-That observation is the starting point of a family of methods, not a method.
-The step every member of the family takes---label the extreme quantiles of the
-target scores and self-train on them---carries an assumption that is invisible
-on the benchmarks the field uses and fatal on the pools it deploys to: that the
-target pool is roughly class-balanced. Take the top and bottom $30\%$ of a
-$97\%$-spoof pool and the ``confidently bona fide'' bucket is mechanically made
-of low-scoring \emph{spoof}. Self-training then teaches the detector that a
-great deal of spoof is genuine. This is not hypothetical: it is what happens to all three released
-publicly released checkpoints we test on the official ASVspoof2021-DF protocol
-(Table~\ref{tab:protoa}), and to three of four modern TTA baselines.
+Class imbalance in adaptation is already established: Label Shift
+Adapter~\cite{lsa} estimates target proportions to adapt model parameters, and
+RLSbench~\cite{rlsbench} studies adaptation under joint label and conditional
+shift. Black-box shift estimation (BBSE)~\cite{bbse} estimates target priors
+from a source confusion matrix. Our contribution is narrower: an explicit
+counting constraint for confident-tail sampling, an audio checkpoint study of
+its consequences, and a comparison of prior-based allocation with smaller tails
+and threshold-only controls. T$^2$A~\cite{t2a} instead addresses deepfake TTA
+through uncertainty-aware negative learning. We do not claim a new general
+label-shift estimator or superiority to specialized label-shift adaptation.
 
-\textbf{Contributions.} (i) The ranking--calibration asymmetry as the mechanism
-of cross-corpus failure, over $369$ third-party cells and tested directly: a
-proxy $\mathcal{A}$-distance \emph{rises} after adaptation, so the effect is
-operating-point repair, not learned invariance. (ii) An exact \emph{necessary}
-prevalence condition for the confident-quantile rule, $q\le\min(\pi,1{-}\pi)$,
-from a counting bound on pseudo-label purity; it accounts for every result here
-and is confirmed by intervening on prevalence directly. (iii) A label-free
-correction that removes the damage on every DF checkpoint, with an
-identifiability argument bounding when it can be trusted --- and an oracle-prior
-arm showing that what fails is the estimate, not the correction. (iv) Two
-label-free monitors, one of which recovers $13.9$ EER points from a Tent
-collapse out-of-sample, together with the precondition they themselves require.
-
-\textbf{Related work.} SSL front-ends with AASIST or attentive back-ends dominate
-recent benchmarks~\cite{wav2vec2aug,xlsrsls,aasist,rawnet2}. Train-time domain
-generalisation aligns source domains~\cite{asdg} or runs gradient reversal over
-source and target jointly~\cite{dann}; both act before deployment. In TTA,
-entropy minimisation (Tent)~\cite{tent} is the reference recipe, and its
-instability prompted reliable-sample filtering (ETA/EATA)~\cite{eata},
-sharpness-aware entropy with recovery (SAR)~\cite{sar}, and information maximisation with
-self-labelling (SHOT)~\cite{shot} --- we compare against all four. Closest to us
-is T$^2$A~\cite{t2a}, which likewise targets TTA \emph{for deepfake detection}
-and likewise diagnoses entropy minimisation's confirmation bias, replacing it
-with uncertainty-aware negative learning; it is evaluated on image/video
-deepfakes and does not consider the target class prior, which is the axis this
-paper isolates. Our findings are complementary: T$^2$A repairs the objective,
-we show that the \emph{sampling} of pseudo-labels carries a prevalence
-precondition that no objective can remove. Batch-statistics recalibration~\cite{adabn} is a no-op for LayerNorm. The
-prior estimator is black-box shift estimation~\cite{bbse}; the proxy
-$\mathcal{A}$-distance is from~\cite{bendavid}.
-
-\section{Method}
+\section{Tail selection and adaptation}
 \label{sec:method}
-Let $x$ be a waveform with label $y\in\{0,1\}$ (fake$=1$) and let $f_\theta$
-produce $s_\theta(x)=P_\theta(y{=}1\mid x)$. We are given a source model, its
-labelled training corpus $\mathcal{S}$, and an \emph{unlabelled} target pool
-$\mathcal{T}$. No target label is read at any point.
+Let $y=1$ denote spoof and $s_\theta(x)\in[0,1]$ the detector's spoof score.
+The unlabeled adaptation pool has $N$ clips and unknown class fractions
+$\pi_c$. Source labels are available for BBSE; target labels are used only for
+evaluation, controlled resampling, and explicitly marked oracle analyses.
 
-\textbf{What breaks under corpus shift.} Ranking quality
-$\mathrm{AUC}=\Pr[s_\theta(x^+){>}s_\theta(x^-)]$ is threshold-free; accuracy at
-a fixed $\tau$ is not. Empirically AUC degrades far less than accuracy at
-$\tau{=}0.5$ under source$\to$target shift: across $369$ third-party evaluation
-cells the accuracy a model's ranking supports but its shipped threshold does not
-deliver averages $7.29$ points. The deployable object is therefore the score
-\emph{order}, and the broken object is the operating point. Everything below follows from taking that literally.
-
-\textbf{(a) The target prior, label-free.} An operating point is a statement
-about a prior, so we estimate the prior rather than assume it. Black-box shift
-estimation~\cite{bbse} gives $\hat p = M^{-\top}q$ with
-$M[y,\hat y]=P_{\mathcal S}(\hat y\mid y)$ the source confusion matrix and $q$ the
-target prediction histogram. Estimators split into those reading the
-\emph{thresholded prediction rate} (BBSE, EM~\cite{sld}) and those reading the
-score \emph{histogram} (a two-component mixture); the first inherits whatever
-calibration error the target induces, and Sec.~\ref{sec:results} show neither is reliable where it is needed.
-
-\textbf{(b) The tail budget, and when it is valid.} The standard rule takes the
-bottom $q$ and top $q$ of the target scores as pseudo-real and pseudo-fake. Its
-validity has a characterisation that needs no model at all. A bucket of $q_cN$
-clips can contain at most the pool's $\pi_cN$ class-$c$ clips, so
-\emph{for any detector whatsoever}
+\subsection{A necessary condition for pure pseudo-labels}
+A bucket $C_c$ assigned pseudo-label $c$, with realized fraction
+$b_c=|C_c|/N>0$, contains at most $\pi_c N$ correct examples. Thus
 \begin{equation}
-\mathrm{purity}_c\;\le\;\min\!\big(1,\ \pi_c/q_c\big).
-\label{eq:purity}
+ \operatorname{purity}(C_c)\leq\min\{1,\pi_c/b_c\}.
+ \label{eq:bound}
 \end{equation}
-This is counting, not an approximation; what is empirical is its
-\emph{tightness}, which is where the ranking precondition enters --- across all
-seven (checkpoint, corpus) cells here the bound is never violated and is attained
-to within $0.025$, the slack tracking AUC ($0.000$ at AUC $.985$, $0.025$ at
-$.917$). Two consequences follow, and they are the whole story.
-
-The \emph{symmetric} rule sets $q_c{=}q$, so perfect purity is \emph{feasible}
-only while
+This is a finite-pool counting bound and makes no assumption about the model.
+For exact symmetric tails, $b_0=b_1=q$, perfect purity is possible only if
 \begin{equation}
-q\;\le\;\min(\pi,\,1-\pi).
-\label{eq:valid}
+ q\leq\min\{\pi,1-\pi\},\qquad \pi=\pi_1.
+ \label{eq:necessary}
 \end{equation}
-This is \emph{necessary, not sufficient}: violating it makes pure pseudo-labels
-impossible for any detector, while satisfying it only removes the prevalence
-obstruction and leaves purity to the ranking. Our claims rest on the necessary
-direction, which is where the published configurations fall.
-In-the-Wild satisfies this at $q{=}0.3$ ($\min{=}.372$) and the recipe repairs
-checkpoints there; DF does not ($\min{=}.028$), where no detector can exceed
-$9.3\%$ pseudo-real purity --- we measure $8.6\%$ --- and the recipe destroys
-them. The damage is one-sided: DF's pseudo-\emph{fake} tail is $100\%$ pure at
-every $q$.
+For illustration, at 97.22\% spoof prevalence a bucket labeling 30\% of the pool
+bona fide has purity at most 9.27\%. High AUC cannot remove this constraint.
+Satisfying it only removes the counting obstruction: overlapping score
+distributions can still contaminate both tails, and pure tails do not guarantee
+beneficial gradient updates. Conversely, learning may tolerate impure labels.
 
-The \emph{prior-split} rule, $q_c{=}2q\hat\pi_c$, restores
-Eq.~\eqref{eq:purity} for \emph{any} $q\le\tfrac12$ given a correct prior, and is
-identical to the symmetric rule at $\hat\pi{=}0.5$. With an estimate it needs
+A prior allocation uses nominal fractions $q_c=2q\hat\pi_c$, keeping the
+nominal total selection fraction $2q$. With exact bucket sizes and a correct
+prior, $q\leq1/2$ ensures $q_c\leq\pi_c$. With estimated priors, the
+corresponding feasibility condition is
 \begin{equation}
-\hat\pi_c/\pi_c\;\le\;1/(2q)\quad\text{for both classes,}
-\label{eq:tol}
+ \hat\pi_c/\pi_c\leq1/(2q)\quad(c=0,1;\ \pi_c>0).
+ \label{eq:tolerance}
 \end{equation}
-i.e.\ at $q{=}0.3$ the estimate may overstate either class by at most $1.67\times$.
-This is why it works on DF ($\hat\pi_{\mathrm{real}}/\pi_{\mathrm{real}}{=}1.03$)
-and fails on In-the-Wild s42, where underestimating $\pi_{\mathrm{real}}$ inflates
-the \emph{fake} budget to $0.587$ against $\pi_{\mathrm{fake}}{=}0.372$
-($2.63\times$, bound $0.633$) and simply moves the impurity to the other tail.
-Across the seven adapted arms we ran, the worst-tail bound is $1.000$ for the
-five that came out intact ($82$--$99\%$ accuracy) and $0.093$ and $0.633$ for the
-two that collapsed ($62.96$, $47.99$). Since $q$ is ours to choose and $\pi$ is
-not (Sec.~\ref{sec:results}), a third option is to shrink $q$ until
-Eq.~\eqref{eq:valid} holds for the most skewed prior anticipated --- at a
-supervision cost the prior-split budget avoids ($q{=}0.02$ labels $800$ of
-$20{,}000$ clips against $12{,}000$). A fixed confidence threshold is a fourth,
-prior-free but calibration-dependent. We report all four.
+It limits permissible overestimation of each class; it is not a safety theorem.
+A smaller symmetric $q$ is an alternative requiring no point estimate of the
+prior, but choosing a guaranteed feasible nonzero value still requires a lower
+bound on the minority prevalence.
 
-\textbf{(c) Objective.} With pseudo-labels $\tilde y$ from (b) on the confident
-set $\mathcal{C}$ and a stochastic channel perturbation $a(\cdot)$ (per-clip
-gain $g\sim\mathcal U(0.7,1.3)$ plus Gaussian noise $\sigma{=}0.005$),
+\textbf{Quantile ties.} Our cached experiments use inclusive score thresholds,
+$s\leq Q(q_0)$ and $s\geq Q(1-q_1)$, with spoof assignments taking precedence
+if masks overlap. Consequently, realized sizes can differ from nominal budgets.
+Equation~\eqref{eq:bound} applies to the realized $b_c$; equations
+\eqref{eq:necessary}--\eqref{eq:tolerance} describe exact-size tails. We audit
+realized selections on cached source scores and do not interpret nominal
+budgets as exact sample counts. Deterministic selection of fixed counts would
+be a different implementation requiring new adaptation runs.
+
+\subsection{Prior estimation and objective}
+For $M_{ij}=P_{\mathcal S}(\hat y=j\mid y=i)$ and target prediction histogram
+$h$, BBSE solves $M^\top\hat p=h$. We estimate $M$ using up to 4,000
+class-balanced clips from the checkpoint's labeled training corpus; $h$ uses
+source predictions on the adaptation pool. We clip the solution components to
+$[10^{-4},1-10^{-4}]$ and renormalize. The implementation returns a uniform
+prior if the matrix is singular. Because $M$ uses training rather than held-out
+source data, optimism in its estimated error rates is a limitation.
+
+At each of four passes, the current model scores the adaptation pool and
+refreshes pseudo-labels. For a mini-batch $B$ and its selected subset $B_C$,
 \begin{equation}
-\min_{\{\gamma,\beta\},\phi}\
-\underbrace{\textstyle\sum_{x\in\mathcal C}\!\mathrm{CE}\big(f_\theta(x),\tilde y\big)}_{\mathcal L_{\mathrm{ST}}}
-+\ \lambda\,\underbrace{\big\|f_\theta(a(x))-\mathrm{sg}[f_\theta(x)]\big\|^2}_{\mathcal L_{\mathrm{cons}}},
+ \begin{aligned}
+ \mathcal L_B ={}&
+ \frac{1}{|B_C|}\sum_{x\in B_C}\!\mathrm{CE}(p_\theta(x),\tilde y_x)
+ \\ &+\frac{\lambda}{2|B|}\sum_{x\in B}
+ \|p_\theta(a(x))-\mathrm{sg}[p_\theta(x)]\|_2^2,
+ \end{aligned}
+ \label{eq:loss}
 \end{equation}
-optimising only the LayerNorm affine parameters $\{\gamma,\beta\}$ of the
-fine-tuned blocks and the head $\phi$ ($16{,}706$ parameters), $\lambda{=}0.3$.
-Restricting the trainable set and using only prior-corrected confident tails is
-what prevents the degenerate collapse entropy minimisation is prone to. The
-consistency term is inherited from the published recipe; an ablation finds it
-contributes nothing here ($3.98$ vs $4.02$ EER), so the budget is doing the work.
+where $p_\theta=(1-s_\theta,s_\theta)$, the CE term is omitted when $B_C$ is
+empty, and $\lambda=0.3$. The consistency term uses all batch examples and both
+probability components. The perturbation is per-clip gain sampled uniformly
+from $[0.7,1.3]$ plus Gaussian noise with standard deviation 0.005. Only the
+last four transformer blocks' LayerNorm affine parameters and the classifier
+head are updated; BatchNorm statistics stay frozen. Adam uses learning rate
+$10^{-4}$ and batch size 32. The released DeepFense models have 16,706 trainable
+parameters under this rule. A fixed-confidence control instead selects scores
+at most 0.05 or at least 0.95, with the same objective.
 
-\section{Experimental Setup}
-\textbf{Protocol A.} The official ASVspoof2021-DF eval partition, scored against
-the official CM keys. Of its $611{,}829$ trials we hold
-$400{,}435$; the absent shard is uniform across codec, label and phase (every
-stratum splits $75$--$25$ present/absent, matching the overall ratio), so the EER
-we pool over those $400{,}435$ is \emph{not} the official full-set figure but an
-unbiased estimate of it. True spoof rate $97.22\%$. Published pooled EERs span $1.92$~\cite{xlsrsls},
-$1.95$~\cite{wav2dftsl} and $2.85$~\cite{wav2vec2aug} down to the challenge-era
-best of $15.64$~\cite{asvspoof21}; our own source model reaches only $26.33$, so
-we run the method on \emph{released} checkpoints instead: DeepFense
-XLS-R\,300M\,+\,AASIST trained on ASVspoof2019-LA~\cite{deepfensehf}, three
-independent training seeds. Adaptation uses an unlabelled $20{,}000$-clip
-subsample; we report the full official pooled EER, an inductive number over
-trials \emph{not} in that subsample, and two further seeds on a fixed $50{,}000$
-subset, giving nine paired cells.
+\section{Evaluation protocol}
+\label{sec:protocol}
+\textbf{Checkpoints and pools.} We use DeepFense XLS-R 300M + AASIST
+checkpoints trained on ASVspoof2019-LA with training seeds 2, 42, and
+240~\cite{deepfense,deepfenseweights}, denoted DF-2, DF-42, and DF-240. A
+WaveFake-trained SSL-AASIST checkpoint, WF~\cite{shiftyspeech}, is evaluated
+on In-the-Wild. Audio is 16\,kHz with the checkpoint-specific input length:
+64,000 samples for DeepFense and 64,600 for WF.
 
-\textbf{Protocol B.} Leave-one-corpus-out over ASVspoof2019-LA~\cite{asvspoof19},
-D2 (LibriSpeech vs.\ eight open TTS systems), In-the-Wild~\cite{itw} and the
-Arabic set~\cite{arad}; each source pool merges the other three with a
-38-language MLAAD subset~\cite{mlaad}, held-out target audio never appears in any
-source pool, and six MLAAD languages are held out of every pool. All methods run
-on the same twelve folds. \textbf{Protocol C} is all $31{,}779$ In-the-Wild clips
-at their native $37.2\%$ fake rate, skewed the \emph{opposite} way to DF.
+The official ASVspoof2021-DF metadata~\cite{asvspoof21} contains 611,829 trials
+across three phases, comprising 533,928 eval trials, 59,325 progress trials,
+and 18,576 hidden trials. Our
+available \emph{eval-only} subset contains 400,435 trials (75.00\% coverage):
+389,299 spoof and 11,136 bona fide, or 97.219\% spoof. Coverage by class is
+75.00\% spoof and 74.89\% bona fide. The missing shard prevents a full-set
+comparison; these proportions do not establish an unbiased estimate of full-set
+EER. All method comparisons use the same available trials.
 
-\textbf{Comparison points.} Source-only; the median-threshold rule; Tent, SHOT,
-ETA/EATA, SAR; AdaBN~\cite{adabn}; DANN~\cite{dann} (which sees the held-out
-target's unlabeled audio every step); an ASDG-style baseline~\cite{asdg}; and a
-target-supervised oracle. Every TTA arm adapts the same $16{,}706$ parameters
-with the same lr, batch and pass count; none was tuned separately, and none could
-be, since per-target tuning needs the labels the setting assumes absent. Two
-published constants are degenerate at $C{=}2$ and were re-derived: EATA's
-redundancy filter (unreachable until the running mean hits a simplex vertex,
-after which only minority-predicted samples pass) and SAR's recovery trigger
-($e_0{=}0.2$ sits inside the $C{=}2$ reliable band and freezes the model; we keep
-its relative position, $e_0{=}(0.2/\ln 1000)\ln C$).
+The main run adapts on 20,000 randomly selected clips with adaptation seed 0.
+We report both the available pool, which includes adaptation clips, and its
+380,435-clip disjoint remainder. Additional adaptation seeds 1 and 2 use a fixed
+50,000-trial subset, selected with seed 12345, with 20,000 clips for adaptation
+per run. These are sensitivity checks on overlapping data, not nine independent
+datasets. In-the-Wild uses all 31,779 clips (11,816 spoof; 37.182\%), with
+20,000 adaptation clips and an 11,779-clip disjoint remainder.
 
-\textbf{Implementation.} 16\,kHz audio, top-4-layer XLS-R fine-tuning for our own
-source models (Adam, lr\,$2{\times}10^{-4}$, batch 32, 8 epochs). Adaptation:
-lr\,$1{\times}10^{-4}$, $E{=}4$ passes, batch $32$ (third-party crops matched to
-each checkpoint's own training length). Code and manifests:
-\texttt{github.com/RohamIzadidoost/Kaggle\_deepFakeAudio}
-(branch \texttt{icassp-breadth}), with per-arm score dumps that reproduce every
-number here without a GPU.
-
-\section{Results}
-\label{sec:results}
+\textbf{Prevalence intervention.} On In-the-Wild with WF, we retain all spoof
+clips and randomly thin bona fide clips to spoof proportions 0.90, 0.95, and
+0.97 (sampling seed 4242). These pools are smaller than 20,000, so adaptation
+and evaluation use the entire resampled pool. The experiment changes both
+prevalence and pool size; it is transductive and does not isolate prevalence
+from sample-count effects.
 
 \begin{table*}[t]
 \centering
-\caption{ASVspoof2021-DF eval, the $400{,}435$ of $611{,}829$ official trials we
-hold, $97.22\%$ spoof,
-released XLS-R+AASIST checkpoint seed~2~\cite{deepfensehf}; every arm was also
-run on seeds 42 and 240 (text). All adaptation is label-free. Deficit $\delta=(100{-}\mathrm{EER})-\mathrm{acc}@0.5$
-is the accuracy the ranking supports but the threshold does not deliver. $\rho$
-and the prediction-rate gap are the label-free monitors of
-Sec.~\ref{sec:method}(d) --- computable at deployment, unlike every other
-column.}
-\label{tab:protoa}
+\caption{Recomputed results on the 400,435 available DF eval trials, checkpoint
+DF-2, adaptation seed 0. Acc. and balanced accuracy (BA) use threshold 0.5 except
+for the two frozen-source threshold controls. $G_\tau$ is an oracle diagnostic
+in percentage points; smaller is better. Baselines are the specified variants
+in Sec.~\ref{sec:protocol}.}
+\label{tab:df}
 \small
-\begin{tabular}{@{}lcccccc@{}}
+\begin{tabular}{@{}lrrrrr@{}}
 \toprule
-& EER\,\% & AUC & acc@$0.5$ & deficit & $\rho$ & gap \\
+Method & EER (\%) & AUC & Acc. (\%) & BA (\%) & $G_\tau$\\
 \midrule
-Source (as released) & 4.51 & .9923 & 98.87 & $-3.38$ & 1.000 & .000 \\
-\;+ ETA~\cite{eata} & 7.44$^\ddagger$ & .9288 & 98.93 & $-6.37$ & 0.312 & .007 \\
-\;+ Tent~\cite{tent} & 4.06$^\ddagger$ & .9765 & 98.52 & $-2.58$ & 0.438 & .013 \\
-\;+ SHOT~\cite{shot} & 6.38 & .9725 & 77.64 & $+15.99$ & 0.767 & .225 \\
-\;+ TTA, fixed confidence $0.95$ & 4.30 & .9924 & 99.02 & $-3.32$ & 0.827 & .005 \\
-\;+ TTA, symmetric $q{=}0.3$ & 5.84 & .9846 & 62.96 & $+31.20$ & 0.816 & \textbf{.372} \\
-\rowcolor{green!12}\;+ TTA, \textbf{prior-corrected} & \textbf{4.02} & \textbf{.9931} & \textbf{98.95} & $-2.97$ & 0.867 & .007 \\
-\;+ SAR~\cite{sar} & 4.47$^\S$ & .9923 & 98.88 & $-3.35$ & 0.970 & .000 \\
+\tablerows{manuscript_audit/table_df_main.tex}
 \bottomrule
 \end{tabular}
-\\[2pt]
-\small $^\ddagger$ EER over a pool that is more
-than $93\%$ a single tied score (Tent saturates $98.07\%$ of scores to exactly
-$1.0$, ETA $97.71\%$); read AUC. $^\S$ SAR neither damages nor adapts: $308$
-recovery resets in $2{,}500$ steps, AUC unchanged to four decimals.
 \end{table*}
 
-\subsection{The class prior is the hidden variable}
-Table~\ref{tab:protoa} is the main result, and
-Eqs.~\eqref{eq:purity}--\eqref{eq:valid} anticipate it. Applied unmodified to a
-released checkpoint already better than the published Wav2Vec2-AASIST baseline
-here, the symmetric-quantile configuration \emph{damages} it: accuracy
-$98.87\!\to\!62.96\%$, EER $4.51\!\to\!5.84\%$, manufacturing a $31$-point deficit
-where there was none.
+\textbf{Metrics and controls.} We recompute metrics from saved float32
+probabilities. ROC-AUC assigns half credit to ties; EER linearly interpolates
+the crossing of FPR and FNR on the ROC, grouping identical scores. Interpolated
+EER need not correspond to an attainable deterministic threshold. We also
+report accuracy, balanced accuracy, and
+\begin{equation}
+ G_\tau=\max_t\operatorname{Acc}(s,t)-\operatorname{Acc}(s,\tau).
+ \label{eq:gap}
+\end{equation}
+The maximum considers all distinct score thresholds, including constant
+predictions. It uses evaluation labels and is strictly a diagnostic of
+threshold headroom, not a deployable method or a probability-calibration error.
+Unlike $1-\mathrm{EER}$, it is the actual attainable accuracy maximum on the
+observed scores.
 
-The published baselines fail likewise, each through its own version of the
-assumption. SHOT minimises $\mathbb{E}[H(p)]-H(\mathbb{E}[p])$, whose diversity
-term is maximised when the mean prediction is \emph{uniform} --- at $C{=}2$ a hard
-prior of $\tfrac12$; the regulariser introduced to \emph{cure} Tent-style
-collapse encodes the assumption more literally than Tent does. ETA is more
-instructive: its reliability filter, meant to discard the high-entropy samples
-that destabilise entropy minimisation, admitted $99.8\%$ of them, so ETA reduced
-to Tent and landed worse. An entropy-keyed filter separates confident from
-uncertain, not \emph{confident-and-right} from \emph{confident-and-wrong}, and
-mis-calibration manufactures the latter. SAR is the exception that clarifies the
-rule: the only prior method that does not degrade the checkpoint, achieved by
-declining to move it ($308$ recovery resets in $2{,}500$ steps). On the other two checkpoints ETA reaches $31.0$ and $37.5\%$ EER (source $3.8$,
-$4.6$) and Tent $17.6$ and $11.2$. So the claim is not that every published
-method fails here, but that \emph{three of five prior configurations degrade a
-strong released detector at the standard benchmark's own prevalence, the fourth
-avoids damage only by declining to adapt, and none improves it.}
+Two label-free controls keep source scores fixed and select a threshold from
+adaptation scores: their median, or their $(1-\hat\pi)$-quantile using BBSE.
+The latter is a predicted-prevalence matching rule, not a guarantee of Bayes
+optimality. These controls preserve AUC and EER. Their cached-score prior
+estimates can differ slightly from the original adaptation-time forward passes.
 
-The prior-split budget reverses this: BBSE returns $\hat\pi{=}0.9715$ against a
-true $0.9708$, comfortably inside Eq.~\eqref{eq:tol}, and EER improves to
-$4.02\%$. The change between the two arms is one scalar. Over three
-independently trained checkpoints (EER\,\% / accuracy\,\%):
+We additionally report fixed-configuration entropy adaptation (Tent-style), an
+ETA reliability-only ablation without redundancy or Fisher regularization,
+and SAR with recovery threshold scaled to $(0.2/\ln1000)\ln2$~\cite{tent,eata,sar}.
+These variants share the above update settings. IM-PL is a SHOT-inspired
+information-maximization control with probability-space centroid pseudo-labels,
+not the original feature-space SHOT algorithm~\cite{shot}; it freezes the head
+and updates 16,384 parameters. Thus these are controlled variants, not tuned
+reproductions establishing superiority over the published methods.
 
-\noindent Over the nine paired cells (seed-to-seed EER std $\le0.14$),
-prior-correction beats
-the symmetric budget on \textbf{$9/9$} ($+1.23$ EER, Wilcoxon $p{=}0.004$) and
-source-only on $8/9$ ($+0.48$, $p{=}0.027$), while the symmetric budget is worse
-than source-only on $6/9$. Accuracy separates them with no overlap at all:
-$98.8$--$99.1\%$ (source), $61.6$--$65.2$ (symmetric), $98.7$--$99.0$
-(prior-corrected). What does \emph{not} replicate is the symmetric budget's
-effect on \emph{ranking} (EER worse on two checkpoints, better on one), as
-Eq.~\eqref{eq:purity} implies: a mis-specified budget corrupts the pseudo-labels
-and hence the operating point, while the ranking is inherited.
+\section{Results}
+\label{sec:results}
+\subsection{Preventing large-budget damage on DF}
+Table~\ref{tab:df} shows that symmetric $q=0.3$ lowers DF-2 accuracy from
+98.87\% to 62.96\% and increases EER from 4.51\% to 5.84\%. Its oracle
+threshold gap is 35.38 points: much of the fixed-threshold damage is
+recoverable by re-thresholding, although AUC also declines. The BBSE budget
+reaches 98.95\% accuracy and 4.06\% EER. Fixed confidence reaches higher
+accuracy (99.02\%), and the smaller $q=0.02$ reaches 98.96\% accuracy and
+4.19\% EER. Prior allocation is therefore one effective remedy, not a uniformly
+best choice. Balanced accuracy is lower after BBSE adaptation than for the
+source (82.34\% versus 88.28\%); the slight overall accuracy gain should not
+be interpreted as an improvement for both classes.
 
-\subsection{The failure, and where the recipe already works}
-At In-the-Wild's native prior ($0.372$) Eq.~\eqref{eq:valid} \emph{holds}, and
-the same recipe repairs rather than destroys. DeepFense s42 --- the checkpoint
-that scores $4.56\%$ on DF --- arrives here ranking at AUC $0.917$ while correct
-on only $39.1\%$ of clips, fewer than a majority-class predictor. Self-training
-repairs exactly that: over four released checkpoints it drives the deficit from
-$16.7$, $22.6$ and $44.4$ to $0.1$, $2.9$ and $5.0$ (and costs a little on the
-fourth, which arrives well-calibrated at $2.1$ and has nothing to repair). On
-s42 it also raises \textbf{AUC $.917\!\to\!.947$} --- which no threshold can do
---- with the disjoint half slightly better ($12.27$/$.949$), so the ranking gain
-is not memorisation.
+\begin{table}[t]
+\centering
+\caption{DF checkpoint comparison on the same available eval pool. Entries
+are EER\%/accuracy\%; symmetric and BBSE budgets use nominal $q=0.3$.}
+\label{tab:dfseeds}
+\small\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Checkpoint & Source & Sym. & BBSE\\
+\midrule
+\tablerows{manuscript_audit/table_df2021_checkpoints.tex}
+\bottomrule
+\end{tabular}
+\end{table}
 
-\subsection{Testing the bound by intervention}
-Sweeping $q$ on DF s2 with everything else fixed gives accuracy $98.96$,
-$95.68$, $88.15$, $62.96$ at $q{=}0.02,0.05,0.10,0.30$ against bounds $1.000$,
-$0.556$, $0.278$, $0.093$ --- monotone in the bound (Spearman $+1.000$). At
-$q{=}0.02$,
-inside Eq.~\eqref{eq:valid} for this pool, the \emph{unmodified symmetric rule}
-is safe and improves on source ($4.51\!\to\!4.19$) --- no prior estimate anywhere.
-It remains weaker than the prior-split budget ($4.02$) for the reason
-Eq.~\eqref{eq:purity} implies: shrinking $q$ fixes a minority-tail problem by
-discarding the majority tail too ($800$ of $20{,}000$ clips labelled, against
-$12{,}000$).
+The accuracy collapse and its reversal occur on all three checkpoints
+(Table~\ref{tab:dfseeds}). Across the nine checkpoint/run combinations, BBSE
+has lower EER than the symmetric budget in 9/9 and the source in 8/9. We give
+these as descriptive counts without treating reused checkpoints and trials as
+independent evidence. The disjoint evaluation is more qualified: BBSE changes
+source EER from 4.52 to 4.07 (DF-2), 4.54 to 3.29 (DF-42), and 3.83 to 3.83
+(DF-240, a 0.003-point increase before rounding). Avoiding severe damage is
+more consistent than improving an already strong source.
 
-\textbf{Inducing the failure where the recipe works.} DF is one benchmark that
-happens to be $97.2\%$ spoof, so we intervene on prevalence directly: resample
-In-the-Wild --- where $q{=}0.3$ satisfies Eq.~\eqref{eq:valid} and repairs
-checkpoints --- to a target $P(\mathrm{fake})$, holding audio and weights fixed. Accuracy at
-$q{=}0.02/0.10/0.30$ is $97.8/95.9/73.3$ at $P(\mathrm{fake}){=}0.90$,
-$98.6/92.6/68.5$ at $0.95$ and $98.6/89.4/65.4$ at $0.97$, against purity bounds
-of $1.00/1.00/0.33$, $1.00/0.50/0.17$ and $1.00/0.30/0.10$.
+The frozen-source BBSE threshold gives 98.88\% accuracy for DF-2, close to its
+98.87\% source result, while the median gives 59.06\%. Median thresholding
+implicitly targets roughly balanced predictions and is poorly suited to this
+pool. The budget change can improve EER, which threshold changes cannot do,
+but it is not required to preserve high accuracy here. Removing consistency
+from the BBSE objective gives 3.98\% EER versus 4.06\% with it on DF-2; this
+single ablation provides no evidence that consistency is needed for the gain.
 
-\noindent Accuracy tracks the bound (Spearman $+0.966$): $q{=}0.3$ collapses
-monotonically, $q{=}0.10$ degrades from $0.95$ exactly where its bound does, and
-$q{=}0.02$ is unharmed. The failure belongs to prevalence, not to DF.
-Necessity is what is tested: we make the condition fail, and the method fails
-with it.
+\subsection{Score resolution and baseline interpretation}
+Tent-style entropy adaptation produces 98.07\% of scores within $10^{-6}$ of
+1.0, but only 93.02\% exactly equal 1.0. ETA's corresponding fractions are
+97.71\% and 96.65\%. Conflating these quantities would make the stated AUCs
+appear impossible. With exact ties grouped, Tent-style adaptation has EER
+4.28\% and AUC 0.9765, compared with source 4.51\% and 0.9923: a small
+improvement near one ROC operating point can coexist with worse integrated
+ranking. For ETA, ROC interpolation gives EER 12.31\%; selecting the nearest
+ROC point and averaging its errors would give 7.44\%, illustrating sensitivity
+to the scoring convention. For DF-42 and DF-240 its balanced accuracy
+is 50\%, indicating an all-spoof decision at threshold 0.5. These observations
+support reporting several metrics, not dismissing EER as arbitrary tie-breaking.
 
-\textbf{Is the correction wrong, or the estimate?} On the hardest cell
-(In-the-Wild s42, $\delta{=}44.4$), substituting the \emph{true} prior gives
-$11.59$ EER at $91.3\%$ accuracy, against $12.58/82.4$ for the symmetric budget
-and $14.51/48.0$ and $14.95/55.0$ for the BBSE and mixture estimates.
+\subsection{Corpus shift and prior-estimation failure}
+\begin{table}[t]
+\centering
+\caption{Native In-the-Wild, EER\%/accuracy\%, with nominal $q=0.3$. WF is the
+WaveFake-trained checkpoint; all other rows use ASVspoof2019-trained models.}
+\label{tab:itw}
+\small\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Checkpoint & Source & Sym. & BBSE\\
+\midrule
+\tablerows{manuscript_audit/table_itw_checkpoints.tex}
+\bottomrule
+\end{tabular}
+\end{table}
+At the native In-the-Wild prior, the nominal symmetric budget has no counting
+obstruction. It improves accuracy on three checkpoints but reduces DF-2
+accuracy (Table~\ref{tab:itw}), consistent with feasibility being insufficient
+for a benefit. For DF-42, symmetric adaptation raises AUC from 0.9171 to
+0.9473 and accuracy from 39.08\% to 82.39\%. A frozen-source median threshold
+already reaches 78.10\%, showing how much the comparison depends on the
+operating point. The oracle threshold gap falls from 48.28 to 8.34 points.
 
-\noindent With the true prior the prior-split budget is the best method in this
-paper on its hardest cell; with either estimate it is worse than using no prior.
-The mechanism is sound and the estimation is not --- exactly what
-Sec.~\ref{sec:results} proves must happen.
+BBSE instead estimates approximately 97.9\% spoof on this 37.2\%-spoof corpus
+and obtains 14.54\% EER and 47.99\% accuracy. A two-component score-mixture
+estimate gives 14.91\%/55.00\%. An oracle budget using the adaptation pool's
+true prior gives 11.59\%/91.28\%. This isolates a substantial estimation cost
+on this checkpoint; the oracle is not a deployable method and is not always
+best on other checkpoints (WF: 4.67\% oracle EER versus 4.55\% symmetric).
 
-\textbf{Not a re-thresholding result.} Both EER and AUC move, and neither takes
-a threshold as input: the same prior estimate used as a threshold leaves EER at
-$4.51$ by construction, and as a budget gives $4.02$.
+BBSE is identifiable under label shift with an invertible confusion matrix,
+even for uncalibrated predictors~\cite{bbse}. Under unrestricted conditional
+shift, the hard prediction rate instead satisfies
+\begin{equation}
+ P_{\mathcal T}(\hat y=1)=\pi\,\mathrm{TPR}_{\mathcal T}
+ +(1-\pi)\,\mathrm{FPR}_{\mathcal T},
+\end{equation}
+which alone cannot determine all three unknowns. This explains why a source
+confusion matrix may fail to transfer. It does not prove impossibility for
+all output-based estimators with additional assumptions or side information,
+nor equivalence between prior error and calibration error.
 
-\subsection{Cross-corpus, balanced pools}
-Where Eq.~\eqref{eq:valid} holds the prior correction is inert by construction,
-so this arm measures the rest of the method. Over twelve identical folds we beat
-source-only ($18.39\!\to\!17.44$ pooled EER, $p{=}0.027$), Tent ($32.25$), ETA
-($29.54$), EATA ($31.34$) and SAR ($18.39$), all $p\le0.027$ --- but \textbf{not
-SHOT} ($17.76$ vs.\ $17.44$, $7/12$, $p{=}0.47$), which beats us on ASVspoof2019.
-That is the point: SHOT's diversity term is a hard uniform prior, free when
-Eq.~\eqref{eq:valid} holds and destructive when it does not ($6.38$ EER, $77.6\%$
-accuracy on DF). The separation between the two methods lives entirely in the
-regime the field does not test.
+\subsection{Intervening on prevalence}
+\begin{table}[t]
+\centering
+\caption{WF on resampled In-the-Wild: accuracy\% for the unchanged source and
+symmetric-tail adaptation. Pool size varies with prevalence.}
+\label{tab:skew}
+\small\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}rrrrrr@{}}
+\toprule
+$\pi$ & $N$ & Source & $q=.02$ & $q=.10$ & $q=.30$\\
+\midrule
+\tablerows{manuscript_audit/table_skew.tex}
+\bottomrule
+\end{tabular}
+\end{table}
+The large-budget degradation also occurs on resampled In-the-Wild
+(Table~\ref{tab:skew}). At 97\% spoof, nominal $q=0.3$ permits at most 10\%
+purity in an exact-size bona fide tail and yields 65.42\% accuracy; $q=0.02$
+yields 98.59\%. However, the unchanged source reaches 98.94\% there, so
+small $q$ prevents the large collapse without universally improving the source.
+The experiment supports prevalence sensitivity of this selection rule; it
+neither proves inevitable failure whenever the bound is below one nor identifies
+prevalence as the only cause of adaptation failure.
 
-\subsection{Label-free guards, and their own precondition}
-Eq.~\eqref{eq:valid} says when pure pseudo-labels are feasible, but checking it
-needs $\pi$, which Sec.~\ref{sec:results} shows is not identifiable. A deployer is
-left with a weaker question that \emph{can} be asked without labels --- not
-\emph{will} this adaptation help but \emph{did} it --- and two statistics answer
-it: rank agreement with the frozen source,
-$\rho=\mathrm{Spearman}(s_\theta,s_{\theta_0})$, and the drift of the predicted
-positive rate from $\hat\pi$ (Table~\ref{tab:protoa}). On DF they work
-complementarily --- $\rho$ catches ranking collapse (ETA $0.31$, Tent $0.44$),
-drift catches operating-point collapse ($0.37$, $0.39$, $0.23$) and is blind to
-the former, and requiring both separates the five harmful arms from the three
-harmless ones for any $\tau\in[0.70,0.80]$ --- and as a leave-one-target-out
-\emph{stopping} rule $\rho$ recovers $13.9$ EER points from Tent's collapse
-($32.25\!\to\!18.33$, oracle $17.24$) while never firing on our own method.
+\section{Discussion and limitations}
+The counting obstruction gives a useful diagnostic for pseudo-label allocation,
+while its consequences depend on score quality, realized selection sizes, and
+the learning objective. Recomputed metrics support severe fixed-threshold
+damage from large symmetric tails and its mitigation by prior allocation or
+smaller tails. They also show important tradeoffs: some remedies reduce
+minority-class performance, prior estimates can fail on shifted corpora, and
+re-thresholding alone explains a substantial part of some accuracy gains.
 
-\textbf{But the drift monitor has a precondition of its own, and it is the same
-$\delta$ the rest of the paper is about.} Repairing a mis-calibrated operating point \emph{requires} a large move in the
-predicted positive rate --- that is what the repair is --- so drift separates
-repair from damage only when the source already sits near the right rate. On
-In-the-Wild it inverts: the two largest drifts ($0.20$, $0.50$) are the two
-largest \emph{improvements} ($+17$, $+43$ accuracy points, at $\delta{=}16.7$ and
-$44.4$), while the one harmful arm drifts least ($0.04$, $\delta{=}2.1$). A guard tuned on DF raises twelve false alarms there, including aborting the
-best arm in this paper. The guards are sound where the source arrives well-calibrated
-($\delta\!\approx\!0$, as on DF) and unusable where it does not --- the same
-regime, and the same reason, as the prior estimate itself.
+The experiments use four released checkpoints from one broad architecture
+family, two principal corpora, an incomplete DF eval partition, and fixed
+adaptation hyperparameters. They do not establish general superiority over
+specialized label-shift methods. Our prevalence intervention changes sample
+count, and the seed checks share data. Future validation should use independent
+corpora, fixed-size prevalence interventions, held-out source calibration,
+exact-count tail selection, and development-domain tuning of baseline methods.
+Neither a small nominal tail nor source-score agreement alone certifies safe
+adaptation without assumptions about the target distribution.
 
-\subsection{The target prior is not identifiable}
-How far can a label-free prior estimate be trusted? Not far, for structural
-reasons rather than any defect of BBSE: such a method observes only
-$\Pr[\hat y{=}1]=\pi\,\mathrm{TPR}_{\mathcal T}+(1{-}\pi)\mathrm{FPR}_{\mathcal T}$
---- one equation in three unknowns. BBSE closes it by assuming the source error
-rates carry over, which is exactly what covariate shift breaks, so an extreme
-prior and an extreme calibration failure are \emph{indistinguishable} from a
-model's outputs: DF/s2 predicts $97.4\%$ fake at a true prior of $0.972$,
-ITW/s42 predicts $98.1\%$ at a true $0.372$.
+\textbf{Reproducibility.} The script \texttt{audit\_icassp.py} verifies 89 saved score arrays
+against historical AUC and accuracy, recomputes the reported metrics, and
+writes the tables and input hashes. The project repository is
+\url{https://github.com/RohamIzadidoost/Kaggle_deepFakeAudio}.
+The accompanying audit bundle includes the revised scripts and outputs.
+No new neural-network training is required
+to reproduce these tables from the saved scores and original manifests.
 
-The consequence is measurable: the estimate degrades exactly as the operating
-point does, $|\hat\pi-\pi|$ against the source deficit giving $r{=}0.997$ over ten
-cells. Estimating the prior and detecting that the estimate is wrong are one problem,
-and the monitors inherit it: at our worst case ($\hat\pi{=}0.979$ against $0.372$)
-the prior-split budget is harmed ($14.51$ EER against $12.58$) but still beats the
-unadapted source ($16.47$).
+\textbf{Ethics and assistance.} This study uses existing public datasets and
+checkpoints; no new human-subject data were collected. OpenAI Codex assisted
+with the revised manuscript text, metric-audit code, and result tables; the
+adaptation experiments predate this revision.
 
-This is why Eq.~\eqref{eq:valid} is worth more than the estimator: it needs only
-a \emph{lower bound} on $\min(\pi,1{-}\pi)$, not the prior. Where the prior cannot
-be estimated, drop the prior-split budget and the prior-anchored monitor and
-shrink $q$ ($q{=}0.02$ was safe on every cell, priors $0.372$ to $0.972$).
-
-\subsection{Breadth, and the mechanism}
-The third-party arm is $369$ cells: nine released checkpoints (five
-architectures) $\times$ ten corpora, restricted to the $76$ pairs whose checkpoint
-was not trained on that corpus, at one, three or ten seeds and counted once per
-(checkpoint, corpus, seed). The effect is \emph{re-calibration}: $\delta$ falls
-$7.29\!\to\!1.96$ ($248/369$, $p{=}2.2{\times}10^{-17}$); the mechanism is not learned invariance --- a proxy
-$\mathcal{A}$-distance and a domain-origin probe both \emph{rise} after adaptation
-(Arabic $1.545\!\to\!1.606$) --- and beyond any threshold the gradient step adds
-separability where the ranking is strong (ASVspoof2019 within-attack-family AUC
-rises on all six families). \textbf{Limitations:} Eq.~\eqref{eq:valid} is
-necessary not sufficient, the gain varies widely, and a low-AUC start we cannot
-rescue.
-
-\section*{Compliance with Ethical Standards}
-This work used only publicly released datasets and model checkpoints under their
-respective licences; no new human-subject data were collected and no human or
-animal experiments were performed. The authors declare no conflict of interest.
-
-{\small
-\begin{thebibliography}{1}
-\small
+\clearpage
+\balance
+\begin{thebibliography}{99}
 \bibitem{wav2vec2aug} H.~Tak \emph{et al.}, ``Automatic speaker verification
 spoofing and deepfake detection using wav2vec 2.0 and data augmentation,'' in
-\emph{Proc.\ Odyssey}, 2022.
-\bibitem{xlsrsls} Q.~Zhang, S.~Wen, and T.~Hu, ``Audio deepfake detection with
-self-supervised XLS-R and SLS classifier,'' in \emph{Proc.\ ACM Multimedia},
-2024.
+\emph{Proc. Odyssey}, 2022.
 \bibitem{aasist} J.~Jung \emph{et al.}, ``AASIST: Audio anti-spoofing using
-integrated spectro-temporal graph attention networks,'' in \emph{ICASSP}, 2022.
-\bibitem{rawnet2} H.~Tak \emph{et al.}, ``End-to-end anti-spoofing with RawNet2,''
-in \emph{ICASSP}, 2021.
-\bibitem{asdg} Y.~Xie \emph{et al.}, ``Domain generalization via aggregation and
-separation for audio deepfake detection,'' \emph{IEEE TIFS}, 2024.
-\bibitem{crossdomain} Y.~Li \emph{et al.}, ``Cross-domain audio deepfake
-detection: dataset and analysis,'' in \emph{Proc.\ EMNLP}, 2024.
+integrated spectro-temporal graph attention networks,'' in \emph{Proc. ICASSP}, 2022.
+\bibitem{itw} N.~M\"uller, P.~Czempin, F.~Dieckmann, A.~Froghyar, and
+K.~B\"ottinger, ``Does audio deepfake detection generalize?,'' in
+\emph{Proc. Interspeech}, 2022.
 \bibitem{tent} D.~Wang \emph{et al.}, ``Tent: Fully test-time adaptation by
-entropy minimization,'' in \emph{ICLR}, 2021.
-\bibitem{eata} S.~Niu \emph{et al.}, ``Efficient test-time model adaptation
-without forgetting,'' in \emph{ICML}, 2022.
-\bibitem{sar} S.~Niu \emph{et al.}, ``Towards stable test-time adaptation in
-dynamic wild world,'' in \emph{ICLR}, 2023.
-\bibitem{shot} J.~Liang, D.~Hu, and J.~Feng, ``Do we really need to access the
-source data? Source hypothesis transfer for unsupervised domain adaptation,''
-in \emph{ICML}, 2020.
-\bibitem{bbse} Z.~Lipton, Y.-X. Wang, and A.~Smola, ``Detecting and correcting
-for label shift with black box predictors,'' in \emph{ICML}, 2018.
-\bibitem{sld} M.~Saerens, P.~Latinne, and C.~Decaestecker, ``Adjusting the
-outputs of a classifier to new a priori probabilities: A simple procedure,''
-\emph{Neural Computation}, vol.\ 14, no.\ 1, pp.\ 21--41, 2002.
-\bibitem{dann} Y.~Ganin and V.~Lempitsky, ``Unsupervised domain adaptation by
-backpropagation,'' in \emph{Proc.\ ICML}, 2015.
-\bibitem{adabn} Y.~Li \emph{et al.}, ``Revisiting batch normalization for
-practical domain adaptation,'' \emph{arXiv:1603.04779}, 2016.
-\bibitem{bendavid} S.~Ben-David \emph{et al.}, ``A theory of learning from
-different domains,'' \emph{Machine Learning}, vol.\ 79, pp.\ 151--175, 2010.
-\bibitem{ast} Y.~Gong, Y.-A. Chung, and J.~Glass, ``AST: Audio spectrogram
-transformer,'' in \emph{Proc.\ Interspeech}, 2021.
+entropy minimization,'' in \emph{Proc. ICLR}, 2021.
+\bibitem{lsa} S.~Park, S.~Yang, J.~Choo, and S.~Yun, ``Label shift adapter for
+test-time adaptation under covariate and label shifts,'' in \emph{Proc. ICCV},
+2023. \url{https://arxiv.org/abs/2308.08810}.
+\bibitem{rlsbench} S.~Garg, N.~Erickson, J.~Sharpnack, A.~Smola,
+S.~Balakrishnan, and Z.~C.~Lipton, ``RLSbench: Domain adaptation under relaxed
+label shift,'' in \emph{Proc. ICML}, vol.~202, pp.~10879--10928, 2023.
+\bibitem{bbse} Z.~Lipton, Y.-X.~Wang, and A.~Smola, ``Detecting and correcting
+for label shift with black box predictors,'' in \emph{Proc. ICML}, vol.~80,
+pp.~3122--3130, 2018.
 \bibitem{t2a} H.-H.~Nguyen-Le, V.-T.~Tran, D.-T.~Nguyen, and N.-A.~Le-Khac,
 ``Think twice before adaptation: Improving adaptability of deepfake detection
-via online test-time adaptation,'' in \emph{Proc.\ IJCAI}, 2025, pp.\ 7686--7694.
-\bibitem{wav2dftsl} Y.~Hao, Y.~Chen, M.~Xu, J.~Zhan, L.~He, L.~Fang, S.~Fang,
-and L.~Liu, ``Wav2DF-TSL: Two-stage learning with efficient pre-training and
-hierarchical experts fusion for robust audio deepfake detection,''
-\emph{arXiv:2509.04161}, 2025.
-\bibitem{asvspoof21} J.~Yamagishi, X.~Wang, M.~Todisco, M.~Sahidullah,
-J.~Patino, A.~Nautsch, X.~Liu, K.~A.~Lee, T.~Kinnunen, N.~Evans, and
-H.~Delgado, ``ASVspoof 2021: Accelerating progress in spoofed and deepfake
-speech detection,'' in \emph{Proc.\ ASVspoof 2021 Workshop}, 2021, pp.\ 47--54.
-\bibitem{itw} N.~M\"uller \emph{et al.}, ``Does audio deepfake detection
-generalize?,'' in \emph{Proc.\ Interspeech}, 2022.
-\bibitem{asvspoof19} X.~Wang \emph{et al.}, ``ASVspoof 2019: A large-scale
-public database of synthesized, converted and replayed speech,'' \emph{Computer
-Speech \& Language}, vol.\ 64, 101114, 2020.
-\bibitem{mlaad} N.~M\"uller \emph{et al.}, ``MLAAD: The multi-language audio
-anti-spoofing dataset,'' in \emph{Proc.\ IJCNN}, 2024.
-\bibitem{arad} DeepFake-Audio-Rangers, ``Arabic Audio Deepfake dataset,''
-HuggingFace datasets repository.
+via online test-time adaptation,'' in \emph{Proc. IJCAI}, pp.~7686--7694, 2025.
+\bibitem{deepfense} Y.~El~Kheir \emph{et al.}, ``DeepFense: A unified, modular,
+and extensible framework for robust deepfake audio detection,''
+\emph{arXiv:2604.08450}, 2026.
+\bibitem{deepfenseweights} DeepFense, ``ASV19\_\allowbreak Wav2Vec2\_\allowbreak AASIST\_\allowbreak NoAug\_\allowbreak Seed\{2,42,240\},''
+released model weights, Hugging Face. \url{https://huggingface.co/DeepFense}.
 \bibitem{shiftyspeech} A.~Garg \emph{et al.}, ``ShiftySpeech: A large-scale
 synthetic speech dataset with distribution shifts,'' \emph{arXiv:2502.05674},
-2025. Checkpoint: \texttt{huggingface.co/ash56/ssl-aasist}.
-\bibitem{deepfensehf} DeepFense, ``ASV19\_\-Wav2Vec2\_\-AASIST\_\-NoAug\_\-Seed\{2,42,240\},''
-HuggingFace model repository. Released weights, no accompanying publication.
-\end{thebibliography}}
-
+2025. Released checkpoint: \url{https://huggingface.co/ash56/ssl-aasist}.
+\bibitem{asvspoof21} J.~Yamagishi \emph{et al.}, ``ASVspoof 2021: Accelerating
+progress in spoofed and deepfake speech detection,'' in \emph{Proc. ASVspoof
+2021 Workshop}, pp.~47--54, 2021.
+\bibitem{eata} S.~Niu \emph{et al.}, ``Efficient test-time model adaptation
+without forgetting,'' in \emph{Proc. ICML}, 2022.
+\bibitem{sar} S.~Niu \emph{et al.}, ``Towards stable test-time adaptation in
+dynamic wild world,'' in \emph{Proc. ICLR}, 2023.
+\bibitem{shot} J.~Liang, D.~Hu, and J.~Feng, ``Do we really need to access the
+source data? Source hypothesis transfer for unsupervised domain adaptation,''
+in \emph{Proc. ICML}, 2020.
+\end{thebibliography}
 \end{document}

@@ -41,7 +41,7 @@ from sklearn.metrics import accuracy_score, roc_auc_score
 import public_ckpt_tta as P
 import tta_baselines as TB
 from eval_protocol import DF_KEYS_DEFAULT, load_df_keys, score_official_df
-from metrics import compute_eer
+from metrics import compute_eer, threshold_diagnostics
 
 SMOKE = os.environ.get("PUBA_SMOKE", "0") == "1"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -552,14 +552,18 @@ def report(ckpt_name, method, setting, ev, scores, adapt_utts=None, extra=None):
                seed=SEED, eval_sub=EVAL_SUB or 0, q=Q, skew_target=SKEW or 0.0,
                eer=round(eer * 100, 3), auc=round(auc, 4), acc=round(acc, 3),
                acc_median_rule=round(acc_med, 3), n=len(sub),
-               attainable=round(100 - eer * 100, 3),
-               deficit=round((100 - eer * 100) - acc, 3), smoke=SMOKE)
+               eer_operating_accuracy=round(100 - eer * 100, 3),
+               eer_operating_gap=round((100 - eer * 100) - acc, 3), smoke=SMOKE)
+    diagnostic = threshold_diagnostics(y, sc)
+    row.update(oracle_accuracy=round(100 * diagnostic["oracle_accuracy"], 3),
+               threshold_gap=round(100 * diagnostic["threshold_gap"], 3))
     if extra:
         row.update(extra)
     record(**row)
     log(f"  >>> {ckpt_name} {method} [{setting}] EER {row['eer']:.3f} "
         f"AUC {row['auc']:.4f} acc {row['acc']:.2f} "
-        f"(median-rule {row['acc_median_rule']:.2f}, deficit {row['deficit']:.2f})")
+        f"(median-rule {row['acc_median_rule']:.2f}, "
+        f"oracle threshold gap {row['threshold_gap']:.2f})")
     return row
 
 

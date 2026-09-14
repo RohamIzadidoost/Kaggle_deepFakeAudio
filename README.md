@@ -1,5 +1,21 @@
 # Ranking Transfers, Thresholds Don't
 
+## Audited ICASSP revision (14 September 2026)
+
+The current short paper is **Class-Prior Constraints on Confident-Tail Test-Time
+Adaptation for Audio Deepfake Detection**, in `main_icassp.tex` / `main_icassp.pdf`
+(also exported as `izadidoost.pdf`). Its tables come from `audit_icassp.py` and
+`manuscript_audit/`; see [the audit report](manuscript_audit/README.md) for
+reproduction commands, corrected metrics, and remaining limitations.
+
+`metrics.compute_eer` now interpolates the empirical ROC crossing with equal
+scores grouped. Historical CSVs and the older long paper below have **not** been
+retroactively rewritten: their EERs use the previous nearest-point approximation.
+The original short paper is preserved in `manuscript_audit/original/`. The
+historical 369-cell deficit claim is not part of the revised short paper.
+
+The rest of this README documents the earlier studies and their original results.
+
 Unsupervised test-time adaptation for cross-corpus audio deepfake detection.
 This repo has two independent studies sharing infrastructure:
 
