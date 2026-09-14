@@ -195,11 +195,16 @@ def done_rows():
         d = d.assign(eval_sub=0)
     if "q" not in d:
         d = d.assign(q=0.3)
-    if "skew" not in d:
-        d = d.assign(skew=0.0)
-    return set(zip(d.ckpt, d.method, d.setting, d.seed.fillna(0).astype(int),
-                   d.eval_sub.fillna(0).astype(int), d.q.fillna(0.3).round(3),
-                   d.skew.fillna(0.0).round(4)))
+    # NB: a column literally named `skew` shadows DataFrame.skew(), so `d.skew`
+    # returns the method and `.fillna` on it raises. Named `skew_target` and
+    # accessed with brackets throughout.
+    if "skew_target" not in d.columns:
+        d = d.assign(skew_target=0.0)
+    return set(zip(d["ckpt"], d["method"], d["setting"],
+                   d["seed"].fillna(0).astype(int),
+                   d["eval_sub"].fillna(0).astype(int),
+                   d["q"].fillna(0.3).round(3),
+                   d["skew_target"].fillna(0.0).round(4)))
 
 
 def _key(ckpt, method, setting):
@@ -544,7 +549,7 @@ def report(ckpt_name, method, setting, ev, scores, adapt_utts=None, extra=None):
     # label-free median-threshold control: what a one-line rule would deliver
     acc_med = float(accuracy_score(y, (sc >= np.median(sc)).astype(int))) * 100
     row = dict(ckpt=ckpt_name, method=method, setting=setting,
-               seed=SEED, eval_sub=EVAL_SUB or 0, q=Q, skew=SKEW or 0.0,
+               seed=SEED, eval_sub=EVAL_SUB or 0, q=Q, skew_target=SKEW or 0.0,
                eer=round(eer * 100, 3), auc=round(auc, 4), acc=round(acc, 3),
                acc_median_rule=round(acc_med, 3), n=len(sub),
                attainable=round(100 - eer * 100, 3),
