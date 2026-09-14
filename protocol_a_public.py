@@ -82,6 +82,14 @@ CORPUS = os.environ.get("PUBA_CORPUS", "df2021")
 # the comparison stays paired. Seed 0 with no subsample is the official-protocol
 # number; the subsampled seeds carry the variance.
 SEED = int(os.environ.get("PUBA_SEED", "0"))
+
+# PUBA_SKEW resamples the evaluation pool to a target P(fake), holding the audio
+# and the checkpoint fixed. This is the controlled test of Eq. (3): the validity
+# condition q <= min(pi, 1-pi) is a claim about prevalence, so the way to test it
+# is to *intervene* on prevalence rather than to compare corpora that differ in
+# a dozen other ways. The fake class is kept whole and the real class thinned,
+# so the pool shrinks as skew rises but the spoof audio is identical throughout.
+SKEW = float(os.environ.get("PUBA_SKEW", "0")) or None
 EVAL_SUB = int(os.environ.get("PUBA_EVAL_SUB", "0")) or None
 
 # Where each checkpoint's own labelled training data lives. BBSE needs the
@@ -187,12 +195,16 @@ def done_rows():
         d = d.assign(eval_sub=0)
     if "q" not in d:
         d = d.assign(q=0.3)
+    if "skew" not in d:
+        d = d.assign(skew=0.0)
     return set(zip(d.ckpt, d.method, d.setting, d.seed.fillna(0).astype(int),
-                   d.eval_sub.fillna(0).astype(int), d.q.fillna(0.3).round(3)))
+                   d.eval_sub.fillna(0).astype(int), d.q.fillna(0.3).round(3),
+                   d.skew.fillna(0.0).round(4)))
 
 
 def _key(ckpt, method, setting):
-    return (ckpt, method, setting, SEED, EVAL_SUB or 0, round(Q, 3))
+    return (ckpt, method, setting, SEED, EVAL_SUB or 0, round(Q, 3),
+            round(SKEW or 0.0, 4))
 
 
 # ------------------------------------------------------------------ manifests
@@ -532,7 +544,7 @@ def report(ckpt_name, method, setting, ev, scores, adapt_utts=None, extra=None):
     # label-free median-threshold control: what a one-line rule would deliver
     acc_med = float(accuracy_score(y, (sc >= np.median(sc)).astype(int))) * 100
     row = dict(ckpt=ckpt_name, method=method, setting=setting,
-               seed=SEED, eval_sub=EVAL_SUB or 0, q=Q,
+               seed=SEED, eval_sub=EVAL_SUB or 0, q=Q, skew=SKEW or 0.0,
                eer=round(eer * 100, 3), auc=round(auc, 4), acc=round(acc, 3),
                acc_median_rule=round(acc_med, 3), n=len(sub),
                attainable=round(100 - eer * 100, 3),
@@ -565,6 +577,21 @@ def main():
             log(f"BBSE source pool '{kind}': {len(pool_df)} clips "
                 f"({pool_df.label.value_counts().to_dict()})")
 
+    if SKEW:
+        rng_s = np.random.RandomState(4242)
+        f = ev.index[ev.label == 1].values
+        r = ev.index[ev.label == 0].values
+        n_real = int(round(len(f) * (1 - SKEW) / SKEW))
+        if n_real > len(r):           # real-limited: thin the fake class instead
+            n_real = len(r)
+            f = rng_s.choice(f, int(round(n_real * SKEW / (1 - SKEW))), replace=False)
+        keep = np.concatenate([f, rng_s.choice(r, n_real, replace=False)])
+        ev = ev.loc[np.sort(keep)].reset_index(drop=True)
+        log(f"PUBA_SKEW={SKEW}: resampled to {len(ev)} clips, "
+            f"P(fake)={ev.label.mean():.4f} "
+            f"({int(ev.label.sum())} fake / {int((1-ev.label).sum())} real); "
+            f"min(pi,1-pi)={min(ev.label.mean(), 1-ev.label.mean()):.4f}, "
+            f"so Eq.(3) needs q <= that")
     if EVAL_SUB:
         # fixed across seeds and arms, so every comparison stays paired
         ev = ev.sample(min(EVAL_SUB, len(ev)), random_state=12345)
@@ -587,8 +614,9 @@ def main():
         log(f"  loaded {nf} front-end + {nb} back-end tensors")
 
         # source scores over the full official eval (cached to disk)
-        stag = ("" if (SEED == 0 and not EVAL_SUB and abs(Q - 0.3) < 1e-9)
-                else f"__s{SEED}_e{EVAL_SUB or 0}_q{Q}")
+        stag = ("" if (SEED == 0 and not EVAL_SUB and abs(Q - 0.3) < 1e-9
+                       and not SKEW)
+                else f"__s{SEED}_e{EVAL_SUB or 0}_q{Q}_k{SKEW or 0}")
         spath = f"{SCORES_DIR}/{name}__source{stag}.npy"
         if os.path.exists(spath):
             s_src = np.load(spath)
