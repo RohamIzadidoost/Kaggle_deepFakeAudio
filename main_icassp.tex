@@ -63,10 +63,12 @@ cross-corpus while its decision \emph{threshold} does not, so unlabeled target
 audio can repair the operating point at test time. We then show that
 confident-quantile test-time adaptation (TTA) can be sound only while its tail
 budget satisfies $q\le\min(\pi,1{-}\pi)$: a counting bound caps pseudo-label
-purity at $\min(1,\pi_{\mathrm{real}}/q)$ \emph{for any detector}. That holds
-where TTA is measured and essentially nowhere else --- ASVspoof2021-DF is
-$97.2\%$ spoof, In-the-Wild $37.2\%$ --- so at the published $q{=}0.3$ no model
-can exceed $9.3\%$ purity on DF. Empirically, on the official DF eval ($400{,}435$ trials) that
+purity at $\min(1,\pi_{\mathrm{real}}/q)$ \emph{for any detector}. That holds where TTA is measured and
+essentially nowhere else --- ASVspoof2021-DF is $97.2\%$ spoof --- so at the
+published $q{=}0.3$ no model can exceed $9.3\%$ purity there. Resampling
+In-the-Wild's prevalence, holding audio and weights fixed, reproduces the failure
+on demand: accuracy tracks the bound across a $3{\times}3$ grid (Spearman
+$+0.966$). Empirically, on the official DF eval ($400{,}435$ trials) that
 configuration destroys the operating point of three released state-of-the-art checkpoints,
 driving accuracy from $98.8$--$99.1\%$ to $62$--$65\%$ across nine paired cells;
 three of four published TTA baselines degrade all three as well --- ETA reaching
@@ -74,11 +76,11 @@ $31$ and $37\%$ EER against a source $3.8$ and $4.6$ --- each through its own
 version of the assumption. Correcting the budget with a label-free prior estimate
 ($\hat\pi{=}0.9715$ vs.\ a true $0.9708$) restores all of them and beats the
 symmetric budget on $9/9$ cells ($p{=}0.004$); both EER and AUC move, so no
-re-thresholding rule accounts for it. The correction's boundary we measure
-rather than assume: the prior is not identifiable from a model's own outputs, so
-its estimate degrades exactly as the operating point does ($r{=}0.998$), and a
-wrong prior is worse than none. Since $q$ is ours to choose and $\pi$ is not,
-shrinking $q$ satisfies the condition without estimating anything.
+re-thresholding rule accounts for it. Its boundary we measure rather than assume: the prior is not identifiable
+from a model's own outputs, so the estimate degrades exactly as the operating
+point does ($r{=}0.997$ over ten cells), and a wrong prior is worse than none.
+Since $q$ is ours to choose and $\pi$ is not, shrinking $q$ satisfies the
+condition without estimating anything.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -221,9 +223,8 @@ optimising only the LayerNorm affine parameters $\{\gamma,\beta\}$ of the
 fine-tuned blocks and the head $\phi$ ($16{,}706$ parameters), $\lambda{=}0.3$.
 Restricting the trainable set and using only prior-corrected confident tails is
 what prevents the degenerate collapse entropy minimisation is prone to. The
-consistency term is inherited from the published recipe and we report it, but an
-ablation finds it contributes nothing here ($3.98$ vs $4.02$ EER); the
-pseudo-label budget is doing the work.
+consistency term is inherited from the published recipe; an ablation finds it
+contributes nothing here ($3.98$ vs $4.02$ EER), so the budget is doing the work.
 
 \textbf{(d) Two label-free guards.} Adaptation can damage the model it is
 given, so a deployer needs to decide --- without labels --- whether to keep the
@@ -374,62 +375,52 @@ effect on \emph{ranking} (EER worse on two checkpoints, better on one), as
 Eq.~\eqref{eq:purity} implies: a mis-specified budget corrupts the pseudo-labels
 and hence the operating point, while the ranking is inherited.
 
-\begin{table}[t]
-\centering
-\caption{The complete In-the-Wild benchmark ($31{,}779$ clips, prior $0.372$),
-four released checkpoints ordered by source calibration deficit $\delta$.
-EER\,\% / accuracy\,\%. The symmetric budget repairs every checkpoint that has a
-deficit; the prior-corrected one does not, and its shortfall grows with $\delta$
---- which is what corrupts the prior estimate (Sec.~\ref{sec:lim}).}
-\label{tab:itw}
-\resizebox{\columnwidth}{!}{%
-\begin{tabular}{@{}lcccc@{}}
-\toprule
-checkpoint & $\delta_{\mathrm{src}}$ & source & symmetric $q$ & prior-corrected \\
-\midrule
-DeepFense s2 & $2.1$ & 9.64 / 88.3 & 9.71 / 85.7 & 9.89 / 87.1 \\
-ssl-aasist~\cite{shiftyspeech} & $16.7$ & 5.06 / 78.2 & \textbf{4.55} / \textbf{95.4} & 4.54 / 95.2 \\
-DeepFense s240 & $22.6$ & 8.47 / 68.9 & \textbf{8.33} / \textbf{88.8} & 8.48 / 77.0 \\
-DeepFense s42 & $44.4$ & 16.47 / 39.1 & \textbf{12.58} / \textbf{82.4} & 14.51 / 48.0 \\
-\bottomrule
-\end{tabular}}
-\end{table}
-
 \subsection{The failure, and where the recipe already works}
-Table~\ref{tab:itw} is the same recipe at a prior that
-\emph{satisfies} Eq.~\eqref{eq:valid} ($0.372>0.3$). DeepFense s42 --- the
-checkpoint that scores $4.56\%$ on DF --- arrives here ranking at AUC $0.917$
-while correct on $39.1\%$ of clips, fewer than a majority-class predictor.
-Self-training repairs exactly that: on the three checkpoints with a deficit it
-drives $\delta$ from $16.7$, $22.6$, $44.4$ to $0.1$, $2.9$, $5.0$; on the
-well-calibrated one it has nothing to repair and costs a little. On s42 it also
-raises \textbf{AUC $.917\!\to\!.947$} --- which no threshold can do --- with the
-disjoint half slightly better ($12.27$ / $.949$), so the ranking gain is not
-memorisation.
+At In-the-Wild's native prior ($0.372$) Eq.~\eqref{eq:valid} \emph{holds}, and
+the same recipe repairs rather than destroys. DeepFense s42 --- the checkpoint
+that scores $4.56\%$ on DF --- arrives here ranking at AUC $0.917$ while correct
+on only $39.1\%$ of clips, fewer than a majority-class predictor. Self-training
+repairs exactly that: over four released checkpoints it drives the deficit from
+$16.7$, $22.6$ and $44.4$ to $0.1$, $2.9$ and $5.0$ (and costs a little on the
+fourth, which arrives well-calibrated at $2.1$ and has nothing to repair). On
+s42 it also raises \textbf{AUC $.917\!\to\!.947$} --- which no threshold can do
+--- with the disjoint half slightly better ($12.27$/$.949$), so the ranking gain
+is not memorisation.
 
 \subsection{Testing the bound by intervention}
 Eqs.~\eqref{eq:purity}--\eqref{eq:valid} are claims about the budget, so we move
-the budget. Sweeping $q$ on DF s2 with everything else fixed:
-
-\begin{center}\footnotesize
-\begin{tabular}{@{}lcccc@{}}
-\toprule
-$q$ & $0.02$ & $0.05$ & $0.10$ & $0.30$ \\
-purity bound & $1.000$ & $0.556$ & $0.278$ & $0.093$ \\
-\midrule
-accuracy & \textbf{98.96} & 95.68 & 88.15 & 62.96 \\
-EER & \textbf{4.19} & 5.96 & 5.62 & 5.84 \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-\noindent Accuracy is monotone in the bound (Spearman $+1.000$). At $q{=}0.02$,
+the budget. Sweeping $q$ on DF s2 with everything else fixed gives accuracy
+$98.96$, $95.68$, $88.15$, $62.96$ at $q{=}0.02,0.05,0.10,0.30$ against bounds
+$1.000$, $0.556$, $0.278$, $0.093$ --- monotone in the bound (Spearman
+$+1.000$). At $q{=}0.02$,
 inside Eq.~\eqref{eq:valid} for this pool, the \emph{unmodified symmetric rule}
 is safe and improves on source ($4.51\!\to\!4.19$) --- no prior estimate anywhere.
 It remains weaker than the prior-split budget ($4.02$) for the reason
 Eq.~\eqref{eq:purity} implies: shrinking $q$ fixes a minority-tail problem by
-discarding the majority tail too, labelling $800$ of $20{,}000$ clips where the
-prior-split budget labels $12{,}000$.
+discarding the majority tail too ($800$ of $20{,}000$ clips labelled, against
+$12{,}000$).
+
+\textbf{Inducing the failure where the recipe works.} DF is one benchmark that
+happens to be $97.2\%$ spoof, so we intervene on prevalence directly: resample
+In-the-Wild --- where $q{=}0.3$ satisfies Eq.~\eqref{eq:valid} and repairs
+checkpoints --- to a target $P(\mathrm{fake})$, holding audio and weights fixed.
+Accuracy, bound in parentheses:
+
+\begin{center}\footnotesize
+\begin{tabular}{@{}lccc@{}}
+\toprule
+$P(\mathrm{fake})$ & $q{=}0.02$ & $q{=}0.10$ & $q{=}0.30$ \\
+\midrule
+$0.90$ & \textbf{97.8} (1.00) & 95.9 (1.00) & 73.3 (0.33) \\
+$0.95$ & \textbf{98.6} (1.00) & 92.6 (0.50) & 68.5 (0.17) \\
+$0.97$ & \textbf{98.6} (1.00) & 89.4 (0.30) & 65.4 (0.10) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent Accuracy tracks the bound (Spearman $+0.966$): $q{=}0.3$ collapses
+monotonically, $q{=}0.10$ degrades from $0.95$ exactly where its bound does, and
+$q{=}0.02$ is unharmed. The failure belongs to prevalence, not to DF.
 
 \textbf{Is the correction wrong, or the estimate?} On the hardest cell
 (In-the-Wild s42, $\delta{=}44.4$) we substitute the \emph{true} prior:
@@ -445,14 +436,13 @@ EER / accuracy & 12.58 / 82.4 & 14.51 / 48.0 & 14.95 / 55.0 & \textbf{11.59} / \
 \end{center}
 
 \noindent With the true prior the prior-split budget is the best method in this
-paper on its hardest cell; with either estimate it is worse than using no prior
-at all. The mechanism is sound and the estimation is not --- which is exactly
-what Sec.~\ref{sec:lim} proves must happen.
+paper on its hardest cell; with either estimate it is worse than using no prior.
+The mechanism is sound and the estimation is not --- exactly what
+Sec.~\ref{sec:lim} proves must happen.
 
 \textbf{Not a re-thresholding result.} Both EER and AUC move, and neither takes
-a threshold as input. The same prior estimate used twice makes it concrete: as a
-threshold it leaves EER at $4.51$ by construction and accuracy at $98.94$; as a
-budget it gives $4.02$.
+a threshold as input: the same prior estimate used as a threshold leaves EER at
+$4.51$ by construction, and as a budget gives $4.02$.
 
 \subsection{Cross-corpus, balanced pools: where the advantage disappears}
 Here Eq.~\eqref{eq:valid} holds and the prior correction is inert by
@@ -480,13 +470,11 @@ than the exactness: a $\rho$-only rule at $\tau{=}0.85$, fitted on seven arms,
 looked equally exact and was falsified by the eighth, rejecting the study's best
 result. Two thresholds on eight points is a diagnostic, not a rule, so we validate the
 ranking guard as a \emph{stopping} rule out of sample: twelve folds ($E{=}32$),
-threshold chosen leave-one-target-out. On Tent it recovers $13.9$ EER points
-($32.25\!\to\!18.33$, oracle $17.24$) --- back to source level from a
-catastrophic collapse. On our own method it never fires ($\rho$ stays
-$0.955$--$0.964$) and simply runs the budget out ($17.44\!\to\!16.58$, oracle
-$16.12$). So it prevents collapse and otherwise does not interfere, rather than
-selecting a budget; a confidence control matches it on Tent only by refusing to
-adapt at all, and churn and prior-drift are weaker still.
+threshold chosen leave-one-target-out. On Tent it recovers $13.9$ EER points ($32.25\!\to\!18.33$, oracle $17.24$) ---
+back to source level from a catastrophic collapse --- while on our own method it
+never fires and simply runs the budget out ($17.44\!\to\!16.58$, oracle $16.12$).
+It prevents collapse and otherwise does not interfere, rather than selecting a
+budget; churn and prior-drift are weaker still.
 
 \subsection{Breadth, and the mechanism}
 Over nine released checkpoints, five architectures and ten corpora ($369$
@@ -509,16 +497,14 @@ one equation, three unknowns. BBSE closes it by assuming source error rates
 carry over --- what covariate shift breaks --- so an extreme prior and an extreme
 calibration failure look identical (DF/s2 predicts $97.4\%$ fake at a true
 $0.972$, ITW/s42 $98.1\%$ at a true $0.372$). The estimate therefore degrades exactly as the operating point does --- over
-seven cells and two corpora, $|\hat\pi-\pi|$ against the source deficit gives
+ten cells and two corpora, $|\hat\pi-\pi|$ against the source deficit gives
 Pearson $r{=}0.998$ --- and a badly wrong prior is worse than none (ITW/s42
-$12.58\!\to\!14.51$ EER). Estimating the prior and detecting that the estimate is
-wrong are one problem; two label-free detectors for it are falsified in our
-release.
+$12.58\!\to\!14.51$ EER). Estimating the prior and detecting that the estimate is wrong are one problem;
+two label-free detectors for it are falsified in our release. The gain also varies a great
+deal ($1.27$ to $0.02$ EER), and a low-AUC start we cannot rescue.
 
 
-\textbf{Scope.} The prior fixes the \emph{budget}, not the threshold; the gain
-varies ($1.27$ to $0.02$ EER across DF checkpoints); and a low-AUC start we
-cannot rescue at all.
+
 
 
 {\small
