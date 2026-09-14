@@ -38,11 +38,11 @@
 
 \begin{document}
 
-\title{Ranking Transfers, Thresholds Don't:\\
-Prior-Corrected Test-Time Adaptation for Audio Deepfake Detection}
+\title{RANKING TRANSFERS, THRESHOLDS DON'T:\\
+PRIOR-CORRECTED TEST-TIME ADAPTATION FOR AUDIO DEEPFAKE DETECTION}
 
 \author{\IEEEauthorblockN{Roham Izadidoost}
-\IEEEauthorblockA{Manipal University Jaipur \\
+\IEEEauthorblockA{Iran University of Science and Technology \\
 izadidoostroham@gmail.com}
 \and
 \IEEEauthorblockN{Dr.~Sumit Srivastava}
@@ -56,31 +56,21 @@ Shweta.sharma1@jaipur.manipal.edu}}
 \maketitle
 
 \begin{abstract}
-Audio deepfake detectors generalise poorly across corpora despite near-perfect
-in-domain accuracy. We show the failure is one of \emph{operating point}: a
-fine-tuned self-supervised detector's \emph{ranking} (ROC-AUC) largely transfers
-cross-corpus while its decision \emph{threshold} does not, so unlabeled target
-audio can repair the operating point at test time. We then show that
-confident-quantile test-time adaptation (TTA) can be sound only while its tail
-budget satisfies $q\le\min(\pi,1{-}\pi)$: a counting bound caps pseudo-label
-purity at $\min(1,\pi_{\mathrm{real}}/q)$ \emph{for any detector}. That holds where TTA is measured and
-essentially nowhere else --- ASVspoof2021-DF is $97.2\%$ spoof --- so at the
-published $q{=}0.3$ no model can exceed $9.3\%$ purity there. Resampling
-In-the-Wild's prevalence, holding audio and weights fixed, reproduces the failure
-on demand: accuracy tracks the bound across a $3{\times}3$ grid (Spearman
-$+0.966$). Empirically, on the official DF eval ($400{,}435$ trials) that
-configuration destroys the operating point of three released state-of-the-art checkpoints,
-driving accuracy from $98.8$--$99.1\%$ to $62$--$65\%$ across nine paired cells;
-three of four published TTA baselines degrade all three as well --- ETA reaching
-$31$ and $37\%$ EER against a source $3.8$ and $4.6$ --- each through its own
-version of the assumption. Correcting the budget with a label-free prior estimate
-($\hat\pi{=}0.9715$ vs.\ a true $0.9708$) restores all of them and beats the
-symmetric budget on $9/9$ cells ($p{=}0.004$); both EER and AUC move, so no
-re-thresholding rule accounts for it. Its boundary we measure rather than assume: the prior is not identifiable
-from a model's own outputs, so the estimate degrades exactly as the operating
-point does ($r{=}0.997$ over ten cells), and a wrong prior is worse than none.
-Since $q$ is ours to choose and $\pi$ is not, shrinking $q$ satisfies the
-condition without estimating anything.
+Audio deepfake detectors generalise poorly across corpora. We show the failure
+is one of \emph{operating point} --- ranking (ROC-AUC) largely transfers while the
+decision threshold does not --- and that the confident-quantile test-time
+adaptation (TTA) recipes built on this can be sound only while their tail budget
+satisfies $q\le\min(\pi,1{-}\pi)$: a counting bound caps pseudo-label purity at
+$\min(1,\pi_{\mathrm{real}}/q)$ for \emph{any} detector. That holds where TTA is
+measured and almost nowhere else. On the official ASVspoof2021-DF eval
+($97.2\%$ spoof) the published $q{=}0.3$ therefore cannot exceed $9.3\%$ purity,
+and it drives three released state-of-the-art checkpoints from $98.8$--$99.1\%$
+accuracy to $62$--$65\%$; three of four modern TTA baselines fail likewise.
+Resampling In-the-Wild's prevalence reproduces the collapse on demand.
+Correcting the budget with a label-free prior estimate restores all three
+($9/9$ paired cells, $p{=}0.004$), but the prior is not identifiable from a
+model's own outputs, so the estimate degrades exactly as the operating point
+does ($r{=}0.997$) --- while simply shrinking $q$ needs no estimate at all.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -284,7 +274,7 @@ each checkpoint's own training length). Code and manifests:
 \section{Results}
 \label{sec:results}
 
-\begin{table}[t]
+\begin{table*}[t]
 \centering
 \caption{Official ASVspoof2021-DF eval, $400{,}435$ trials, $97.22\%$ spoof,
 released XLS-R+AASIST checkpoint seed~2~\cite{deepfensehf}; every arm was also
@@ -294,7 +284,7 @@ and the prediction-rate gap are the label-free monitors of
 Sec.~\ref{sec:method}(d) --- computable at deployment, unlike every other
 column.}
 \label{tab:protoa}
-\resizebox{\columnwidth}{!}{%
+\footnotesize
 \begin{tabular}{@{}lcccccc@{}}
 \toprule
 & EER\,\% & AUC & acc@$0.5$ & deficit & $\rho$ & gap \\
@@ -311,7 +301,7 @@ Source (as released) & 4.51 & .9923 & 98.87 & $-3.38$ & 1.000 & .000 \\
 \;\;\;\;(no consistency term) & 3.98 & .9936 & 98.90 & $-2.88$ & 0.884 & .003 \\
 \;+ SAR~\cite{sar} & 4.47$^\S$ & .9923 & 98.88 & $-3.35$ & 0.970 & .000 \\
 \bottomrule
-\end{tabular}}
+\end{tabular}
 \\[2pt]
 \footnotesize $^\dagger$ A threshold cannot change EER or AUC; both come from the
 score ROC. The median rule is a control for the \emph{accuracy} claim and cannot
@@ -319,7 +309,7 @@ produce any EER result in this paper. $^\ddagger$ EER over a pool that is more
 than $93\%$ a single tied score (Tent saturates $98.07\%$ of scores to exactly
 $1.0$, ETA $97.71\%$); read AUC. $^\S$ SAR neither damages nor adapts: $308$
 recovery resets in $2{,}500$ steps, AUC unchanged to four decimals.
-\end{table}
+\end{table*}
 
 \subsection{The class prior is the hidden variable}
 Table~\ref{tab:protoa} is the main result, and
@@ -481,14 +471,14 @@ budget; churn and prior-drift are weaker still.
 \subsection{Breadth, and the mechanism}
 Over nine released checkpoints, five architectures and ten corpora ($369$
 cells), the consistent effect is \emph{re-calibration}: $\delta$ falls
-$7.29\!\to\!1.96$ ($248/369$, $p{=}2.2{\times}10^{-17}$), and where it lands barely
-depends on where it started ($\mathrm{corr}{=}{+}0.17$). The mechanism is not
-learned invariance: a proxy $\mathcal{A}$-distance and a linear domain-origin
-probe both \emph{rise} after adaptation (Arabic $1.545\!\to\!1.606$), consistent
-with DANN underperforming while optimising that quantity. Beyond any threshold
-the gradient step adds separability where the ranking is strong: on ASVspoof2019
-within-attack-family AUC rises on all six families ($30/30$, $p{=}10^{-9}$); on
-the AUC-$0.71$ target it is null.
+$7.29\!\to\!1.96$ ($248/369$, $p{=}2.2{\times}10^{-17}$), barely depending on
+where it started ($\mathrm{corr}{=}{+}0.17$). The mechanism is not learned
+invariance: a proxy $\mathcal{A}$-distance and a linear domain-origin probe both
+\emph{rise} after adaptation (Arabic $1.545\!\to\!1.606$), consistent with DANN
+underperforming while optimising that quantity. Beyond any threshold the
+gradient step adds separability where the ranking is strong: within-attack-family
+AUC rises on all six ASVspoof2019 families ($30/30$, $p{=}10^{-9}$); on the
+AUC-$0.71$ target it is null.
 
 \section{Limitations}
 \label{sec:lim}
@@ -498,16 +488,21 @@ $\Pr[\hat y{=}1]=\pi\,\mathrm{TPR}_{\mathcal T}+(1{-}\pi)\mathrm{FPR}_{\mathcal 
 one equation, three unknowns. BBSE closes it by assuming source error rates
 carry over --- what covariate shift breaks --- so an extreme prior and an extreme
 calibration failure look identical (DF/s2 predicts $97.4\%$ fake at a true
-$0.972$, ITW/s42 $98.1\%$ at a true $0.372$). The estimate therefore degrades exactly as the operating point does --- over
-ten cells and two corpora, $|\hat\pi-\pi|$ against the source deficit gives
-Pearson $r{=}0.998$ --- and a badly wrong prior is worse than none (ITW/s42
-$12.58\!\to\!14.51$ EER). Estimating the prior and detecting that the estimate is wrong are one problem;
-two label-free detectors for it are falsified in our release. The gain also varies a great
-deal ($1.27$ to $0.02$ EER), and a low-AUC start we cannot rescue.
+$0.972$, ITW/s42 $98.1\%$ at a true $0.372$). The estimate therefore degrades
+exactly as the operating point does (over ten cells, $|\hat\pi-\pi|$ against the
+source deficit gives $r{=}0.997$), and a wrong prior is worse than none:
+estimating the prior and detecting that the estimate is wrong are one problem,
+and two label-free detectors for it are falsified in our release.
 
 
 
 
+
+\section*{Compliance with Ethical Standards}
+This work used only publicly released datasets and publicly released model
+checkpoints, under their respective licences; no new human-subject data were
+collected and no human or animal experiments were performed. The authors
+declare no conflict of interest.
 
 {\small
 \begin{thebibliography}{1}

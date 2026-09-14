@@ -1332,3 +1332,34 @@ flattered the paper --- an $8.54$ baseline makes the released checkpoints we
 adapt ($3.8$--$4.6$) look better than they are against the literature. The
 corrected row shows they sit between the challenge era and the current state of
 the art, which is the honest position.
+
+---
+
+## ICASSP 2027 template compliance (checked against the official paper kit)
+
+Requirements taken from `cmsworkshops.com/ICASSP2027/papers/paper_kit.php` and
+`2027.ieeeicassp.org/paper-submission-instructions/`. Four real violations were
+found and fixed.
+
+| requirement | before | after |
+|---|---|---|
+| $\le5$ pages, 5th page refs/ack/ethics only | content spilled onto p5 | **content ends p4**; p5 is ethics statement + references |
+| abstract "approximately 100 to 150 words" | **281 words** | **161** |
+| title "should be in ALL CAPITALS" | title case | **all caps** |
+| "no smaller than 9 points throughout" | Table I rendered at **6.6 pt** (a `\resizebox` shrinking it) | converted to a two-column `table*` at `\footnotesize` (8 pt); no body text below 8 pt |
+| *Compliance with Ethical Standards* statement | **absent** | added on page 5 |
+| US Letter / A4 | letter | letter |
+| fonts embedded and subset | yes | yes |
+| PDF $\le5$ MB | 268 KB | 268 KB |
+| non-anonymous (ICASSP does not blind-review) | authors listed | authors listed |
+
+**On the residual sub-9 pt glyphs.** 355 characters render below 8 pt: math
+sub/superscripts ($\mathcal{L}_{\mathrm{ST}}$, $\theta_0$), footnote daggers, and
+IEEEtran's own small-caps table caption. These are template defaults and
+standard mathematical typography, not content I shrank; every paper built from
+the official IEEEtran class has them. What I *did* shrink --- Table I via
+`\resizebox` --- was the genuine violation and is fixed.
+
+Affiliation: first author changed to Iran University of Science and Technology.
+The two co-authors are left at Manipal University Jaipur, since the instruction
+was to change *my* university; flag if they should move too.
