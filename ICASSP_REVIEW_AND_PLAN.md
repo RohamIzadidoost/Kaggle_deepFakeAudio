@@ -1192,3 +1192,104 @@ and swapped manually within a minute; nothing was lost, since stage 5's rows
 were already written and every runner resumes. Lesson: a `nohup`'d watcher
 launched from a tool call is not reliable here --- check that a scheduled
 hand-off actually happened rather than assuming it.
+
+---
+
+# Final queue: stages A-I complete, 0 failures (2026-09-13 01:19)
+
+## A. The tail-budget sweep confirms the bound as a dose-response curve
+
+DF s2, full official eval, symmetric budget only:
+
+| $q$ | purity bound | EER | accuracy |
+|---|---|---|---|
+| 0.02 | 1.000 | **4.194** | **98.96** |
+| 0.05 | 0.556 | 5.964 | 95.68 |
+| 0.10 | 0.278 | 5.622 | 88.15 |
+| 0.30 | 0.093 | 5.836 | 62.96 |
+| — source — | | 4.510 | 98.87 |
+| — prior-split — | | **4.020** | 98.95 |
+
+Bound vs accuracy: **Spearman $+1.000$**. This is the theory tested by
+intervention rather than observation --- we moved $q$ and accuracy tracked the
+bound monotonically.
+
+**The pre-registered prediction was right on both counts.** I predicted small-$q$
+symmetric would be *safe* but *weaker* than the prior-split budget, because
+$q{=}0.02$ labels 800 clips where the prior-split budget labels 12,000. Observed:
+safe ($98.96\%$ accuracy, no collapse, and it improves on source $4.510\to4.194$)
+and weaker ($4.194$ vs $4.020$).
+
+## B. The correction is right; the estimator is what fails
+
+ITW s42, the worst-calibrated cell ($\delta{=}44.4$):
+
+| prior source | EER | accuracy | $\delta$ after |
+|---|---|---|---|
+| source (no adaptation) | 16.47 | 39.08 | $+44.4$ |
+| symmetric $q$ (no prior) | 12.58 | 82.39 | $+5.0$ |
+| BBSE estimate | 14.51 | 47.99 | $+37.5$ |
+| score-mixture estimate | 14.95 | 55.00 | $+30.1$ |
+| **true prior (oracle)** | **11.59** | **91.28** | **$-2.9$** |
+
+Given the *true* prior the prior-split budget is the best method on the hardest
+cell in the study --- better than symmetric on EER and by 9 accuracy points. Given
+either estimate it is worse than using no prior at all. That cleanly separates
+the two hypotheses this arm was queued to distinguish: **the correction is
+sound, the estimation is not.**
+
+## C. The quantile/confidence trade-off, as predicted
+
+| | DF (well-calibrated, extreme prior) | ITW ssl (mis-calibrated, mild prior) |
+|---|---|---|
+| quantile rule ($q{=}0.3$) | 5.84 / 62.96 | **4.55 / 95.38** |
+| confidence rule ($p{\ge}.95$) | **4.30 / 99.02** | 4.88 / 86.65 |
+| source | 4.51 / 98.87 | 5.06 / 78.24 |
+
+Exactly the 2$\times$2 the method section argues for: a quantile rule is
+calibration-free but prior-dependent, a confidence rule prior-free but
+calibration-dependent, and each wins precisely where the other's assumption
+fails.
+
+## D/I. The stopping rule, validated leave-one-target-out
+
+12 folds (4 targets $\times$ 3 seeds), $E{=}32$, thresholds chosen on the other
+three targets:
+
+| | ours | Tent |
+|---|---|---|
+| source ($E{=}0$) | 18.39 | 18.39 |
+| published $E{=}4$ | 17.44 | 32.25 |
+| full budget $E{=}32$ | 16.58 | 36.74 |
+| **ranking guard (LOTO)** | **16.58** | **18.33** |
+| prior guard | 17.42 | 24.10 |
+| churn | 17.23 | 27.27 |
+| confidence (neg. control) | 16.74 | 18.39 |
+| oracle argmin | 16.12 | 17.24 |
+
+**On Tent the ranking guard recovers $13.9$ EER points** ($32.25\to18.33$),
+landing within $1.1$ of the oracle and essentially back at source level --- the
+collapse-prevention claim, now out-of-sample. On our own method it selects the
+full budget (within $0.45$ of oracle, $0.87$ better than $E{=}4$), which is
+honestly *not* a selection: $\rho$ stays at $0.955$--$0.964$ throughout and the
+guard simply never fires. The right statement is that it prevents collapse and
+does not get in the way otherwise. The confidence control matches it on Tent
+only by stopping at epoch 0 (i.e. refusing to adapt at all) and is worse on ours.
+
+## E, F, G, G2
+
+* **E.** Dropping the consistency term from the prior-split arm: $3.980$ vs
+  $4.020$ EER. The consistency term contributes **nothing** on DF and is very
+  slightly harmful. It should be reported as an ablation that failed to justify
+  itself, not as a component.
+* **F.** `verify_reduction` **PASSES** --- bitwise identical, max difference
+  $0.000$. The 242 lines added to `adaptive_pipeline.py` did not disturb the
+  validated `adapt()` path.
+* **G.** On ITW every baseline behaves (no collapse), as the bound predicts when
+  Eq.~(3) holds: Tent $4.61$, ETA $4.59$, SHOT $4.97$, SAR $5.02$ against source
+  $5.06$ and ours $4.55$.
+* **G2.** On DF with two more checkpoints the baseline picture is far worse than
+  the single-checkpoint version suggested: **ETA $7.44 / 31.05 / 37.47$** against
+  source $4.51 / 3.82 / 4.56$, and Tent $4.06 / 17.58 / 11.18$. SHOT degrades
+  accuracy on all three ($77.6$, $82.4$, $73.3$); SAR is inert on all three. The
+  abstract can now drop its single-checkpoint qualifier.
