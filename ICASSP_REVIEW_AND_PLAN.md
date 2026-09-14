@@ -1293,3 +1293,42 @@ only by stopping at epoch 0 (i.e. refusing to adapt at all) and is worse on ours
   source $4.51 / 3.82 / 4.56$, and Tent $4.06 / 17.58 / 11.18$. SHOT degrades
   accuracy on all three ($77.6$, $82.4$, $73.3$); SAR is inert on all three. The
   abstract can now drop its single-checkpoint qualifier.
+
+---
+
+## The uncited baseline row: verified, and two numbers were wrong
+
+Traced all four to primary sources. Two of the figures inherited from
+`protocol_a.py`'s docstring (and propagated by me into the manuscript) do not
+survive checking.
+
+| claim in the manuscript | verified | source |
+|---|---|---|
+| Wav2DF-TSL $1.95$ | **correct** | Hao et al., arXiv:2509.04161, Table II |
+| "SSL$+$SLS $2.87$" | **wrong** --- SLS is $1.92$ on DF; $2.87$ is its **LA** number | Zhang, Wen & Hu (ACM MM 2024), authors' repo |
+| "Wav2Vec2-AASIST $8.54$" | **wrong** --- Tak et al. report $2.85$ (best, SA+DA) | Tak et al., Odyssey 2022, Table 3 |
+| challenge top-1 $15.64$ | **correct** (best baseline $22.38$) | Yamagishi et al., ASVspoof 2021 Workshop, Table 6 |
+
+Details worth keeping:
+
+* **Tak et al.'s own Table 3** (DF eval, pooled EER) reads $21.06$ sinc-layer,
+  $7.69$ wav2vec2, $4.57$ with self-attentive pooling, and **$2.85$** with
+  pooling + RawBoost; $6.64$ under the LA-optimised augmentation. There is no
+  $8.54$ anywhere in it. Wav2DF-TSL's Table II cites the same system at $2.87$.
+* **The SLS repo** states $1.92\%$ DF, $2.87\%$ LA, $7.46\%$ In-the-Wild. The
+  $2.87$ I had attributed to SLS on DF is its LA figure --- a coincidence with
+  Wav2DF-TSL's $2.87$ for XLS-R+AASIST on DF, which is probably how the two got
+  conflated in the first place.
+* **The challenge paper** states it plainly: "The best performing system
+  submitted by team T23 produced an EER of $15.64\%$, followed closely by ...
+  T20 ... $16.05\%$", with best baseline B04 at $22.38\%$.
+
+Two bibliography entries added (`wav2dftsl`, `asvspoof21`); the other two
+systems were already cited in the paper. The row now reads: $1.92$, $1.95$,
+$2.85$, and the challenge-era $15.64$ / $22.38$.
+
+**This is why the row needed checking rather than transcribing.** Both errors
+flattered the paper --- an $8.54$ baseline makes the released checkpoints we
+adapt ($3.8$--$4.6$) look better than they are against the literature. The
+corrected row shows they sit between the challenge era and the current state of
+the art, which is the honest position.

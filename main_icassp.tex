@@ -240,10 +240,12 @@ claim it here.
 \textbf{Protocol A.} The official ASVspoof2021-DF eval partition against the
 official CM keys; $400{,}435$ of $611{,}829$ trials are held locally, the missing
 part uniform across codec, label and phase (verified $75$--$25$ in every
-stratum), true spoof rate $97.22\%$. Published pooled EERs here run from $1.95$
-(Wav2DF-TSL) and $2.87$ (SSL$+$SLS) through $8.54$ (Wav2Vec2-AASIST) to $15.64$
-(challenge top-1); our own source model reaches only $26.33$, so we run the
-method on \emph{released} checkpoints instead: DeepFense
+stratum), true spoof rate $97.22\%$. Published pooled EERs here span $1.92$
+(XLS-R$+$SLS~\cite{xlsrsls}), $1.95$ (Wav2DF-TSL~\cite{wav2dftsl}) and $2.85$
+(wav2vec\,2.0$+$AASIST with RawBoost~\cite{wav2vec2aug}) down to the
+challenge-era best of $15.64$ and best baseline $22.38$~\cite{asvspoof21}; our
+own source model reaches only $26.33$, so we run the method on \emph{released}
+checkpoints instead: DeepFense
 XLS-R\,300M\,+\,AASIST trained on ASVspoof2019-LA~\cite{deepfensehf}, three
 independent training seeds. Adaptation uses an unlabelled $20{,}000$-clip
 subsample; we report the full official pooled EER, an inductive number over
@@ -545,6 +547,14 @@ practical domain adaptation,'' \emph{arXiv:1603.04779}, 2016.
 different domains,'' \emph{Machine Learning}, vol.\ 79, pp.\ 151--175, 2010.
 \bibitem{ast} Y.~Gong, Y.-A. Chung, and J.~Glass, ``AST: Audio spectrogram
 transformer,'' in \emph{Proc.\ Interspeech}, 2021.
+\bibitem{wav2dftsl} Y.~Hao, Y.~Chen, M.~Xu, J.~Zhan, L.~He, L.~Fang, S.~Fang,
+and L.~Liu, ``Wav2DF-TSL: Two-stage learning with efficient pre-training and
+hierarchical experts fusion for robust audio deepfake detection,''
+\emph{arXiv:2509.04161}, 2025.
+\bibitem{asvspoof21} J.~Yamagishi, X.~Wang, M.~Todisco, M.~Sahidullah,
+J.~Patino, A.~Nautsch, X.~Liu, K.~A.~Lee, T.~Kinnunen, N.~Evans, and
+H.~Delgado, ``ASVspoof 2021: Accelerating progress in spoofed and deepfake
+speech detection,'' in \emph{Proc.\ ASVspoof 2021 Workshop}, 2021, pp.\ 47--54.
 \bibitem{itw} N.~M\"uller \emph{et al.}, ``Does audio deepfake detection
 generalize?,'' in \emph{Proc.\ Interspeech}, 2022.
 \bibitem{asvspoof19} X.~Wang \emph{et al.}, ``ASVspoof 2019: A large-scale
