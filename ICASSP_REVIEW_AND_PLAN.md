@@ -1363,3 +1363,46 @@ the official IEEEtran class has them. What I *did* shrink --- Table I via
 Affiliation: first author changed to Iran University of Science and Technology.
 The two co-authors are left at Manipal University Jaipur, since the instruction
 was to change *my* university; flag if they should move too.
+
+---
+
+## Second-round reviewer feedback: four fixes
+
+**1. The theorem was stated too strongly (the reviewer is right).** The counting
+argument proves $q>\pi_c \Rightarrow$ perfect purity impossible. The converse
+does not follow: $q\le\pi_c$ removes the prevalence obstruction but does not make
+the tail pure --- that is left to the ranking, which is what the measured slack
+($\le0.025$, tracking AUC) quantifies. "Exact validity condition" over-claimed.
+Now stated throughout as a **necessary** condition for pseudo-label *feasibility*,
+with an explicit sentence saying necessary-not-sufficient and noting that the
+paper's claims rest on the necessary direction --- which is where the published
+configurations fall. The intervention section now says plainly that necessity is
+what is being tested: we make the condition fail and the method fails with it.
+
+**2. Missing deepfake-specific TTA prior work.** Added T$^2$A (Nguyen-Le et al.,
+IJCAI 2025) --- verified against the arXiv abstract and IJCAI proceedings. It is
+genuinely the closest work: TTA *for deepfake detection*, diagnosing entropy
+minimisation's confirmation bias and replacing it with uncertainty-aware negative
+learning. Positioned honestly as complementary: it is image/video and does not
+consider the target class prior; T$^2$A repairs the *objective* while we show the
+*sampling* of pseudo-labels carries a prevalence precondition no objective
+removes.
+
+**3. "State-of-the-art" was indefensible.** The paper itself lists published
+EERs of 1.92/1.95/2.85 against the analysed checkpoint's 4.51. Every instance
+replaced with "strong publicly released checkpoints"; the one comparative claim
+now reads "between the challenge era and the current state of the art", which is
+what the corrected baseline row actually shows.
+
+**4. Font size.** `\resizebox` on Table I was rendering it at 6.6 pt and
+IEEEtran's small-caps captions at 6.4 pt, both under the 9 pt floor. Table I is
+now a two-column `table*` at 9 pt, captions are lifted to 9 pt via the `caption`
+package (targeted, so the bibliography keeps the size every IEEE paper uses), and
+the table footnote went from 8 pt to 9 pt. Remaining sub-9 pt on pages 1--4 is
+136 characters: IEEEtran's small-caps section headings, math sub/superscripts
+and footnote daggers. No body text, table or caption is below 9 pt.
+
+Refitting after these additions cost roughly a column: the three-checkpoint and
+oracle-prior inline tables became prose, the In-the-Wild grid became prose, and
+the cross-corpus and breadth subsections were compressed. Content ends on page 4;
+page 5 carries the ethics statement and references only.
