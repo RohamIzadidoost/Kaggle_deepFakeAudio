@@ -63,26 +63,24 @@ Shweta.sharma1@jaipur.manipal.edu}}
 \maketitle
 
 \begin{abstract}
-Audio deepfake detectors generalise poorly across corpora. We show the failure
-is one of \emph{operating point} --- ranking (ROC-AUC) largely transfers while the
-decision threshold does not --- and that the confident-quantile test-time
-adaptation (TTA) recipes built on this can be sound only while their tail budget
-satisfies $q\le\min(\pi,1{-}\pi)$: a counting bound caps pseudo-label purity at
-$\min(1,\pi_{\mathrm{real}}/q)$ for \emph{any} detector. That holds where TTA is
-measured and almost nowhere else. On the official ASVspoof2021-DF eval
+Audio deepfake detectors generalise poorly across corpora. We show the failure is
+one of \emph{operating point} --- ranking largely transfers while the decision
+threshold does not --- and that confident-quantile test-time adaptation (TTA)
+needs its tail budget to satisfy $q\le\min(\pi,1{-}\pi)$: a counting bound caps
+pseudo-label purity at $\min(1,\pi_{\mathrm{real}}/q)$ for \emph{any} detector.
+That holds where TTA is measured and almost nowhere else. On ASVspoof2021-DF
 ($97.2\%$ spoof) the published $q{=}0.3$ therefore cannot exceed $9.3\%$ purity,
-and it drives three strong publicly released checkpoints from $98.8$--$99.1\%$
-accuracy to $62$--$65\%$; three of four modern TTA baselines fail likewise.
-Resampling In-the-Wild's prevalence reproduces the collapse on demand.
-Correcting the budget with a label-free prior estimate restores all three
-($9/9$ paired cells, $p{=}0.004$), but the prior is not identifiable from a
-model's own outputs, so the estimate degrades exactly as the operating point
-does ($r{=}0.997$) --- while simply shrinking $q$ needs no estimate at all.
+and it drives three publicly released checkpoints from $98.8$--$99.1\%$ accuracy
+to $62$--$65\%$; three of four modern TTA baselines fail likewise, and resampling
+In-the-Wild's prevalence reproduces the collapse on demand. A label-free prior
+estimate restores all three ($9/9$ paired cells, $p{=}0.004$), but the prior is
+not identifiable from a model's own outputs, so its estimate degrades exactly as
+the operating point does ($r{=}0.997$) --- whereas shrinking $q$ needs no estimate.
 \end{abstract}
 
 \begin{IEEEkeywords}
 audio deepfake detection, anti-spoofing, test-time adaptation, label shift,
-cross-corpus generalisation, EER.
+cross-corpus generalisation.
 \end{IEEEkeywords}
 
 \section{Introduction}
@@ -232,10 +230,12 @@ consistency term is inherited from the published recipe; an ablation finds it
 contributes nothing here ($3.98$ vs $4.02$ EER), so the budget is doing the work.
 
 \section{Experimental Setup}
-\textbf{Protocol A.} The official ASVspoof2021-DF eval partition against the
-official CM keys; $400{,}435$ of $611{,}829$ trials are held locally, the missing
-part uniform across codec, label and phase (verified $75$--$25$ in every
-stratum), true spoof rate $97.22\%$. Published pooled EERs span $1.92$~\cite{xlsrsls},
+\textbf{Protocol A.} The official ASVspoof2021-DF eval partition, scored against
+the official CM keys. Of its $611{,}829$ trials we hold
+$400{,}435$; the absent shard is uniform across codec, label and phase (every
+stratum splits $75$--$25$ present/absent, matching the overall ratio), so the EER
+we pool over those $400{,}435$ is \emph{not} the official full-set figure but an
+unbiased estimate of it. True spoof rate $97.22\%$. Published pooled EERs span $1.92$~\cite{xlsrsls},
 $1.95$~\cite{wav2dftsl} and $2.85$~\cite{wav2vec2aug} down to the challenge-era
 best of $15.64$~\cite{asvspoof21}; our own source model reaches only $26.33$, so
 we run the method on \emph{released} checkpoints instead: DeepFense
@@ -269,14 +269,17 @@ its relative position, $e_0{=}(0.2/\ln 1000)\ln C$).
 source models (Adam, lr\,$2{\times}10^{-4}$, batch 32, 8 epochs). Adaptation:
 lr\,$1{\times}10^{-4}$, $E{=}4$ passes, batch $32$ (third-party crops matched to
 each checkpoint's own training length). Code and manifests:
-\texttt{[URL withheld]}.
+\texttt{github.com/RohamIzadidoost/Kaggle\_deepFakeAudio}
+(branch \texttt{icassp-breadth}), with per-arm score dumps that reproduce every
+number here without a GPU.
 
 \section{Results}
 \label{sec:results}
 
 \begin{table*}[t]
 \centering
-\caption{Official ASVspoof2021-DF eval, $400{,}435$ trials, $97.22\%$ spoof,
+\caption{ASVspoof2021-DF eval, the $400{,}435$ of $611{,}829$ official trials we
+hold, $97.22\%$ spoof,
 released XLS-R+AASIST checkpoint seed~2~\cite{deepfensehf}; every arm was also
 run on seeds 42 and 240 (text). All adaptation is label-free. Deficit $\delta=(100{-}\mathrm{EER})-\mathrm{acc}@0.5$
 is the accuracy the ranking supports but the threshold does not deliver. $\rho$
@@ -448,38 +451,37 @@ ITW/s42 predicts $98.1\%$ at a true $0.372$.
 
 The consequence is measurable: the estimate degrades exactly as the operating
 point does, $|\hat\pi-\pi|$ against the source deficit giving $r{=}0.997$ over ten
-cells. Estimating the prior and detecting that the estimate is wrong are one
-problem, and the monitors inherit it. At our worst case ($\hat\pi{=}0.979$ against
-$0.372$) the prior-split budget is harmed ($14.51$ EER against $12.58$) but still
-beats the unadapted source ($16.47$).
+cells. Estimating the prior and detecting that the estimate is wrong are one problem,
+and the monitors inherit it: at our worst case ($\hat\pi{=}0.979$ against $0.372$)
+the prior-split budget is harmed ($14.51$ EER against $12.58$) but still beats the
+unadapted source ($16.47$).
 
-This is why Eq.~\eqref{eq:valid} is worth more than the estimator: satisfying it
-needs only a \emph{lower bound} on $\min(\pi,1{-}\pi)$, not the prior. Where the
-prior cannot be estimated, drop the prior-split budget and the prior-anchored
-monitor and shrink $q$ --- $q{=}0.02$ was safe on every cell we ran, across priors
-from $0.372$ to $0.972$.
+This is why Eq.~\eqref{eq:valid} is worth more than the estimator: it needs only
+a \emph{lower bound} on $\min(\pi,1{-}\pi)$, not the prior. Where the prior cannot
+be estimated, drop the prior-split budget and the prior-anchored monitor and
+shrink $q$ ($q{=}0.02$ was safe on every cell, priors $0.372$ to $0.972$).
 
 \subsection{Breadth, and the mechanism}
-Over nine released checkpoints, five architectures and ten corpora ($369$
-cells), the consistent effect is \emph{re-calibration}: $\delta$ falls
-$7.29\!\to\!1.96$ ($248/369$, $p{=}2.2{\times}10^{-17}$). The mechanism is not learned
-invariance --- a proxy $\mathcal{A}$-distance and a domain-origin probe both
-\emph{rise} after adaptation (Arabic $1.545\!\to\!1.606$) --- and beyond any threshold
-the gradient step adds separability where the ranking is strong (ASVspoof2019
-within-attack-family AUC rises on all six families, $30/30$).
-
-\textbf{Limitations.} Eq.~\eqref{eq:valid} is \emph{necessary}, not sufficient: it
-removes the prevalence obstruction, leaving purity to the ranking. The gain also varies
-widely ($1.27$--$0.02$ EER), and a low-AUC start we cannot rescue.
+The third-party arm is $369$ cells: nine released checkpoints (five
+architectures) $\times$ ten corpora, restricted to the $76$ pairs whose checkpoint
+was not trained on that corpus, at one, three or ten seeds and counted once per
+(checkpoint, corpus, seed). The effect is \emph{re-calibration}: $\delta$ falls
+$7.29\!\to\!1.96$ ($248/369$, $p{=}2.2{\times}10^{-17}$); the mechanism is not learned invariance --- a proxy
+$\mathcal{A}$-distance and a domain-origin probe both \emph{rise} after adaptation
+(Arabic $1.545\!\to\!1.606$) --- and beyond any threshold the gradient step adds
+separability where the ranking is strong (ASVspoof2019 within-attack-family AUC
+rises on all six families). \textbf{Limitations:} Eq.~\eqref{eq:valid} is
+necessary not sufficient, the gain varies widely, and a low-AUC start we cannot
+rescue.
 
 \section*{Compliance with Ethical Standards}
-This work used only publicly released datasets and publicly released model
-checkpoints, under their respective licences; no new human-subject data were
-collected and no human or animal experiments were performed. The authors
-declare no conflict of interest.
+This work used only publicly released datasets and model checkpoints under their
+respective licences; no new human-subject data were collected and no human or
+animal experiments were performed. The authors declare no conflict of interest.
 
 {\small
 \begin{thebibliography}{1}
+\small
 \bibitem{wav2vec2aug} H.~Tak \emph{et al.}, ``Automatic speaker verification
 spoofing and deepfake detection using wav2vec 2.0 and data augmentation,'' in
 \emph{Proc.\ Odyssey}, 2022.

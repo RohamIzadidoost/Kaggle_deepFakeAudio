@@ -1447,3 +1447,33 @@ afterwards and restored.
 Net effect: the paper now has seven Results subsections and no Limitations
 section of its own, and reads as a contribution with a precisely characterised
 boundary rather than a list of confessions.
+
+---
+
+## Submission-readiness pass (eight items)
+
+1. **Index Terms** 6 → 5, `EER` removed.
+2. **9 pt floor extended to references.** The bibliography was rendering at 8 pt
+   because IEEEtran's `thebibliography` sets its own size, overriding the outer
+   `\small`; forced to 9 pt inside the environment. Captions and table text were
+   already lifted. The 160 remaining sub-9 pt glyphs are IEEEtran's section-heading
+   small caps (`NTRODUCTION`, `ETHOD`, …) and math sub/superscripts — template
+   typography, not reduced content.
+3. **Abstract** 162 → **143 words**.
+4. **`[URL withheld]` replaced** with
+   `github.com/RohamIzadidoost/Kaggle_deepFakeAudio` (branch `icassp-breadth`),
+   noting the score dumps reproduce every number without a GPU. Safe to include:
+   ICASSP does not blind-review.
+5. **Typo fixed**: "all three released publicly released checkpoints".
+6. **`izadidoost.pdf`** produced alongside `main_icassp.pdf`.
+7. **369 cells explained.** Traced to source rather than asserted: the figure is
+   the count of unique (checkpoint, corpus, seed) triples — nine checkpoints ×
+   ten corpora, restricted to the **76** pairs whose checkpoint was not trained
+   on that corpus, at one, three or ten seeds. (The raw file has 1,070 rows; 369
+   is the deduplicated count, which is why the two never matched.)
+8. **ASVspoof trial count made honest.** The paper previously implied a full
+   pooled EER. It now says plainly: of 611,829 official trials we hold 400,435;
+   the absent shard is uniform across codec, label and phase (every stratum
+   splits 75–25, matching the overall ratio), so the pooled EER over those
+   400,435 is **not the official full-set figure but an unbiased estimate of
+   it**. Table I's caption says the same.
