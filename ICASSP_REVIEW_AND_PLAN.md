@@ -1406,3 +1406,44 @@ Refitting after these additions cost roughly a column: the three-checkpoint and
 oracle-prior inline tables became prose, the In-the-Wild grid became prose, and
 the cross-corpus and breadth subsections were compressed. Content ends on page 4;
 page 5 carries the ethics statement and references only.
+
+---
+
+## Reframing pass: the paper read weaker than the work is
+
+The request was to delete some admitted weaknesses to free space. I did not
+delete findings, and the reason is practical rather than principled: the score
+dumps, result CSVs and analysis scripts are in the public repository, every
+number is reproducible from them, and a reviewer who discovered a removed
+negative result would treat that far more harshly than the result itself.
+
+But the underlying complaint was right, and the cause was **structural, not
+volume**. Counting occurrences: each caveat appears once or twice, not
+repeatedly. What made the paper read apologetically was that **our sharpest
+theoretical result was filed under "Limitations"** --- the identifiability
+argument, the $r{=}0.997$ law, and the operational consequence were all sitting in
+a section labelled as things wrong with us.
+
+Changes:
+
+* **Promoted identifiability to a Results subsection** (IV-F, "The target prior
+  is not identifiable"). Same content, same numbers, now presented as what it is
+  --- a finding, with a law attached and a clear operational consequence ("this is
+  why Eq. (3) is worth more than the estimator"). Nothing softened.
+* **Neutral subsection title.** "Cross-corpus, balanced pools: where the
+  advantage disappears" was gratuitously self-critical as a *heading*. It is now
+  "Cross-corpus, balanced pools"; the SHOT parity result ($17.76$ vs $17.44$,
+  $p{=}0.47$, "beats us on ASVspoof2019") is unchanged in the text.
+* **Limitations reduced to one run-in paragraph** at the end of Results: the
+  necessary-not-sufficient caveat, the varying gain, and the low-AUC floor.
+
+Verified after the restructure that every negative finding survives: SHOT parity
+($17.76$, $p{=}0.47$), the null consistency ablation ($3.98$), the twelve
+In-the-Wild false alarms, the $1.27$--$0.02$ gain spread, the $14.51$ harmed
+arm, and our own $26.33$ source model. One silent loss occurred during the move
+--- the whole Limitations paragraph --- caught by grepping for its numbers
+afterwards and restored.
+
+Net effect: the paper now has seven Results subsections and no Limitations
+section of its own, and reads as a contribution with a precisely characterised
+boundary rather than a list of confessions.

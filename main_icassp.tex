@@ -162,8 +162,7 @@ $M[y,\hat y]=P_{\mathcal S}(\hat y\mid y)$ the source confusion matrix and $q$ t
 target prediction histogram. Estimators split into those reading the
 \emph{thresholded prediction rate} (BBSE, EM~\cite{sld}) and those reading the
 score \emph{histogram} (a two-component mixture); the first inherits whatever
-calibration error the target induces, and Secs.~\ref{sec:results}
-and~\ref{sec:lim} show neither is reliable where it is needed.
+calibration error the target induces, and Sec.~\ref{sec:results} show neither is reliable where it is needed.
 
 \textbf{(b) The tail budget, and when it is valid.} The standard rule takes the
 bottom $q$ and top $q$ of the target scores as pseudo-real and pseudo-fake. Its
@@ -211,7 +210,7 @@ the \emph{fake} budget to $0.587$ against $\pi_{\mathrm{fake}}{=}0.372$
 Across the seven adapted arms we ran, the worst-tail bound is $1.000$ for the
 five that came out intact ($82$--$99\%$ accuracy) and $0.093$ and $0.633$ for the
 two that collapsed ($62.96$, $47.99$). Since $q$ is ours to choose and $\pi$ is
-not (Sec.~\ref{sec:lim}), a third option is to shrink $q$ until
+not (Sec.~\ref{sec:results}), a third option is to shrink $q$ until
 Eq.~\eqref{eq:valid} holds for the most skewed prior anticipated --- at a
 supervision cost the prior-split budget avoids ($q{=}0.02$ labels $800$ of
 $20{,}000$ clips against $12{,}000$). A fixed confidence threshold is a fourth,
@@ -394,13 +393,13 @@ and $14.51/48.0$ and $14.95/55.0$ for the BBSE and mixture estimates.
 \noindent With the true prior the prior-split budget is the best method in this
 paper on its hardest cell; with either estimate it is worse than using no prior.
 The mechanism is sound and the estimation is not --- exactly what
-Sec.~\ref{sec:lim} proves must happen.
+Sec.~\ref{sec:results} proves must happen.
 
 \textbf{Not a re-thresholding result.} Both EER and AUC move, and neither takes
 a threshold as input: the same prior estimate used as a threshold leaves EER at
 $4.51$ by construction, and as a budget gives $4.02$.
 
-\subsection{Cross-corpus, balanced pools: where the advantage disappears}
+\subsection{Cross-corpus, balanced pools}
 Where Eq.~\eqref{eq:valid} holds the prior correction is inert by construction,
 so this arm measures the rest of the method. Over twelve identical folds we beat
 source-only ($18.39\!\to\!17.44$ pooled EER, $p{=}0.027$), Tent ($32.25$), ETA
@@ -413,7 +412,7 @@ regime the field does not test.
 
 \subsection{Label-free guards, and their own precondition}
 Eq.~\eqref{eq:valid} says when pure pseudo-labels are feasible, but checking it
-needs $\pi$, which Sec.~\ref{sec:lim} shows is not identifiable. A deployer is
+needs $\pi$, which Sec.~\ref{sec:results} shows is not identifiable. A deployer is
 left with a weaker question that \emph{can} be asked without labels --- not
 \emph{will} this adaptation help but \emph{did} it --- and two statistics answer
 it: rank agreement with the frozen source,
@@ -437,41 +436,41 @@ best arm in this paper. The guards are sound where the source arrives well-calib
 ($\delta\!\approx\!0$, as on DF) and unusable where it does not --- the same
 regime, and the same reason, as the prior estimate itself.
 
+\subsection{The target prior is not identifiable}
+How far can a label-free prior estimate be trusted? Not far, for structural
+reasons rather than any defect of BBSE: such a method observes only
+$\Pr[\hat y{=}1]=\pi\,\mathrm{TPR}_{\mathcal T}+(1{-}\pi)\mathrm{FPR}_{\mathcal T}$
+--- one equation in three unknowns. BBSE closes it by assuming the source error
+rates carry over, which is exactly what covariate shift breaks, so an extreme
+prior and an extreme calibration failure are \emph{indistinguishable} from a
+model's outputs: DF/s2 predicts $97.4\%$ fake at a true prior of $0.972$,
+ITW/s42 predicts $98.1\%$ at a true $0.372$.
+
+The consequence is measurable: the estimate degrades exactly as the operating
+point does, $|\hat\pi-\pi|$ against the source deficit giving $r{=}0.997$ over ten
+cells. Estimating the prior and detecting that the estimate is wrong are one
+problem, and the monitors inherit it. At our worst case ($\hat\pi{=}0.979$ against
+$0.372$) the prior-split budget is harmed ($14.51$ EER against $12.58$) but still
+beats the unadapted source ($16.47$).
+
+This is why Eq.~\eqref{eq:valid} is worth more than the estimator: satisfying it
+needs only a \emph{lower bound} on $\min(\pi,1{-}\pi)$, not the prior. Where the
+prior cannot be estimated, drop the prior-split budget and the prior-anchored
+monitor and shrink $q$ --- $q{=}0.02$ was safe on every cell we ran, across priors
+from $0.372$ to $0.972$.
+
 \subsection{Breadth, and the mechanism}
 Over nine released checkpoints, five architectures and ten corpora ($369$
 cells), the consistent effect is \emph{re-calibration}: $\delta$ falls
-$7.29\!\to\!1.96$ ($248/369$, $p{=}2.2{\times}10^{-17}$). The mechanism is not
-learned invariance --- a proxy $\mathcal{A}$-distance and a domain-origin probe
-both \emph{rise} after adaptation (Arabic $1.545\!\to\!1.606$), consistent with
-DANN underperforming while optimising that quantity --- and beyond any threshold
-the gradient step adds separability where the ranking is strong
-(within-attack-family AUC rises on all six ASVspoof2019 families, $30/30$,
-$p{=}10^{-9}$).
+$7.29\!\to\!1.96$ ($248/369$, $p{=}2.2{\times}10^{-17}$). The mechanism is not learned
+invariance --- a proxy $\mathcal{A}$-distance and a domain-origin probe both
+\emph{rise} after adaptation (Arabic $1.545\!\to\!1.606$) --- and beyond any threshold
+the gradient step adds separability where the ranking is strong (ASVspoof2019
+within-attack-family AUC rises on all six families, $30/30$).
 
-\section{Limitations}
-\label{sec:lim}
-\textbf{Scope.} The gain varies widely and a low-AUC start we cannot rescue.
-\textbf{The prior is not identifiable, which bounds the correction.} A label-free
-method sees only
-$\Pr[\hat y{=}1]=\pi\,\mathrm{TPR}_{\mathcal T}+(1{-}\pi)\mathrm{FPR}_{\mathcal T}$:
-one equation, three unknowns. BBSE closes it by assuming source error rates carry
-over --- what covariate shift breaks --- so an extreme prior and an extreme
-calibration failure look identical (DF/s2 predicts $97.4\%$ fake at a true
-$0.972$, ITW/s42 $98.1\%$ at a true $0.372$). The estimate therefore degrades
-exactly as the operating point does ($|\hat\pi-\pi|$ against the source deficit
-gives $r{=}0.997$ over ten cells): estimating the prior and detecting that the
-estimate is wrong are one problem.
-
-\textbf{When estimation fails completely.} Our worst case is ITW/s42,
-$\hat\pi{=}0.979$ against a true $0.372$ --- outside Eq.~\eqref{eq:tol} by
-$2.6\times$. \emph{(i)} The prior-split budget is harmed ($14.51$ EER, $48.0\%$ accuracy, vs.\
-the symmetric budget's $12.58$/$82.4$) though it still beats the unadapted source
-($16.47$), so it degrades rather than collapses.
-\emph{(ii)} The guards do not rescue it: the drift monitor is anchored on the
-same $\hat\pi$ and inverts here, and $\rho$ exceeds $0.91$ for every In-the-Wild
-arm. The safety net inherits the unidentifiability it covers.
-\emph{(iii)} What survives needs no estimate, since Eq.~\eqref{eq:valid} asks
-only a \emph{lower bound} on $\min(\pi,1{-}\pi)$: drop both, shrink $q$.
+\textbf{Limitations.} Eq.~\eqref{eq:valid} is \emph{necessary}, not sufficient: it
+removes the prevalence obstruction, leaving purity to the ranking. The gain also varies
+widely ($1.27$--$0.02$ EER), and a low-AUC start we cannot rescue.
 
 \section*{Compliance with Ethical Standards}
 This work used only publicly released datasets and publicly released model
