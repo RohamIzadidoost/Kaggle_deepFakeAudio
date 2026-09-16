@@ -65,6 +65,13 @@ def manifests():
     return {"df2021": df, "itw": itw}, info
 
 
+# The prevalence runs used PUBA_ADAPT_N=8000 (run_skew_sweep.sh,
+# run_skew_low.sh); every other run used the 20,000 default. Reconstructing the
+# wrong budget silently swallows the whole resampled pool into the adaptation
+# set, which drops the disjoint split those runs actually had.
+ADAPT_N_SKEW, ADAPT_N_DEFAULT = 8000, 20000
+
+
 def select_pool(ev, seed, sub, skew):
     ev = ev.copy()
     if skew:
@@ -78,7 +85,8 @@ def select_pool(ev, seed, sub, skew):
         ev = ev.loc[np.sort(keep)].reset_index(drop=True)
     if sub:
         ev = ev.sample(min(sub, len(ev)), random_state=12345).sort_values("utt").reset_index(drop=True)
-    adapt = np.random.RandomState(seed).choice(len(ev), min(20000, len(ev)), replace=False)
+    adapt_n = ADAPT_N_SKEW if skew else ADAPT_N_DEFAULT
+    adapt = np.random.RandomState(seed).choice(len(ev), min(adapt_n, len(ev)), replace=False)
     return ev, np.sort(adapt)
 
 
@@ -101,6 +109,56 @@ def values(y, s, threshold=.5):
                 largest_tie_pct=100*counts.max()/len(s), n_unique=len(unique))
 
 
+def contamination(selections, scores):
+    """Compare the two currencies of the counting argument against outcomes.
+
+    For each symmetric-tail cell, the bound's implied excess contamination
+    n_adapt * sum_c (b_c - pi_c)^+ is paired with the change in balanced
+    accuracy that adaptation produced, in both evaluation settings. Balanced
+    accuracy is used because raw accuracy's trivial baseline moves with the
+    prevalence being intervened on.
+    """
+    rows = []
+    sym = selections[selections.rule == "symmetric"]
+    for (corpus, ckpt, q, skew), g in sym.groupby(["corpus", "ckpt", "q", "skew"]):
+        for setting in ["available_pool", "disjoint_eval"]:
+            sel = scores[(scores.corpus == corpus) & (scores.ckpt == ckpt)
+                         & np.isclose(scores.q, q) & np.isclose(scores["skew"], skew)
+                         & (scores.setting == setting) & (scores.seed == 0)
+                         & (scores.eval_sub == 0)]
+            src_row = sel[sel.arm == "source"]
+            ada = sel[sel.arm == "ours_fixed"]
+            if len(src_row) != 1 or len(ada) != 1:
+                continue
+            rows.append(dict(corpus=corpus, ckpt=ckpt, q=q, skew=skew, setting=setting,
+                             prior=float(src_row.iloc[0].prior),
+                             worst_purity=float(g.purity.min()),
+                             excess=float(g.excess.sum()), wrong=float(g.wrong.sum()),
+                             ba_source=float(src_row.iloc[0].balanced_accuracy),
+                             ba_adapted=float(ada.iloc[0].balanced_accuracy),
+                             d_ba=float(ada.iloc[0].balanced_accuracy
+                                        - src_row.iloc[0].balanced_accuracy)))
+    out = pd.DataFrame(rows)
+    out.to_csv(OUT / "contamination.csv", index=False, float_format="%.10g")
+    for setting in ["available_pool", "disjoint_eval"]:
+        d = out[out.setting == setting]
+        if not len(d):
+            continue
+        good, bad = d[d.d_ba > 5], d[d.d_ba <= 5]
+        print(f"contamination/{setting}: {len(good)} cells improve BA by "
+              f"[{good.d_ba.min():+.2f},{good.d_ba.max():+.2f}] with excess "
+              f"<= {good.excess.max():.0f}; {len(bad)} cells give "
+              f"[{bad.d_ba.min():+.2f},{bad.d_ba.max():+.2f}] with excess "
+              f">= {bad.excess.min():.0f}. Purity ranges overlap: "
+              f"[{good.worst_purity.min():.3f},{good.worst_purity.max():.3f}] vs "
+              f"[{bad.worst_purity.min():.3f},{bad.worst_purity.max():.3f}]", flush=True)
+    binding = selections[selections.bound < 1 - 1e-9]
+    tight = binding[binding.bound <= .35]
+    print(f"counting bound: {len(binding)} binding tails; among the "
+          f"{len(tight)} with bound <= 0.35 the largest purity shortfall is "
+          f"{(tight.bound - tight.purity).abs().max():.4f}", flush=True)
+
+
 def write_tables(scores, controls):
     d = scores[(scores.seed == 0) & (scores.eval_sub == 0)
                & (scores["skew"] == 0) & (scores.setting == "available_pool")]
@@ -108,9 +166,10 @@ def write_tables(scores, controls):
     rows = []
     for label, arm, q in [("Source", "source", .3),
                           ("Entropy (Tent-style)", "tent", .3),
-                          ("ETA reliability ablation", "eta", .3),
-                          ("SAR with scaled recovery", "sar", .3),
-                          ("IM-PL (SHOT-inspired)", "shot", .3),
+                          # ETA / SAR / IM-PL moved to a footnote: as controlled
+                          # variants rather than tuned reproductions they read as
+                          # broken baselines in a main table. Their audited rows
+                          # stay in scores.csv.
                           ("Fixed confidence 0.95", "ours_conf", .3),
                           (r"Symmetric $q=0.02$", "ours_fixed", .02),
                           (r"Symmetric $q=0.3$", "ours_fixed", .3),
@@ -137,18 +196,28 @@ def write_tables(scores, controls):
                 line += f" & {r.eer:.2f}/{r.accuracy:.2f}"
             rows.append(line+r" \\")
         (OUT / f"table_{corpus}_checkpoints.tex").write_text("\n".join(rows)+"\n")
-    rows = []
-    for skew in [.9, .95, .97]:
-        p = scores[(scores.corpus == "itw") & np.isclose(scores["skew"], skew)
-                   & (scores.setting == "available_pool")]
-        line = f"{skew:.2f} & {int(p.iloc[0].n):,}"
-        r = p[(p.arm == "source") & (p.q == .3)].iloc[0]
-        line += f" & {r.accuracy:.2f}"
-        for q in [.02, .1, .3]:
-            r = p[(p.arm == "ours_fixed") & (p.q == q)].iloc[0]
-            line += f" & {r.accuracy:.2f}"
-        rows.append(line+r" \\")
-    (OUT / "table_skew.tex").write_text("\n".join(rows)+"\n")
+    # Prevalence table. Cells are EER/balanced accuracy: BA has the same 50%
+    # trivial baseline at every prevalence, whereas raw accuracy's trivial
+    # baseline moves from 90.00% to 99.00% across these rows, so accuracy is
+    # plotted against that moving baseline in the figure instead. The native
+    # In-the-Wild prior is the anchor row; a dash marks a budget never run at
+    # that prevalence.
+    itw = scores[(scores.corpus == "itw") & (scores.ckpt == "ssl_aasist_wavefake")]
+    for setting, name in [("available_pool", "table_skew.tex"),
+                          ("disjoint_eval", "table_skew_disjoint.tex")]:
+        rows = []
+        for skew in sorted(itw["skew"].unique()):
+            p = itw[np.isclose(itw["skew"], skew) & (itw.setting == setting)]
+            if not len(p):
+                continue
+            line = f"{p.iloc[0].prior:.3f} & {int(p.iloc[0].n):,}"
+            for arm, q in [("source", .3), ("ours_fixed", .02), ("ours_fixed", .1),
+                           ("ours_fixed", .3), ("ours_bbse", .3)]:
+                r = p[(p.arm == arm) & np.isclose(p.q, q)]
+                line += (f" & {r.iloc[0].eer:.2f}/{r.iloc[0].balanced_accuracy:.1f}"
+                         if len(r) else " & --")
+            rows.append(line+r" \\")
+        (OUT / name).write_text("\n".join(rows)+"\n")
 
 
 def main():
@@ -192,14 +261,35 @@ def main():
             if len(original) != 1:
                 raise ValueError(f"Expected one historical row for {path}, got {len(original)}")
             row = original.iloc[0]
+            # Accuracy and AUC are what pin the score-to-label alignment, and stay
+            # strict. The run-time EER used the nearest-ROC-point estimator, whose
+            # grid is one step per minority example; on a resampled pool with a
+            # small minority class that step is coarser than a fixed 0.002, so the
+            # legacy comparison is scaled to the ROC resolution instead.
+            eer_tol = max(.002, 100/min(int((y == 1).sum()), int((y == 0).sum())))
             if (abs(v["accuracy"] - row.acc) > .002 or abs(v["auc"] - row.auc) > .00011
-                    or abs(v["legacy_eer"] - row.eer) > .002):
+                    or abs(v["legacy_eer"] - row.eer) > eer_tol):
                 raise ValueError(f"Historical metrics do not match reconstructed manifest: {path}")
             results.append(dict(**key, setting="available_pool", **v))
             mask = np.ones(len(y), dtype=bool)
             mask[adapt] = False
             if len(np.unique(y[mask])) == 2:
-                results.append(dict(**key, setting="disjoint_eval", **values(y[mask], s[mask])))
+                dv = values(y[mask], s[mask])
+                # The disjoint split is a reconstruction of the run-time
+                # adaptation draw, so check it against the run-time row where
+                # one exists: a wrong adaptation budget would not match.
+                hd = hist[(hist.ckpt == ckpt) & (hist.method == arm)
+                          & (hist.setting == "disjoint_eval") & (hist.seed == seed)
+                          & (hist.eval_sub == sub) & np.isclose(hist.q, q)
+                          & np.isclose(hist.skew_target, skew)]
+                if len(hd) == 1:
+                    hr = hd.iloc[0]
+                    d_tol = max(.002, 100/min(int((y[mask] == 1).sum()), int((y[mask] == 0).sum())))
+                    if (abs(dv["accuracy"] - hr.acc) > .002 or abs(dv["auc"] - hr.auc) > .00011
+                            or abs(dv["legacy_eer"] - hr.eer) > d_tol or dv["n"] != hr.n):
+                        raise ValueError(
+                            f"Reconstructed disjoint split does not match the run: {path}")
+                results.append(dict(**key, setting="disjoint_eval", **dv))
             provenance.append(dict(file=str(path), sha256=digest(path), n=len(s)))
             if arm != "source":
                 continue
@@ -221,7 +311,7 @@ def main():
                     if len(np.unique(y[take])) == 2:
                         controls.append(dict(**key, rule=rule, setting=setting, pi_hat=pi_hat,
                                              **values(y[take], s[take], threshold)))
-            if seed or sub or skew or q != .3:
+            if seed or sub:
                 continue
             # Audit the initial pseudo-label masks, including all boundary ties
             # and the implementation's fake-tail overwrite on any overlap.
@@ -238,10 +328,21 @@ def main():
                     bound = min(1, np.mean(ya == c)/actual) if actual else np.nan
                     if take.any() and purity > bound+1e-12:
                         raise AssertionError("Counting bound violated")
+                    # The counting argument bounds purity, but what an update
+                    # actually sees is a COUNT of wrong labels. Eq. (1) implies
+                    # at least n_adapt*(b_c - pi_c) of them once the bucket
+                    # exceeds the class population; that excess is recorded here
+                    # so the two currencies can be compared against outcomes.
+                    pi_c = float(np.mean(ya == c))
                     selections.append(dict(**key, rule=rule, label=c, nominal=nominal,
-                                           actual=actual, purity=purity, bound=bound))
+                                           actual=actual, purity=purity, bound=bound,
+                                           n_adapt=len(adapt), pi_c=pi_c,
+                                           excess=len(adapt)*max(0., actual-pi_c),
+                                           wrong=(len(adapt)*actual*(1-purity)
+                                                  if take.any() else np.nan)))
     for name, rows in [("scores", results), ("threshold_controls", controls), ("initial_tails", selections)]:
         pd.DataFrame(rows).to_csv(OUT / f"{name}.csv", index=False, float_format="%.10g")
+    contamination(pd.DataFrame(selections), pd.DataFrame(results))
     write_tables(pd.DataFrame(results), pd.DataFrame(controls))
     info["score_inputs"] = provenance
     info["method"] = "ROC interpolation with ties grouped; exhaustive distinct-score oracle; historical AUC/accuracy cross-check"
