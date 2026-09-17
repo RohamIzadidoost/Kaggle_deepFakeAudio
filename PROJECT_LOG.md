@@ -522,3 +522,63 @@ against the run-time row, and acceptance of either EER estimator (runs after
 stratified bootstrap), `make_figure.py`, `run_skew_low*.sh`, `run_excess*.sh`.
 `main_icassp.tex` is 4 pages + references, 0 overfull boxes, every prose number
 verified against the audited arrays.
+
+## 2026-09-17 (afternoon) — Reviewer correction, and a batch-normalisation bug
+
+**Reject, on the framing of the central result.** The objection was that an
+oracle-accuracy decomposition was being presented as evidence of ranking
+preservation. Checked, and correct on all three counts:
+
+- At skewed prevalence the "attainable ceiling" sits only 1.7--3.0 points above
+  the always-majority rule, and within 1 point in 26 of 79 runs. Its stability
+  was largely a property of the metric, not evidence about the ranking.
+- The 79/79 "adaptation helps iff the gap falls" was arithmetic:
+  `d_acc = d_oracle - d_gap`, so the biconditional follows once the oracle term
+  is small.
+- Delta had only been validated within prevalence, where it is a monotone
+  transform of q and the two cannot be separated.
+
+The manuscript now makes the ranking claim directly and without the
+decomposition: accuracy moves a median 15.14 points while EER moves 0.38 and
+AUC 0.12, accuracy moving more than ten times as far as EER in 66 of 79 runs.
+Delta survives a proper across-strata test that it had never been given: pooled
+Spearman +0.75 against +0.36 for q; pairs from different strata matched on
+Delta but far apart in q differ by a median 7.8 gap points, against 28.9 for
+pairs matched on q. Figure rebuilt on both. 4 pages + references, 19/19 changed
+numbers re-verified.
+
+**View pilot (PILOT_VIEWS_NOTES.md).** Views built from offset crop + gain +
+noise made the frozen teacher *worse*. Isolating each transformation showed why:
+crops and gain cost nothing (-3.3% to -0.1% relative EER), additive noise costs
++80.8% at sigma=0.005 and +32.3% at sigma=0.001. The existing consistency term
+perturbs with exactly that gain+noise, so it demands agreement against a view
+whose own ranking is 84% worse -- a mechanism for its null ablation.
+
+**A float16 claim, made and retracted.** The pilot's view 0 did not reproduce
+the cached pipeline score (4.856% against 5.060%), and the float16 decode
+buffer looked like the cause. It was not: `PUBA_FP32=1` gives 5.058%.
+
+**The real cause, and it is serious.** torchaudio's `_Wav2Vec2Model.forward`
+runs `layer_norm(waveforms, waveforms.shape)` on the batched tensor, taking the
+statistics over batch *and* time, so every clip is normalised by its
+neighbours' loudness; upstream fairseq normalises per utterance before
+batching, so the two agree only at batch size one. Forward hooks put the
+divergence at the first convolution, i.e. in the input. One clip scores 0.2029
+alone, 0.2031 among copies of itself, 0.3449 among 32 distinct clips; mean
+shift 0.034 over 4,000 clips, maximum 0.73, and it persists with autocast off.
+Per-utterance normalisation takes batch dependence from 0.606 to 0.025 (bf16)
+and 0.00095 (fp32), and is wired in as opt-in `PUBA_PERSAMPLE_NORM=1` so the
+cached arrays keep their meaning.
+
+Consequences still open: every `ssl_aasist` score depends on manifest order,
+batch size and pool composition. The manuscript's arms share one batching, so
+its comparisons hold, but the prevalence intervention changes pool composition
+and therefore scores independently of adaptation, and that confound is
+unquantified. The multi-view teacher gain (-4.6% relative EER) was measured
+with view 0 and the view mean under different batch statistics and is therefore
+unverified; a corrected re-run was in flight when work stopped
+(`pilot_views_itw_fixed.npz`).
+
+Also fixed: `protocol_a_public.py`'s resume guard treated a float32 rerun as
+satisfied by the float16 row, so audio precision is now part of the run key and
+the cached-score filename.

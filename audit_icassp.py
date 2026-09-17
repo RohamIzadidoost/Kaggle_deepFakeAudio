@@ -192,9 +192,8 @@ def write_tables(scores, controls):
                  & (controls.seed == 0) & (controls.eval_sub == 0)
                  & (controls["skew"] == 0) & (controls.q == .3)
                  & (controls.setting == "available_pool")]
-    for label, rule in [("Median threshold only", "median"), ("BBSE threshold only", "bbse_quantile")]:
-        r = c[c.rule == rule].iloc[0]
-        rows.append(label+f" & {r.eer:.2f} & {r.auc:.4f} & {r.accuracy:.2f} & {r.balanced_accuracy:.2f} & {r.threshold_gap:.2f}"+r" \\")
+    # The frozen-score threshold controls are quoted in the text instead; keeping
+    # them as table rows spent space on a control that changes no ranking metric.
     (OUT / "table_df_main.tex").write_text("\n".join(rows)+"\n")
     for corpus, ids in [("df2021", [("DF-2", ck), ("DF-42", "deepfense_w2v2_aasist_s42"),
                                      ("DF-240", "deepfense_w2v2_aasist_s240")]),
@@ -250,10 +249,15 @@ def main():
             if arm == "M":
                 continue
             suffix = tag[0] if tag else ""
-            m = re.fullmatch(r"s(\d+)_e(\d+)(?:_q([\d.]+))?(?:_k([\d.]+))?", suffix) if suffix else None
+            m = re.fullmatch(r"s(\d+)_e(\d+)(?:_q([\d.]+))?(?:_k([\d.]+))?(_f32)?",
+                             suffix) if suffix else None
             if suffix and not m:
                 raise ValueError(f"Unrecognized score suffix: {path}")
             seed, sub, q, skew = (int(m[1]), int(m[2]), float(m[3] or .3), float(m[4] or 0)) if m else (0, 0, .3, 0)
+            # float32-audio runs are a different condition; they are exploratory
+            # and must not be mixed into the manuscript's tables.
+            if m and m[5]:
+                continue
             ev, adapt = select_pool(pools[corpus], seed, sub, skew)
             y, s = ev.label.to_numpy(), np.load(path, allow_pickle=False)
             if s.shape != y.shape:

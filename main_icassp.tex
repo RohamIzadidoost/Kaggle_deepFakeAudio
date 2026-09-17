@@ -12,8 +12,8 @@ pdfauthor={Roham Izadidoost, Sumit Srivastava, Shweta Sharma}}
 \makeatletter
 \newcommand{\tablerows}[1]{\@@input #1 }
 \makeatother
-\setlength{\textfloatsep}{10pt plus 2pt minus 2pt}
-\setlength{\dbltextfloatsep}{10pt plus 2pt minus 2pt}
+\setlength{\textfloatsep}{6pt plus 2pt minus 2pt}
+\setlength{\dbltextfloatsep}{6pt plus 2pt minus 2pt}
 \title{Confident-Tail Test-Time Adaptation Moves the Threshold,\\
 Not the Ranking, in Audio Deepfake Detection}
 \name{Roham Izadidoost$^{1}$ \qquad Sumit Srivastava$^{2}$ \qquad Shweta Sharma$^{2}$}
@@ -30,20 +30,19 @@ In-the-Wild evaluation has ROC-AUC 0.9171 but 39.08\% accuracy at threshold
 0.5. Confident-tail self-training, which pseudo-labels the lowest- and
 highest-scoring target clips, exploits the ordering that survives. Over 79
 adaptation runs spanning four released checkpoints, two corpora, spoof
-prevalence 0.01 to 0.972 and budgets 0.02 to 0.50, it proves to be almost
-purely an operating-point procedure: the accuracy its scores can attain shifts
-by a median of 0.12 points while the gap between that ceiling and the accuracy
-obtained at threshold 0.5 shifts by 14.87, and in no run does the ceiling move
-further. Where the new operating point lands follows a counting quantity. A
-bucket assigned class $c$ with realized fraction $b_c$ of a pool with prior
-$\pi_c$ cannot be purer than $\min(1,\pi_c/b_c)$, so a fraction
-$\Delta=\sum_c(b_c-\pi_c)^{+}$ of the pool is necessarily mislabeled. The
-post-adaptation gap increases with $\Delta$ in 12 of the 14 strata that vary
-the budget, and adaptation improves accuracy exactly when that gap ends below
-the source's, on 79 of 79 runs. Purity orders none of this, and neither does
-the budget: $q=0.50$ helps at 37\% spoof prevalence while $q=0.30$ destroys
+prevalence 0.01 to 0.972 and budgets 0.02 to 0.50, it moves the decision far
+more than the ordering that decision is applied to: accuracy at threshold 0.5
+shifts by a median of 15.1 points while EER shifts by 0.38 and ROC-AUC by 0.12.
+Where the decision lands follows a counting quantity. A bucket assigned class
+$c$ with realized fraction $b_c$ of a pool with prior $\pi_c$ cannot be purer
+than $\min(1,\pi_c/b_c)$, so a fraction $\Delta=\sum_c(b_c-\pi_c)^{+}$ of the
+pool is necessarily mislabeled. Pooled across checkpoints and priors, $\Delta$
+orders the resulting threshold gap where the budget alone does not (Spearman
+$+0.75$ against $+0.36$). Purity orders none of it, and neither does the
+budget: $q=0.50$ helps at 37\% spoof prevalence while $q=0.30$ destroys
 accuracy at 97\%, and on a balanced pool a perfectly pure selection still costs
-$9.6\pm0.8$ points over three seeds.
+$9.6\pm0.8$ points. The rule chooses an operating point; it does not improve a
+detector.
 \end{abstract}
 \begin{keywords}
 audio deepfake detection, test-time adaptation, label shift, pseudo-labels
@@ -122,11 +121,9 @@ $\hat\pi_c/\pi_c\leq1/(2q)$, a limit on overestimation rather than a safety
 theorem. A smaller symmetric $q$ needs no point estimate, but a guaranteed
 feasible nonzero value still needs a lower bound on the minority prevalence.
 
-\textbf{Quantile ties.} Our runs use inclusive thresholds, $s\leq Q(q_0)$ and
-$s\geq Q(1-q_1)$, with spoof assignments taking precedence on overlap, so
-realized sizes differ from nominal budgets. Equations~\eqref{eq:bound} and
-\eqref{eq:excess} are evaluated at the realized $b_c$ throughout; we never read
-a nominal budget as an exact sample count.
+\textbf{Quantile ties.} Inclusive thresholds and spoof precedence on overlap
+make realized tail sizes differ from nominal budgets, so \eqref{eq:bound} and
+\eqref{eq:excess} are evaluated at the realized $b_c$ throughout.
 
 \subsection{Prior estimation and objective}
 For $M_{ij}=P_{\mathcal S}(\hat y=j\mid y=i)$ and a target prediction histogram
@@ -192,7 +189,7 @@ always-spoof accuracy baseline is 97.22\%. Threshold 0.5 except in the two
 frozen-source controls. All columns but AUC are percentages; $G_\tau$ is an
 oracle diagnostic and smaller is better.}
 \label{tab:df}
-\small\setlength{\tabcolsep}{3pt}
+\footnotesize\setlength{\tabcolsep}{3pt}
 \begin{tabular}{@{}lrrrrr@{}}
 \toprule
 Method & EER & AUC & Acc. & BA & $G_\tau$\\
@@ -202,10 +199,10 @@ Method & EER & AUC & Acc. & BA & $G_\tau$\\
 \end{tabular}
 \end{table}
 
-\textbf{Metrics and controls.} We recompute metrics from saved float32
-probabilities. ROC-AUC assigns half credit to ties; EER linearly interpolates
-the crossing of FPR and FNR on the ROC, grouping identical scores. Interpolated
-EER need not correspond to an attainable deterministic threshold. We also
+\textbf{Metrics and controls.} Metrics are recomputed from saved float32
+probabilities. ROC-AUC gives ties half credit; EER interpolates the FPR/FNR
+crossing with identical scores grouped, and need not correspond to an
+attainable deterministic threshold. We also
 report accuracy, balanced accuracy, and the oracle threshold gap
 $G_\tau=\max_t\operatorname{Acc}(s,t)-\operatorname{Acc}(s,\tau)$, whose
 maximum ranges over all distinct thresholds including constant predictions. It
@@ -236,31 +233,44 @@ their audited rows are in the released tables.}
 
 \section{Results}
 \label{sec:results}
-\subsection{Adaptation moves the operating point, not the ranking}
+\subsection{Adaptation moves the decision, not the ranking}
 Across all 79 symmetric-budget runs -- four checkpoints, two corpora, spoof
 prevalence 0.01 to 0.972, budgets $q$ from 0.02 to 0.50 and three adaptation
-seeds on eight cells -- adaptation leaves almost untouched the accuracy its
-scores can attain, and moves only where the decision sits. The best accuracy
-attainable over all thresholds shifts by a median of 0.12 points; the gap
-between that ceiling and the accuracy obtained at threshold 0.5 shifts by 14.87
-points, and in no run does the ceiling move further than the gap
-(Fig.~\ref{fig:prev}(a)). ROC-AUC shifts by a median of 0.12 points. This is why the metrics disagree so violently: the same DF-2 run
-that changes accuracy by 35.9 points changes EER by 1.33.
+seeds on eight cells -- adaptation changes where the decision falls far more
+than it changes the ordering that decision is applied to. Accuracy at threshold
+0.5 moves by a median of 15.14 points, with a 90th percentile of 31.69 and a
+maximum of 43.31, while EER moves by 0.38 (1.33, 4.00) and ROC-AUC by 0.12
+points (0.67, 3.02). Accuracy moves more than ten times as far as EER in 66 of
+the 79 runs and further than EER in 78 of them (Fig.~\ref{fig:prev}(a)); the
+same DF-2 run that changes accuracy by 35.9 points changes EER by 1.33.
+
+EER and AUC are threshold-free and neither is pinned by the class prior, so
+this comparison does not rest on decomposing accuracy into a
+ranking-determined ceiling and a threshold gap $G_\tau$. We use that
+decomposition below only as bookkeeping, and it is not independent evidence:
+the identity $\mathrm{Acc}(\tau)=\max_t\mathrm{Acc}(t)-G_\tau$ makes
+``accuracy improves whenever $G_\tau$ falls'' automatic once the ceiling term
+is small, and at skewed prevalence that term is weakly identified, sitting
+1.7 to 3.0 points above the always-majority rule on average and within one
+point of it in 26 of the 79 runs.
 
 \subsection{Contamination sets where the operating point lands}
-The quantity that predicts the new operating point is $\Delta$. In 12 of the 14
-checkpoint/prevalence strata that vary the budget, the post-adaptation
-threshold gap increases with $\Delta$ (Fig.~\ref{fig:prev}(b)), and in the
-seven whose source threshold is already well placed -- a source gap under 17
-points -- it does so strictly, six of them at $\rho=+1$. The two exceptions
-both have badly placed sources, DF-42 at $\pi=0.01$ leaving 95.1 points on the
-table: there the smallest budgets cannot move the model at all and larger ones
-close the gap rather than open it.
+The quantity that predicts where the decision lands is $\Delta$. Within one
+checkpoint and prevalence $\Delta$ is a monotone transform of $q$, so a
+within-stratum correlation cannot separate the two: the 12 of 14 such strata in
+which the post-adaptation gap rises with $\Delta$ establish only that larger
+budgets place the decision worse. The question is whether $\Delta$ carries
+across strata. Pooled over all 63 single-seed cells it does, at Spearman
+$\rho=+0.75$ against $+0.36$ for $q$ and $-0.47$ for the minority prevalence
+alone (Fig.~\ref{fig:prev}(b)). A matched-pair test is sharper: across pairs
+drawn from different checkpoints or prevalences that agree on $\Delta$ to
+within 0.02 but differ in $q$ by more than 0.10, the post-adaptation gaps
+differ by a median of 7.8 points, where pairs agreeing on $q$ but differing in
+$\Delta$ by more than 0.10 differ by 28.9. Contamination pins the outcome about
+four times as tightly as the budget does, though 7.8 points of residual spread
+shows it is not the whole story.
 
-With the invariance above, this says exactly when the rule is worth applying:
-adaptation raises accuracy if and only if its post-adaptation gap ends below
-the source's, which holds on 79 of 79 runs. Neither purity nor the budget
-orders the same outcomes. At the native In-the-Wild prior $q=0.50$ -- the
+Neither purity nor the budget orders these outcomes. At the native In-the-Wild prior $q=0.50$ -- the
 largest symmetric budget there is, labeling the entire pool -- leaves a
 7.43-point gap and gains 7.47 points of balanced accuracy, while $q=0.15$ at
 $\pi=0.01$ leaves 28.17 and gains 2.64; a tail of purity 0.107 gains 9.36
@@ -273,22 +283,19 @@ $9.6\pm0.8$ points of accuracy across three seeds.
 On DF-2 (Table~\ref{tab:df}) symmetric $q=0.3$ raises EER from 4.51\% to
 5.84\%, lowers balanced accuracy from 88.28\% to 80.89\% and accuracy from
 98.87\% to 62.96\%, against a 97.22\% always-spoof baseline and a 35.38-point
-threshold gap. Allocating the tails by a BBSE prior estimate instead reaches
-4.06\% EER and 98.95\% accuracy, but 82.34\% balanced accuracy, below the
-source: one effective remedy, not a uniformly best one, and not an improvement
-for both classes.
+threshold gap; a frozen-source BBSE threshold alone reproduces that accuracy,
+at 98.88\%. Allocating the tails by a BBSE prior estimate reaches 4.06\% EER
+and 98.95\% accuracy but 82.34\% balanced accuracy, below the source: one
+effective remedy, not a uniformly best one.
 
 The same pattern holds on DF-42 and DF-240. Across the nine checkpoint/run
 combinations BBSE has lower EER than the symmetric budget in 9/9, and than the
 source in 8/9 on the available pool and 7/9 under disjoint evaluation. A paired
-stratified bootstrap over trials (2,000 replicates, resampled within class so
-the prior stays fixed) separates the two: all nine symmetric differences have
-95\% intervals excluding zero, but only 4/9 and 5/9 of the source differences
-do, and DF-240's is $-0.02$ points $[-0.14,+0.12]$. These counts are
-descriptive, not independent evidence.
-
-Re-thresholding alone reproduces that accuracy: a frozen-source BBSE threshold
-gives 98.88\% against the source's 98.87\%, while the median gives 59.06\%.
+stratified bootstrap over trials (2,000 replicates, resampled within class)
+separates the two: all nine symmetric differences have 95\% intervals excluding
+zero, but only 4/9 and 5/9 of the source differences do, and DF-240's is
+$-0.02$ points $[-0.14,+0.12]$. These counts are descriptive, not independent
+evidence.
 
 \subsection{Corpus shift and prior estimation}
 At the native In-the-Wild prior the budget has no counting obstruction and
@@ -310,7 +317,7 @@ accuracy\%. BA has the same 50\% trivial baseline in every row, where the
 always-spoof accuracy baseline moves from 90.00\% to 99.00\%. A dash marks a
 budget not run at that prevalence.}
 \label{tab:skew}
-\small\setlength{\tabcolsep}{2.5pt}
+\footnotesize\setlength{\tabcolsep}{2.5pt}
 \begin{tabular}{@{}rrccccc@{}}
 \toprule
 $\pi$ & $N$ & Source & $q=.02$ & $q=.10$ & $q=.30$ & BBSE\\
@@ -327,11 +334,12 @@ accuracy 81.8\% against 83.5\% and EER 5.21\% against 3.74\%; $q=0.02$ gains
 \centering
 \includegraphics[width=\columnwidth]{fig_prevalence.pdf}
 \caption{Over 79 runs spanning four checkpoints, two corpora, prevalence
-0.01--0.972 and budgets 0.02--0.50. (a) How far adaptation moves the attainable
-accuracy ceiling against how far it moves the operating point; every run lies
-above the diagonal, and values below $3\times10^{-3}$ points are clipped to the
-axis. (b) The post-adaptation threshold gap against the contamination
-\eqref{eq:excess} implies.}
+0.01--0.972 and budgets 0.02--0.50. (a) Shift in accuracy at threshold 0.5 against
+shift in EER; 78 of 79 runs lie above the diagonal, and values below
+$3\times10^{-3}$ points are clipped to the axis. (b) The post-adaptation
+threshold gap against the contamination \eqref{eq:excess} implies, pooled over
+all strata rather than within a prevalence: $\rho=+0.75$ here against $+0.36$
+for the budget alone.}
 \label{fig:prev}
 \end{figure}
 
@@ -346,49 +354,51 @@ and measured at 33.3\%, yet reaches 97.00\% accuracy. Every arm at every
 prevalence has EER between 4.95\% and 5.27\% while accuracy spans 51.90\% to
 97.00\%.
 
-\textbf{Budget sweeps.} Sweeping $q$ at fixed prevalence traces the relation
-directly, and repeating three points of each sweep over three adaptation seeds
-shows the ordering is not seed noise. At $\pi=0.01$ balanced accuracy falls
-from $+12.00\pm0.17$ at $\Delta=0.049$ through $+3.35\pm0.62$ to
-$-5.19\pm1.63$ at $0.289$; at $\pi=0.97$ it falls from $+11.62\pm0.10$ through
-$+5.43\pm0.46$ to $-1.80\pm0.20$. Each step between budgets is five to sixteen
-times the seed spread, and both orderings survive disjoint evaluation.
+\textbf{Budget sweeps.} Repeating three points of each sweep over three
+adaptation seeds shows the ordering is not seed noise: at $\pi=0.01$ balanced
+accuracy falls from $+12.00\pm0.17$ at $\Delta=0.049$ through $+3.35\pm0.62$ to
+$-5.19\pm1.63$ at $0.289$, and at $\pi=0.97$ from $+11.62\pm0.10$ to
+$-1.80\pm0.20$. Each step is five to sixteen times the seed spread, and both
+orderings survive disjoint evaluation.
 
-\textbf{Prior estimation in that direction.} BBSE, which repaired the
-high-prevalence collapse, does not transfer: it estimates 35.9--41.8\% spoof on
-pools that are 1.1--9.7\% spoof and changes accuracy by $-1.0$ to $+4.7$
-points, where a prior-free $q=0.02$ gains 27.1 to 31.3.
+\textbf{Prior estimation in that direction.} BBSE does not transfer: it
+estimates 35.9--41.8\% spoof on pools that are 1.1--9.7\% spoof, changing
+accuracy by $-1.0$ to $+4.7$ points where a prior-free $q=0.02$ gains 27.1 to
+31.3.
 
 \section{Discussion and limitations}
-On these detectors, confident-tail adaptation chooses an operating point rather
-than improving a detector, which is a narrower reading than the rule is usually
-given and an easier one to deploy responsibly: use it where a source threshold
-is believed to be badly placed, and bound $\Delta$ otherwise. The counting
-obstruction is what makes $\Delta$ computable, and it is useful only in that
-currency: a purity ceiling orders nothing, while the share of the pool that
-must be mislabeled orders the resulting operating point wherever the source
-threshold was worth preserving. It bounds the damage and does not promise a
-benefit; a balanced pool with a perfectly pure selection still lost 8.6 points.
+On these detectors, confident-tail adaptation is a way of choosing an operating
+point rather than of improving a detector: it moves accuracy by tens of points
+and EER by fractions of one. The counting obstruction is what makes the
+governing quantity computable, and it is useful only as a share of the pool, a
+purity ceiling ordering nothing. It bounds damage rather than promising a
+benefit; a balanced pool with a perfectly pure selection still lost 9.6
+points.\footnote{Scores, audit and code:
+\url{https://github.com/RohamIzadidoost/Kaggle_deepFakeAudio}}
+
+The reading we draw is that absolute pseudo-labels are the wrong instrument for
+the problem they are usually applied to. An objective defined on relative
+evidence between clips cannot be optimized by shifting all scores together, and
+so cannot buy an apparent gain the way a budget-driven threshold move can. The
+consistency term points the same way: the gain-and-noise view it enforces
+agreement against itself scores 9.03\% EER on In-the-Wild where the unperturbed
+clip scores 4.91\%, while a temporal crop costs nothing, so agreement is being
+demanded of a substantially degraded view.
 
 The evidence is four released checkpoints from one architecture family, two
-corpora, an incomplete DF eval partition, one adaptation recipe, and three
-adaptation seeds on eight of the cells, on pools that share audio within a
-corpus. $\Delta$
-uses realized bucket sizes and the true prior, so it is a diagnostic, not a
-label-free rule; making it one needs a prior estimate, and ours fail exactly
-where the deployment cases lie.
-
-\textbf{Reproducibility and assistance.} \texttt{audit\_icassp.py} verifies
-every saved score array against its historical AUC and accuracy, recomputes
-every reported metric and the selection audit, and writes the tables and input
-hashes, with no neural training or inference. Code, scores and outputs:
-\url{https://github.com/RohamIzadidoost/Kaggle_deepFakeAudio}. The study uses
-existing public data and checkpoints, with no new human-subject data. AI coding
-assistants contributed to the text, code, figure and experiment scripts under
-the authors' direction.
+corpora, an incomplete DF eval partition that rules out full-benchmark
+comparison, one adaptation recipe, and three seeds on eight cells, on pools
+that share audio within a corpus. $\Delta$ uses realized bucket sizes and the
+true prior, so it is a diagnostic rather than a label-free rule, and the prior
+estimate one would need fails exactly where the deployment cases lie.
 
 \clearpage
 \balance
+\noindent\textbf{Ethics and assistance.} This study uses existing public
+datasets and released checkpoints; no new human-subject data were collected. AI
+coding assistants contributed to the text, code, figure and experiment scripts
+under the authors' direction.
+
 \begin{thebibliography}{99}
 \bibitem{wav2vec2aug} H.~Tak \emph{et al.}, ``Automatic speaker verification
 spoofing and deepfake detection using wav2vec 2.0 and data augmentation,'' in

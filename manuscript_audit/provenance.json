@@ -1091,7 +1091,7 @@
   "auxiliary_inputs": [
     {
       "file": "audit_icassp.py",
-      "sha256": "cb91ed7514033dd12a51053b83044244749d360a3e33ec6b29b6fa8fb0273c0e"
+      "sha256": "8a613fe5b9284f6488c8b8d0d911a1174c6a9727c8aaca0b71ddfc1d0b4c6549"
     },
     {
       "file": "metrics.py",

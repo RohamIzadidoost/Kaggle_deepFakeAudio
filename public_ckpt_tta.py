@@ -257,7 +257,12 @@ def build_cache(df, crop, log=print):
     cache lives on the host and batches are moved per step.
     """
     n = len(df)
-    buf = torch.empty((n, crop), dtype=torch.float16)
+    # PUBA_FP32=1 keeps decoded audio in float32. The fp16 buffer halves host
+    # memory, but quantising the waveform costs 4.0% relative EER on
+    # In-the-Wild (5.060% -> 4.856%), which is the same sensitivity to
+    # waveform-level noise that pilot_transforms.py measures directly.
+    dtype = torch.float32 if os.environ.get("PUBA_FP32") == "1" else torch.float16
+    buf = torch.empty((n, crop), dtype=dtype)
     t0 = time.time()
     for i, p in enumerate(df.path.values):
         buf[i] = torch.from_numpy(load_clip(p, crop))
@@ -343,7 +348,39 @@ def build_model(name, device, log=print):
     if missing or res.unexpected_keys:
         raise RuntimeError(f"backend load failed: missing={missing[:5]} "
                            f"unexpected={res.unexpected_keys[:5]}")
+    if os.environ.get("PUBA_PERSAMPLE_NORM") == "1":
+        _use_per_sample_norm(model)
     return model.to(device).eval(), n_front, len(back)
+
+
+def _use_per_sample_norm(model):
+    """Normalise each waveform by its own statistics, as upstream does.
+
+    torchaudio's `_Wav2Vec2Model.forward` runs
+    `layer_norm(waveforms, waveforms.shape)` on the batched tensor, so the mean
+    and variance are taken over batch *and* time together and every clip is
+    normalised by its neighbours' loudness. Upstream fairseq applies the same
+    normalisation per utterance, before batching, so the two agree only at
+    batch size one. Left alone, a clip's score depends on which clips share its
+    batch -- measured at up to 0.61 of probability on In-the-Wild, which is
+    also why changing a pool's composition changes its scores.
+
+    Opt-in via PUBA_PERSAMPLE_NORM=1, because every cached score array and
+    every number in the audit was produced by the batched path, and silently
+    changing it would make those artefacts mean something else.
+    """
+    import torch.nn.functional as _F
+    ssl = model.ssl_model.model
+    ssl.normalize_waveform = False
+
+    def extract_feat(input_data):
+        x = input_data[:, :, 0] if input_data.ndim == 3 else input_data
+        x = _F.layer_norm(x, x.shape[-1:])          # over time, per utterance
+        emb, _ = ssl(x)
+        return emb
+
+    model.ssl_model.extract_feat = extract_feat
+    return model
 
 
 def find_transformer_layers(model):
