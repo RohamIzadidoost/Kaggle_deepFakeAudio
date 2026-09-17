@@ -243,10 +243,17 @@ def load_clip(path, crop):
         x = torchaudio.functional.resample(torch.from_numpy(x), sr, SR).numpy()
     if len(x) == 0:
         return np.zeros(crop, dtype=np.float32)
-    if len(x) >= crop:
-        return x[:crop]
-    reps = int(crop / len(x)) + 1
-    return np.tile(x, reps)[:crop].astype(np.float32)
+    x = (x[:crop] if len(x) >= crop
+         else np.tile(x, int(crop / len(x)) + 1)[:crop]).astype(np.float32)
+    if os.environ.get("PUBA_PERSAMPLE_NORM") == "1":
+        # Per-utterance waveform normalisation, applied at decode time rather
+        # than inside the model. torchaudio normalises the *batched* tensor and
+        # so mixes clips; doing it here is per-utterance by construction,
+        # matches upstream fairseq, costs nothing at run time and never touches
+        # the autograd graph. Equivalent to F.layer_norm(x, x.shape[-1:]) at
+        # torch's default eps, i.e. with biased variance.
+        x = (x - x.mean()) / np.sqrt(x.var() + 1e-5)
+    return x.astype(np.float32)
 
 
 def build_cache(df, crop, log=print):
@@ -369,22 +376,7 @@ def _use_per_sample_norm(model):
     every number in the audit was produced by the batched path, and silently
     changing it would make those artefacts mean something else.
     """
-    import torch.nn.functional as _F
-    ssl = model.ssl_model.model
-    ssl.normalize_waveform = False
-
-    def extract_feat(input_data):
-        x = input_data[:, :, 0] if input_data.ndim == 3 else input_data
-        # No trainable parameter sits upstream of the waveform, so this is pure
-        # preprocessing and never needs to be on the graph. Building it under
-        # grad costs ~2.4 GB during adaptation and OOMs a 10 GB card, while
-        # changing no gradient: torch.no_grad() here is not an approximation.
-        with torch.no_grad():
-            x = _F.layer_norm(x, x.shape[-1:])      # over time, per utterance
-        emb, _ = ssl(x)
-        return emb
-
-    model.ssl_model.extract_feat = extract_feat
+    model.ssl_model.model.normalize_waveform = False
     return model
 
 

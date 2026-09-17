@@ -11,7 +11,7 @@
 set -u
 cd /home/general/Desktop/deepfake_project
 source env/bin/activate
-export CACHE_ON_CPU=1 PUBA_PERSAMPLE_NORM=1
+export CACHE_ON_CPU=1 PUBA_PERSAMPLE_NORM=1 PUBA_FP32=1
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 for k in 0.01 0.02 0.05 0.10 0.3718 0.90 0.95 0.97; do
   echo "=========== [$(date '+%F %T')] PSN SKEW $k ==========="
