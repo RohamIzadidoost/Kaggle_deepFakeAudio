@@ -200,22 +200,24 @@ def done_rows():
     # accessed with brackets throughout.
     if "skew_target" not in d.columns:
         d = d.assign(skew_target=0.0)
-    if "fp32" not in d.columns:
-        d = d.assign(fp32=0)
+    for col in ("fp32", "psnorm"):
+        if col not in d.columns:
+            d = d.assign(**{col: 0})
     return set(zip(d["ckpt"], d["method"], d["setting"],
                    d["seed"].fillna(0).astype(int),
                    d["eval_sub"].fillna(0).astype(int),
                    d["q"].fillna(0.3).round(3),
                    d["skew_target"].fillna(0.0).round(4),
-                   d["fp32"].fillna(0).astype(int)))
+                   d["fp32"].fillna(0).astype(int),
+                   d["psnorm"].fillna(0).astype(int)))
 
 
 def _key(ckpt, method, setting):
-    # Audio precision has to be part of the identity: it changes the scores
-    # (fp16 costs 4.0% relative EER on In-the-Wild) but nothing else in the key,
-    # so without it a float32 rerun is silently satisfied by the float16 row.
+    # Anything that changes the scores without changing the rest of the key has
+    # to be in the key, or a rerun is silently satisfied by the old row. Audio
+    # precision and the waveform-normalisation mode both qualify.
     return (ckpt, method, setting, SEED, EVAL_SUB or 0, round(Q, 3),
-            round(SKEW or 0.0, 4), int(FP32_AUDIO))
+            round(SKEW or 0.0, 4), int(FP32_AUDIO), int(PERSAMPLE_NORM))
 
 
 # ------------------------------------------------------------------ manifests
@@ -282,6 +284,9 @@ def build_bbse_source(kind):
 
 # ------------------------------------------------------------------ audio
 FP32_AUDIO = os.environ.get("PUBA_FP32") == "1"
+# Per-utterance waveform normalisation (see public_ckpt_tta._use_per_sample_norm).
+# It changes every score, so like precision it has to be part of a run's identity.
+PERSAMPLE_NORM = os.environ.get("PUBA_PERSAMPLE_NORM") == "1"
 
 
 def decode_batch(paths, crop):
@@ -560,6 +565,7 @@ def report(ckpt_name, method, setting, ev, scores, adapt_utts=None, extra=None):
     acc_med = float(accuracy_score(y, (sc >= np.median(sc)).astype(int))) * 100
     row = dict(ckpt=ckpt_name, method=method, setting=setting,
                seed=SEED, eval_sub=EVAL_SUB or 0, q=Q, skew_target=SKEW or 0.0,
+               fp32=int(FP32_AUDIO), psnorm=int(PERSAMPLE_NORM),
                eer=round(eer * 100, 3), auc=round(auc, 4), acc=round(acc, 3),
                acc_median_rule=round(acc_med, 3), n=len(sub),
                eer_operating_accuracy=round(100 - eer * 100, 3),
@@ -636,7 +642,8 @@ def main():
         stag = ("" if (SEED == 0 and not EVAL_SUB and abs(Q - 0.3) < 1e-9
                        and not SKEW and not FP32_AUDIO)
                 else f"__s{SEED}_e{EVAL_SUB or 0}_q{Q}_k{SKEW or 0}"
-                     + ("_f32" if FP32_AUDIO else ""))
+                     + ("_f32" if FP32_AUDIO else "")
+                     + ("_psn" if PERSAMPLE_NORM else ""))
         spath = f"{SCORES_DIR}/{name}__source{stag}.npy"
         if os.path.exists(spath):
             s_src = np.load(spath)
