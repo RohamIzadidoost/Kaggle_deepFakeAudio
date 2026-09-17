@@ -120,19 +120,27 @@ def contamination(selections, scores):
     """
     rows = []
     sym = selections[selections.rule == "symmetric"]
-    for (corpus, ckpt, q, skew), g in sym.groupby(["corpus", "ckpt", "q", "skew"]):
+    for (corpus, ckpt, q, skew, seed), g in sym.groupby(
+            ["corpus", "ckpt", "q", "skew", "seed"]):
         for setting in ["available_pool", "disjoint_eval"]:
             sel = scores[(scores.corpus == corpus) & (scores.ckpt == ckpt)
                          & np.isclose(scores.q, q) & np.isclose(scores["skew"], skew)
-                         & (scores.setting == setting) & (scores.seed == 0)
+                         & (scores.setting == setting) & (scores.seed == seed)
                          & (scores.eval_sub == 0)]
             src_row = sel[sel.arm == "source"]
             ada = sel[sel.arm == "ours_fixed"]
             if len(src_row) != 1 or len(ada) != 1:
                 continue
-            rows.append(dict(corpus=corpus, ckpt=ckpt, q=q, skew=skew, setting=setting,
+            n_adapt = float(g.n_adapt.iloc[0])
+            rows.append(dict(corpus=corpus, ckpt=ckpt, q=q, skew=skew, seed=seed,
+                             setting=setting,
                              prior=float(src_row.iloc[0].prior),
                              worst_purity=float(g.purity.min()),
+                             n_adapt=n_adapt,
+                             # The pool FRACTION, not the clip count, is the
+                             # scale-free form and the one that orders outcomes
+                             # across pools adapted with 8,000 and 20,000 clips.
+                             delta=float(g.excess.sum())/n_adapt,
                              excess=float(g.excess.sum()), wrong=float(g.wrong.sum()),
                              ba_source=float(src_row.iloc[0].balanced_accuracy),
                              ba_adapted=float(ada.iloc[0].balanced_accuracy),
@@ -144,12 +152,16 @@ def contamination(selections, scores):
         d = out[out.setting == setting]
         if not len(d):
             continue
-        good, bad = d[d.d_ba > 5], d[d.d_ba <= 5]
-        print(f"contamination/{setting}: {len(good)} cells improve BA by "
-              f"[{good.d_ba.min():+.2f},{good.d_ba.max():+.2f}] with excess "
-              f"<= {good.excess.max():.0f}; {len(bad)} cells give "
-              f"[{bad.d_ba.min():+.2f},{bad.d_ba.max():+.2f}] with excess "
-              f">= {bad.excess.min():.0f}. Purity ranges overlap: "
+        d = d.sort_values("delta")
+        gaps = d.delta.diff()
+        cut = float(d.delta.iloc[int(gaps.values[1:].argmax())+1]) if len(d) > 1 else 0.
+        good, bad = d[d.delta < cut], d[d.delta >= cut]
+        print(f"contamination/{setting}: largest empty interval in delta ends at "
+              f"{cut:.3f}; below it {len(good)} cells give dBA "
+              f"[{good.d_ba.min():+.2f},{good.d_ba.max():+.2f}] "
+              f"({(good.d_ba > 5).sum()} above +5), above it {len(bad)} cells give "
+              f"[{bad.d_ba.min():+.2f},{bad.d_ba.max():+.2f}] "
+              f"({(bad.d_ba > 5).sum()} above +5). Worst-tail purity overlaps: "
               f"[{good.worst_purity.min():.3f},{good.worst_purity.max():.3f}] vs "
               f"[{bad.worst_purity.min():.3f},{bad.worst_purity.max():.3f}]", flush=True)
     binding = selections[selections.bound < 1 - 1e-9]
@@ -180,7 +192,7 @@ def write_tables(scores, controls):
                  & (controls.seed == 0) & (controls.eval_sub == 0)
                  & (controls["skew"] == 0) & (controls.q == .3)
                  & (controls.setting == "available_pool")]
-    for label, rule in [("Source + median threshold", "median"), ("Source + BBSE quantile threshold", "bbse_quantile")]:
+    for label, rule in [("Median threshold only", "median"), ("BBSE threshold only", "bbse_quantile")]:
         r = c[c.rule == rule].iloc[0]
         rows.append(label+f" & {r.eer:.2f} & {r.auc:.4f} & {r.accuracy:.2f} & {r.balanced_accuracy:.2f} & {r.threshold_gap:.2f}"+r" \\")
     (OUT / "table_df_main.tex").write_text("\n".join(rows)+"\n")
@@ -261,14 +273,16 @@ def main():
             if len(original) != 1:
                 raise ValueError(f"Expected one historical row for {path}, got {len(original)}")
             row = original.iloc[0]
-            # Accuracy and AUC are what pin the score-to-label alignment, and stay
-            # strict. The run-time EER used the nearest-ROC-point estimator, whose
-            # grid is one step per minority example; on a resampled pool with a
-            # small minority class that step is coarser than a fixed 0.002, so the
-            # legacy comparison is scaled to the ROC resolution instead.
+            # Accuracy and AUC pin the score-to-label alignment and stay strict.
+            # The recorded EER is whichever estimator was current when the row was
+            # written: metrics.compute_eer was replaced on 2026-09-14, so earlier
+            # rows carry the nearest-ROC-point value and later ones the
+            # interpolated crossing. The check accepts either, at a tolerance
+            # scaled to the ROC grid (one step per minority example).
             eer_tol = max(.002, 100/min(int((y == 1).sum()), int((y == 0).sum())))
+            eer_ok = min(abs(v["legacy_eer"] - row.eer), abs(v["eer"] - row.eer)) <= eer_tol
             if (abs(v["accuracy"] - row.acc) > .002 or abs(v["auc"] - row.auc) > .00011
-                    or abs(v["legacy_eer"] - row.eer) > eer_tol):
+                    or not eer_ok):
                 raise ValueError(f"Historical metrics do not match reconstructed manifest: {path}")
             results.append(dict(**key, setting="available_pool", **v))
             mask = np.ones(len(y), dtype=bool)
@@ -285,8 +299,9 @@ def main():
                 if len(hd) == 1:
                     hr = hd.iloc[0]
                     d_tol = max(.002, 100/min(int((y[mask] == 1).sum()), int((y[mask] == 0).sum())))
+                    d_ok = min(abs(dv["legacy_eer"] - hr.eer), abs(dv["eer"] - hr.eer)) <= d_tol
                     if (abs(dv["accuracy"] - hr.acc) > .002 or abs(dv["auc"] - hr.auc) > .00011
-                            or abs(dv["legacy_eer"] - hr.eer) > d_tol or dv["n"] != hr.n):
+                            or not d_ok or dv["n"] != hr.n):
                         raise ValueError(
                             f"Reconstructed disjoint split does not match the run: {path}")
                 results.append(dict(**key, setting="disjoint_eval", **dv))
@@ -311,7 +326,7 @@ def main():
                     if len(np.unique(y[take])) == 2:
                         controls.append(dict(**key, rule=rule, setting=setting, pi_hat=pi_hat,
                                              **values(y[take], s[take], threshold)))
-            if seed or sub:
+            if sub:
                 continue
             # Audit the initial pseudo-label masks, including all boundary ties
             # and the implementation's fake-tail overwrite on any overlap.

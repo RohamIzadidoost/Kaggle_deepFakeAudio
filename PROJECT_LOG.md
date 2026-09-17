@@ -477,3 +477,48 @@ purity arguments, identify baseline variants accurately, and avoid significance
 claims from reused checkpoints/data. The earlier 369-cell deficit/guard claims
 are archived, not included in the revised short paper. No neural training or
 inference was performed, and no files were pushed or submitted.
+
+## 2026-09-17 — The operating-point law (ICASSP rewrite)
+
+Reviewer pass demanded EER/AUC/BA leadership, a low-prevalence sweep, disjoint
+win counts with intervals, and a figure. Doing it produced a different paper.
+
+**What the audit exposed first.** Balanced accuracy contradicts the accuracy
+headline: symmetric q=0.3 on DF-42 "collapses" accuracy 98.78→61.80 while BA
+*rises* 78.35→80.35. BBSE's accuracy restoration lowers BA on 2 of 3
+checkpoints. The 97.22% always-spoof baseline makes DF accuracy nearly
+uninformative. Leading with the accuracy collapse was a liability.
+
+**Three GPU queues (63 symmetric-budget runs total, 0 crashes after the OOM
+fix).** Low-prevalence sweep on In-the-Wild (pi 0.01–0.10); a dose-response
+sweep in q at pi=0.01 and 0.97 plus large budgets (q up to 0.50) at native
+prevalence; a second checkpoint (DF-42); and the same grid on a second corpus
+(ASVspoof2021-DF resampled to pi 0.01/0.10/0.50/0.90). All predictions
+pre-registered in `PREREGISTERED_low_prevalence_predictions.md` and
+`PREREGISTERED_excess_dose_response.md` before launch; 3 of 7 first-round
+predictions were falsified, including "small q must break where the bound says
+it must" and "BBSE stays safe down to pi=0.02" (it estimates 36–42% spoof on
+1–10% spoof pools).
+
+**The result.** Confident-tail adaptation is an operating-point procedure:
+the attainable accuracy ceiling shifts by a median 0.12 points while the gap
+between that ceiling and accuracy at threshold 0.5 shifts by 15.86, with 0/63
+exceptions. Accuracy rises **iff** the post-adaptation gap ends below the
+source's — 63/63. Where it lands is ordered by the contamination fraction
+`Delta = sum_c (b_c - pi_c)^+` implied by the counting bound (12/14 strata that
+vary the budget; 7/7 of those whose source threshold was well placed), not by
+pseudo-label purity. Neither purity nor q orders outcomes: q=0.50 at pi=0.37
+gains +7.5 BA while q=0.15 at pi=0.01 gains +2.6, and on a balanced DF pool
+with Delta=0 and purity exactly 1.000 adaptation still costs 8.6 accuracy
+points — the sharpest available statement that the bound is necessary, not
+sufficient.
+
+**Repo changes.** `audit_icassp.py` gained the contamination analysis, the
+correct 8,000-clip adaptation budget for resampled pools (it was hardcoded at
+20,000, which silently merged the adaptation pool into the evaluation pool and
+dropped the disjoint split), a self-check of the reconstructed disjoint mask
+against the run-time row, and acceptance of either EER estimator (runs after
+2026-09-14 record the interpolated one). New: `bootstrap_eer_ci.py` (paired
+stratified bootstrap), `make_figure.py`, `run_skew_low*.sh`, `run_excess*.sh`.
+`main_icassp.tex` is 4 pages + references, 0 overfull boxes, every prose number
+verified against the audited arrays.

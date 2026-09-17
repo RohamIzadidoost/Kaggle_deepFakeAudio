@@ -121,6 +121,26 @@
       "n": 400435
     },
     {
+      "file": "scores_protocol_a_public/deepfense_w2v2_aasist_s2__ours_fixed__s0_e0_q0.02_k0.01.npy",
+      "sha256": "8582ea8254207a01246a7993e7d0269b1b0551db6f22b1b1e038c4033d1d595e",
+      "n": 11248
+    },
+    {
+      "file": "scores_protocol_a_public/deepfense_w2v2_aasist_s2__ours_fixed__s0_e0_q0.02_k0.1.npy",
+      "sha256": "9a73bfd6ca6c730810f13a0cb8cf6a26b53997242d4dc95aab01df6c39fc8fcb",
+      "n": 12373
+    },
+    {
+      "file": "scores_protocol_a_public/deepfense_w2v2_aasist_s2__ours_fixed__s0_e0_q0.02_k0.5.npy",
+      "sha256": "975fe94a059f72ee43591e661cf010d1f9d951c0e6c8ca237912e2bfbbe5aa7d",
+      "n": 22272
+    },
+    {
+      "file": "scores_protocol_a_public/deepfense_w2v2_aasist_s2__ours_fixed__s0_e0_q0.02_k0.9.npy",
+      "sha256": "ae6372c6655105d56f432c7ca896de8a4d165e010cc97163ce86680ffca8e009",
+      "n": 111360
+    },
+    {
       "file": "scores_protocol_a_public/deepfense_w2v2_aasist_s2__ours_fixed__s0_e0_q0.05.npy",
       "sha256": "e98ec8549a2b37d7161cf8fdd61a72401fb0cb1ff2268d41d168fa3ab6140c72",
       "n": 400435
@@ -131,9 +151,59 @@
       "n": 400435
     },
     {
+      "file": "scores_protocol_a_public/deepfense_w2v2_aasist_s2__ours_fixed__s0_e0_q0.15_k0.01.npy",
+      "sha256": "f8ee90f46309d240ac6761c8935826d30e5d59c355426700c56adaa93fee984f",
+      "n": 11248
+    },
+    {
+      "file": "scores_protocol_a_public/deepfense_w2v2_aasist_s2__ours_fixed__s0_e0_q0.15_k0.1.npy",
+      "sha256": "09f7350c1e6ea3a1356edc41253d1fdb96315b13e90b07c94a7a2314704a3e72",
+      "n": 12373
+    },
+    {
+      "file": "scores_protocol_a_public/deepfense_w2v2_aasist_s2__ours_fixed__s0_e0_q0.15_k0.5.npy",
+      "sha256": "0f24eb9ef7a6ba258b1433c24aed7be5c6194affe0dfddc7fc17802f38720409",
+      "n": 22272
+    },
+    {
+      "file": "scores_protocol_a_public/deepfense_w2v2_aasist_s2__ours_fixed__s0_e0_q0.15_k0.9.npy",
+      "sha256": "28606798314f85c4c3a8b8cd1fd10c6e14d6d78895d9f50f5298b49ebfdeb3ae",
+      "n": 111360
+    },
+    {
+      "file": "scores_protocol_a_public/deepfense_w2v2_aasist_s2__ours_fixed__s0_e0_q0.3_k0.01.npy",
+      "sha256": "de911d4f7e39d2129add75b60b8b1a7d050cf2232c974cb83434a2d8daafeb0f",
+      "n": 11248
+    },
+    {
+      "file": "scores_protocol_a_public/deepfense_w2v2_aasist_s2__ours_fixed__s0_e0_q0.3_k0.1.npy",
+      "sha256": "d010f0f7bbed711b104e75e569658e38270a9a0b1c5e73f773f38fe5d285a636",
+      "n": 12373
+    },
+    {
+      "file": "scores_protocol_a_public/deepfense_w2v2_aasist_s2__ours_fixed__s0_e0_q0.3_k0.5.npy",
+      "sha256": "4fa107d0bf4e16728d3e22a7292fb4eae3670440cbb5cb2962485f3d8961ae6e",
+      "n": 22272
+    },
+    {
+      "file": "scores_protocol_a_public/deepfense_w2v2_aasist_s2__ours_fixed__s0_e0_q0.3_k0.9.npy",
+      "sha256": "ebe04fb30a7e640a6f1b1037e66caf87ef8c0e93dc4c4a174e22504691b9fe6d",
+      "n": 111360
+    },
+    {
+      "file": "scores_protocol_a_public/deepfense_w2v2_aasist_s2__ours_fixed__s1_e0_q0.02_k0.5.npy",
+      "sha256": "ac6a7d61962a792ddb467eb27e91b6f8c6aa147228d051ac5b19951162cdc6d0",
+      "n": 22272
+    },
+    {
       "file": "scores_protocol_a_public/deepfense_w2v2_aasist_s2__ours_fixed__s1_e50000.npy",
       "sha256": "36f18fdc9eb12ecd10f7b9c7c85a6ce1075039c02de20154c4bcda61b4bacc59",
       "n": 50000
+    },
+    {
+      "file": "scores_protocol_a_public/deepfense_w2v2_aasist_s2__ours_fixed__s2_e0_q0.02_k0.5.npy",
+      "sha256": "62c5fc9fa666d1d6096022ffa2d997b7e8eb8a6e7e11ef187d2162a8ca896966",
+      "n": 22272
     },
     {
       "file": "scores_protocol_a_public/deepfense_w2v2_aasist_s2__ours_fixed__s2_e50000_q0.3.npy",
@@ -161,6 +231,26 @@
       "n": 400435
     },
     {
+      "file": "scores_protocol_a_public/deepfense_w2v2_aasist_s2__source__s0_e0_q0.02_k0.01.npy",
+      "sha256": "9488d6045f193c02bee20433505bc6b0ee505bf90f0a5a7f2c003a279c821293",
+      "n": 11248
+    },
+    {
+      "file": "scores_protocol_a_public/deepfense_w2v2_aasist_s2__source__s0_e0_q0.02_k0.1.npy",
+      "sha256": "64dec3a029a47973daccd12b2f2a91c27913e7ccfec1b7fd9d2b27e6bde980f4",
+      "n": 12373
+    },
+    {
+      "file": "scores_protocol_a_public/deepfense_w2v2_aasist_s2__source__s0_e0_q0.02_k0.5.npy",
+      "sha256": "7d2b541d70480d5e6cdbed3cc56bfd2a062fbcfad92baf4ced8036a7e9208e0c",
+      "n": 22272
+    },
+    {
+      "file": "scores_protocol_a_public/deepfense_w2v2_aasist_s2__source__s0_e0_q0.02_k0.9.npy",
+      "sha256": "20dfa79975ceb17bff16adadd1ea5455013f7d654f3f1290486535f985ce44dc",
+      "n": 111360
+    },
+    {
       "file": "scores_protocol_a_public/deepfense_w2v2_aasist_s2__source__s0_e0_q0.05.npy",
       "sha256": "108256e8101c40ba2f6f03d8448d59a763f9428d034c0db07e172a7f7e48fb67",
       "n": 400435
@@ -171,9 +261,59 @@
       "n": 400435
     },
     {
+      "file": "scores_protocol_a_public/deepfense_w2v2_aasist_s2__source__s0_e0_q0.15_k0.01.npy",
+      "sha256": "9488d6045f193c02bee20433505bc6b0ee505bf90f0a5a7f2c003a279c821293",
+      "n": 11248
+    },
+    {
+      "file": "scores_protocol_a_public/deepfense_w2v2_aasist_s2__source__s0_e0_q0.15_k0.1.npy",
+      "sha256": "64dec3a029a47973daccd12b2f2a91c27913e7ccfec1b7fd9d2b27e6bde980f4",
+      "n": 12373
+    },
+    {
+      "file": "scores_protocol_a_public/deepfense_w2v2_aasist_s2__source__s0_e0_q0.15_k0.5.npy",
+      "sha256": "7d2b541d70480d5e6cdbed3cc56bfd2a062fbcfad92baf4ced8036a7e9208e0c",
+      "n": 22272
+    },
+    {
+      "file": "scores_protocol_a_public/deepfense_w2v2_aasist_s2__source__s0_e0_q0.15_k0.9.npy",
+      "sha256": "20dfa79975ceb17bff16adadd1ea5455013f7d654f3f1290486535f985ce44dc",
+      "n": 111360
+    },
+    {
+      "file": "scores_protocol_a_public/deepfense_w2v2_aasist_s2__source__s0_e0_q0.3_k0.01.npy",
+      "sha256": "9488d6045f193c02bee20433505bc6b0ee505bf90f0a5a7f2c003a279c821293",
+      "n": 11248
+    },
+    {
+      "file": "scores_protocol_a_public/deepfense_w2v2_aasist_s2__source__s0_e0_q0.3_k0.1.npy",
+      "sha256": "64dec3a029a47973daccd12b2f2a91c27913e7ccfec1b7fd9d2b27e6bde980f4",
+      "n": 12373
+    },
+    {
+      "file": "scores_protocol_a_public/deepfense_w2v2_aasist_s2__source__s0_e0_q0.3_k0.5.npy",
+      "sha256": "7d2b541d70480d5e6cdbed3cc56bfd2a062fbcfad92baf4ced8036a7e9208e0c",
+      "n": 22272
+    },
+    {
+      "file": "scores_protocol_a_public/deepfense_w2v2_aasist_s2__source__s0_e0_q0.3_k0.9.npy",
+      "sha256": "20dfa79975ceb17bff16adadd1ea5455013f7d654f3f1290486535f985ce44dc",
+      "n": 111360
+    },
+    {
+      "file": "scores_protocol_a_public/deepfense_w2v2_aasist_s2__source__s1_e0_q0.02_k0.5.npy",
+      "sha256": "7d2b541d70480d5e6cdbed3cc56bfd2a062fbcfad92baf4ced8036a7e9208e0c",
+      "n": 22272
+    },
+    {
       "file": "scores_protocol_a_public/deepfense_w2v2_aasist_s2__source__s1_e50000.npy",
       "sha256": "42e75532cb083ef6b111460dadb23e6c6c30c2545b4aeb8e10b71c31e6656f91",
       "n": 50000
+    },
+    {
+      "file": "scores_protocol_a_public/deepfense_w2v2_aasist_s2__source__s2_e0_q0.02_k0.5.npy",
+      "sha256": "7d2b541d70480d5e6cdbed3cc56bfd2a062fbcfad92baf4ced8036a7e9208e0c",
+      "n": 22272
     },
     {
       "file": "scores_protocol_a_public/deepfense_w2v2_aasist_s2__source__s2_e50000_q0.3.npy",
@@ -291,6 +431,36 @@
       "n": 31779
     },
     {
+      "file": "scores_protocol_a_public_itw/deepfense_w2v2_aasist_s42__ours_fixed__s0_e0_q0.02_k0.01.npy",
+      "sha256": "3dc4f19d5b00a5956c5670e8cb253e901ff09543e9c4845e3b9817e3a0948620",
+      "n": 20165
+    },
+    {
+      "file": "scores_protocol_a_public_itw/deepfense_w2v2_aasist_s42__ours_fixed__s0_e0_q0.02_k0.97.npy",
+      "sha256": "edeb689e074ec0eb1b21ba4b9d0cf4b0d207fdf2c83bd15e60b646e9f6a7f646",
+      "n": 12181
+    },
+    {
+      "file": "scores_protocol_a_public_itw/deepfense_w2v2_aasist_s42__ours_fixed__s0_e0_q0.15_k0.01.npy",
+      "sha256": "8db693f15291faa4b6171446d90639bcc881489fa6f15a325d8ef11e68ea9aaf",
+      "n": 20165
+    },
+    {
+      "file": "scores_protocol_a_public_itw/deepfense_w2v2_aasist_s42__ours_fixed__s0_e0_q0.15_k0.97.npy",
+      "sha256": "4c2edc07f17d0a26f5cb173d3d8e0ffb67863e8cefc255dd3c47b4c7e0dd5aca",
+      "n": 12181
+    },
+    {
+      "file": "scores_protocol_a_public_itw/deepfense_w2v2_aasist_s42__ours_fixed__s0_e0_q0.3_k0.01.npy",
+      "sha256": "0366a27008f320d71049e661100e0a6afa384d79c1cc70a7a8cbe554c9cae26c",
+      "n": 20165
+    },
+    {
+      "file": "scores_protocol_a_public_itw/deepfense_w2v2_aasist_s42__ours_fixed__s0_e0_q0.3_k0.97.npy",
+      "sha256": "59d4620476143c13c27943e368d6229045ff1cf0b4d64e922ae31c128cef7e03",
+      "n": 12181
+    },
+    {
       "file": "scores_protocol_a_public_itw/deepfense_w2v2_aasist_s42__ours_gmm.npy",
       "sha256": "c00416de9957c35c08eadb8aeb93dcd0ee3317eef70322775ebf7f400c264654",
       "n": 31779
@@ -304,6 +474,36 @@
       "file": "scores_protocol_a_public_itw/deepfense_w2v2_aasist_s42__source.npy",
       "sha256": "85cc6d2f7d023ee6cbd2b84ee7f889114df96304a53399f070abd88ccca09aa8",
       "n": 31779
+    },
+    {
+      "file": "scores_protocol_a_public_itw/deepfense_w2v2_aasist_s42__source__s0_e0_q0.02_k0.01.npy",
+      "sha256": "14354522eae396c1dc3342fea701f762e4f5e7b01bfdbe56a674d6c89d9e70ef",
+      "n": 20165
+    },
+    {
+      "file": "scores_protocol_a_public_itw/deepfense_w2v2_aasist_s42__source__s0_e0_q0.02_k0.97.npy",
+      "sha256": "00f4a06acc771e043f21ebbfd001ae786c8a9c366908df5ed04931869683c4e8",
+      "n": 12181
+    },
+    {
+      "file": "scores_protocol_a_public_itw/deepfense_w2v2_aasist_s42__source__s0_e0_q0.15_k0.01.npy",
+      "sha256": "14354522eae396c1dc3342fea701f762e4f5e7b01bfdbe56a674d6c89d9e70ef",
+      "n": 20165
+    },
+    {
+      "file": "scores_protocol_a_public_itw/deepfense_w2v2_aasist_s42__source__s0_e0_q0.15_k0.97.npy",
+      "sha256": "00f4a06acc771e043f21ebbfd001ae786c8a9c366908df5ed04931869683c4e8",
+      "n": 12181
+    },
+    {
+      "file": "scores_protocol_a_public_itw/deepfense_w2v2_aasist_s42__source__s0_e0_q0.3_k0.01.npy",
+      "sha256": "14354522eae396c1dc3342fea701f762e4f5e7b01bfdbe56a674d6c89d9e70ef",
+      "n": 20165
+    },
+    {
+      "file": "scores_protocol_a_public_itw/deepfense_w2v2_aasist_s42__source__s0_e0_q0.3_k0.97.npy",
+      "sha256": "00f4a06acc771e043f21ebbfd001ae786c8a9c366908df5ed04931869683c4e8",
+      "n": 12181
     },
     {
       "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__eta.npy",
@@ -396,6 +596,41 @@
       "n": 12181
     },
     {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__ours_fixed__s0_e0_q0.06_k0.01.npy",
+      "sha256": "e02c865dff2861666484b144fcae60f0ec193f54708876b3a5b54c1787308e6f",
+      "n": 20165
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__ours_fixed__s0_e0_q0.08_k0.97.npy",
+      "sha256": "b1ea37e16b404cc20ebae5f34584143cc903b97be82d1e16a51f463184bd4129",
+      "n": 12181
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__ours_fixed__s0_e0_q0.11_k0.01.npy",
+      "sha256": "2737661b5dbc4164ba597be5b578f520e4765a8e5cc05e6db38f955e6e187f8d",
+      "n": 20165
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__ours_fixed__s0_e0_q0.13_k0.97.npy",
+      "sha256": "a10989b09c8ae3eeff0c16a0365d833831ff31b7941f627b3092dd7e57de09a2",
+      "n": 12181
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__ours_fixed__s0_e0_q0.15_k0.01.npy",
+      "sha256": "351706dee65ad73ee3716f7679b25f63c6a5e9b21ff7ccd2692ef98d2f242ed5",
+      "n": 20165
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__ours_fixed__s0_e0_q0.17_k0.97.npy",
+      "sha256": "3ebd8c90085aef7b5c5969bd93949ef9996498e521451856adceb9022fd9acf8",
+      "n": 12181
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__ours_fixed__s0_e0_q0.19_k0.01.npy",
+      "sha256": "570129c1ddb235e223cc4f1416ee26b2635997364817b42cb267b392a0842850",
+      "n": 20165
+    },
+    {
       "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__ours_fixed__s0_e0_q0.1_k0.01.npy",
       "sha256": "eb239a08395f1cf0c65732a3280a500b5643ee8a7e675a7734d0539f426aa2e3",
       "n": 20165
@@ -431,6 +666,21 @@
       "n": 12181
     },
     {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__ours_fixed__s0_e0_q0.21_k0.97.npy",
+      "sha256": "fcff2a014d75ae1a1784fe8feecb84c480c5813c4ca27ad5df041774bd81503a",
+      "n": 12181
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__ours_fixed__s0_e0_q0.23_k0.01.npy",
+      "sha256": "25359bc65aea77f1438c5c308ec4bbfb9c0277783bbc16ff6347eabb0eb959b7",
+      "n": 20165
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__ours_fixed__s0_e0_q0.25_k0.97.npy",
+      "sha256": "492b546da3e912b7a51860eda5efad3121a1974735caf0e81a81e6bd870949c7",
+      "n": 12181
+    },
+    {
       "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__ours_fixed__s0_e0_q0.3_k0.01.npy",
       "sha256": "2918c7fe5c978e18f4cf4cfbf7a6d9aa54493b875ef6bcc78aaf315e17502618",
       "n": 20165
@@ -451,6 +701,11 @@
       "n": 22181
     },
     {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__ours_fixed__s0_e0_q0.3_k0.3718.npy",
+      "sha256": "a506eb54340e6c4a9665b6d10e2a93d73799b4db60a4f1ed02af9cbed0bf61fe",
+      "n": 31778
+    },
+    {
       "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__ours_fixed__s0_e0_q0.3_k0.9.npy",
       "sha256": "3af12b4947dd48ef730d900d132af6ab2374006b6c9db3f09b4504fbdf79d4cd",
       "n": 13129
@@ -464,6 +719,91 @@
       "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__ours_fixed__s0_e0_q0.3_k0.97.npy",
       "sha256": "4dfca3bf43fd83faf928dc07c6772df890b3818117d4d988b5563aff2d23bcbc",
       "n": 12181
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__ours_fixed__s0_e0_q0.45_k0.3718.npy",
+      "sha256": "a01226bbf52950ba1fda8f78c7ca690f8e3278428c9adb9be1018c46571c1535",
+      "n": 31778
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__ours_fixed__s0_e0_q0.4_k0.3718.npy",
+      "sha256": "4cffb76563abd6f04c09b80f7ec2d5330249acf34fd180d3f7649f1af8051928",
+      "n": 31778
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__ours_fixed__s0_e0_q0.5_k0.3718.npy",
+      "sha256": "605b5c91775d8622accedfab74ba72892cc705a83dc1c0f0c1dd9b08b88aa7a7",
+      "n": 31778
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__ours_fixed__s1_e0_q0.06_k0.01.npy",
+      "sha256": "d9d59d70c93e5de9bc21c0cabe785960a4d339eeb831d8d036c5ee2ea772a058",
+      "n": 20165
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__ours_fixed__s1_e0_q0.08_k0.97.npy",
+      "sha256": "340a6144ee02d42cc6691bbf871564f84f89d40971e6f8bb6536e8af067c6750",
+      "n": 12181
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__ours_fixed__s1_e0_q0.15_k0.01.npy",
+      "sha256": "cdb8fe37ebb0c47761e0ee9d76283095488069108584c985d2c82b534fca505e",
+      "n": 20165
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__ours_fixed__s1_e0_q0.17_k0.97.npy",
+      "sha256": "dd0e0f495d92e482f0869564baadcb2ed392f7fc9348e0e5c56d2b6c13c23788",
+      "n": 12181
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__ours_fixed__s1_e0_q0.3_k0.01.npy",
+      "sha256": "7f1b5e08f6b25162c25a546d865fe51826b1fcffb21f4a132394b73a404e87c3",
+      "n": 20165
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__ours_fixed__s1_e0_q0.3_k0.97.npy",
+      "sha256": "175e0f77229859b0b571f347549404b4401216c16a7e5790f607ef47d67f102e",
+      "n": 12181
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__ours_fixed__s1_e0_q0.5_k0.3718.npy",
+      "sha256": "c916e099e4c219007590f4f3a911ecb349d90a2a54a7e24b8de3ff2e72e543ba",
+      "n": 31778
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__ours_fixed__s2_e0_q0.06_k0.01.npy",
+      "sha256": "c367c879c4f393e4df96a1ff2f78bff79c6327c79832ce617be0ed5544fa667a",
+      "n": 20165
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__ours_fixed__s2_e0_q0.08_k0.97.npy",
+      "sha256": "b8528a7f509aea518ae5ea0c4dd2c66ebd0388c03b517af9c199988d4fdadfa2",
+      "n": 12181
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__ours_fixed__s2_e0_q0.15_k0.01.npy",
+      "sha256": "b492dd7d71e5269405e115eef6070aba3d234038bcc0671f889f4af408e7253f",
+      "n": 20165
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__ours_fixed__s2_e0_q0.17_k0.97.npy",
+      "sha256": "51d513027e4bca867f416d0174856dab3cf7950bd63ae65e5420a1e7ff82e8ed",
+      "n": 12181
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__ours_fixed__s2_e0_q0.3_k0.01.npy",
+      "sha256": "429a8e090abaf666fdab9517a5efecc87807bb081c3ae36c5d195b2bb92a4494",
+      "n": 20165
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__ours_fixed__s2_e0_q0.3_k0.97.npy",
+      "sha256": "b1a07beacffdb7efd23f4819a99e2240364b425c52ab0133f9d4a5ee5db88324",
+      "n": 12181
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__ours_fixed__s2_e0_q0.5_k0.3718.npy",
+      "sha256": "92d366c2f85644b8e2dbbaac247c268627909e58823767b6b234ab034f338009",
+      "n": 31778
     },
     {
       "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__ours_gmm.npy",
@@ -526,6 +866,41 @@
       "n": 12181
     },
     {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__source__s0_e0_q0.06_k0.01.npy",
+      "sha256": "1f1a1045643b47b678889750a0a365cebc1ebcaaeacdf5aa58c4f6adece10593",
+      "n": 20165
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__source__s0_e0_q0.08_k0.97.npy",
+      "sha256": "e837d28547055f25de0235689fa80677f7f4df9c38e72d099de1c20f68b3c191",
+      "n": 12181
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__source__s0_e0_q0.11_k0.01.npy",
+      "sha256": "1f1a1045643b47b678889750a0a365cebc1ebcaaeacdf5aa58c4f6adece10593",
+      "n": 20165
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__source__s0_e0_q0.13_k0.97.npy",
+      "sha256": "e837d28547055f25de0235689fa80677f7f4df9c38e72d099de1c20f68b3c191",
+      "n": 12181
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__source__s0_e0_q0.15_k0.01.npy",
+      "sha256": "1f1a1045643b47b678889750a0a365cebc1ebcaaeacdf5aa58c4f6adece10593",
+      "n": 20165
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__source__s0_e0_q0.17_k0.97.npy",
+      "sha256": "e837d28547055f25de0235689fa80677f7f4df9c38e72d099de1c20f68b3c191",
+      "n": 12181
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__source__s0_e0_q0.19_k0.01.npy",
+      "sha256": "1f1a1045643b47b678889750a0a365cebc1ebcaaeacdf5aa58c4f6adece10593",
+      "n": 20165
+    },
+    {
       "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__source__s0_e0_q0.1_k0.01.npy",
       "sha256": "1f1a1045643b47b678889750a0a365cebc1ebcaaeacdf5aa58c4f6adece10593",
       "n": 20165
@@ -561,6 +936,21 @@
       "n": 12181
     },
     {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__source__s0_e0_q0.21_k0.97.npy",
+      "sha256": "e837d28547055f25de0235689fa80677f7f4df9c38e72d099de1c20f68b3c191",
+      "n": 12181
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__source__s0_e0_q0.23_k0.01.npy",
+      "sha256": "1f1a1045643b47b678889750a0a365cebc1ebcaaeacdf5aa58c4f6adece10593",
+      "n": 20165
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__source__s0_e0_q0.25_k0.97.npy",
+      "sha256": "e837d28547055f25de0235689fa80677f7f4df9c38e72d099de1c20f68b3c191",
+      "n": 12181
+    },
+    {
       "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__source__s0_e0_q0.3_k0.01.npy",
       "sha256": "1f1a1045643b47b678889750a0a365cebc1ebcaaeacdf5aa58c4f6adece10593",
       "n": 20165
@@ -581,6 +971,11 @@
       "n": 22181
     },
     {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__source__s0_e0_q0.3_k0.3718.npy",
+      "sha256": "7cfcac514edd2c728dd618eff0bc1eef8297a049bc75bf83606b5ee11f8c61e0",
+      "n": 31778
+    },
+    {
       "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__source__s0_e0_q0.3_k0.9.npy",
       "sha256": "d91486e37c1a262289b3b63b653c2137ab90e383af9a67a3fb41ee111af967fa",
       "n": 13129
@@ -594,6 +989,91 @@
       "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__source__s0_e0_q0.3_k0.97.npy",
       "sha256": "e837d28547055f25de0235689fa80677f7f4df9c38e72d099de1c20f68b3c191",
       "n": 12181
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__source__s0_e0_q0.45_k0.3718.npy",
+      "sha256": "7cfcac514edd2c728dd618eff0bc1eef8297a049bc75bf83606b5ee11f8c61e0",
+      "n": 31778
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__source__s0_e0_q0.4_k0.3718.npy",
+      "sha256": "7cfcac514edd2c728dd618eff0bc1eef8297a049bc75bf83606b5ee11f8c61e0",
+      "n": 31778
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__source__s0_e0_q0.5_k0.3718.npy",
+      "sha256": "7cfcac514edd2c728dd618eff0bc1eef8297a049bc75bf83606b5ee11f8c61e0",
+      "n": 31778
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__source__s1_e0_q0.06_k0.01.npy",
+      "sha256": "1f1a1045643b47b678889750a0a365cebc1ebcaaeacdf5aa58c4f6adece10593",
+      "n": 20165
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__source__s1_e0_q0.08_k0.97.npy",
+      "sha256": "e837d28547055f25de0235689fa80677f7f4df9c38e72d099de1c20f68b3c191",
+      "n": 12181
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__source__s1_e0_q0.15_k0.01.npy",
+      "sha256": "1f1a1045643b47b678889750a0a365cebc1ebcaaeacdf5aa58c4f6adece10593",
+      "n": 20165
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__source__s1_e0_q0.17_k0.97.npy",
+      "sha256": "e837d28547055f25de0235689fa80677f7f4df9c38e72d099de1c20f68b3c191",
+      "n": 12181
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__source__s1_e0_q0.3_k0.01.npy",
+      "sha256": "1f1a1045643b47b678889750a0a365cebc1ebcaaeacdf5aa58c4f6adece10593",
+      "n": 20165
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__source__s1_e0_q0.3_k0.97.npy",
+      "sha256": "e837d28547055f25de0235689fa80677f7f4df9c38e72d099de1c20f68b3c191",
+      "n": 12181
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__source__s1_e0_q0.5_k0.3718.npy",
+      "sha256": "7cfcac514edd2c728dd618eff0bc1eef8297a049bc75bf83606b5ee11f8c61e0",
+      "n": 31778
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__source__s2_e0_q0.06_k0.01.npy",
+      "sha256": "1f1a1045643b47b678889750a0a365cebc1ebcaaeacdf5aa58c4f6adece10593",
+      "n": 20165
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__source__s2_e0_q0.08_k0.97.npy",
+      "sha256": "e837d28547055f25de0235689fa80677f7f4df9c38e72d099de1c20f68b3c191",
+      "n": 12181
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__source__s2_e0_q0.15_k0.01.npy",
+      "sha256": "1f1a1045643b47b678889750a0a365cebc1ebcaaeacdf5aa58c4f6adece10593",
+      "n": 20165
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__source__s2_e0_q0.17_k0.97.npy",
+      "sha256": "e837d28547055f25de0235689fa80677f7f4df9c38e72d099de1c20f68b3c191",
+      "n": 12181
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__source__s2_e0_q0.3_k0.01.npy",
+      "sha256": "1f1a1045643b47b678889750a0a365cebc1ebcaaeacdf5aa58c4f6adece10593",
+      "n": 20165
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__source__s2_e0_q0.3_k0.97.npy",
+      "sha256": "e837d28547055f25de0235689fa80677f7f4df9c38e72d099de1c20f68b3c191",
+      "n": 12181
+    },
+    {
+      "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__source__s2_e0_q0.5_k0.3718.npy",
+      "sha256": "7cfcac514edd2c728dd618eff0bc1eef8297a049bc75bf83606b5ee11f8c61e0",
+      "n": 31778
     },
     {
       "file": "scores_protocol_a_public_itw/ssl_aasist_wavefake__tent.npy",
@@ -611,7 +1091,7 @@
   "auxiliary_inputs": [
     {
       "file": "audit_icassp.py",
-      "sha256": "300c98413c428107e9657cba54bb44566e3ff2cbc40842453c6ae505dfd368bf"
+      "sha256": "cb91ed7514033dd12a51053b83044244749d360a3e33ec6b29b6fa8fb0273c0e"
     },
     {
       "file": "metrics.py",
@@ -619,11 +1099,11 @@
     },
     {
       "file": "results_protocol_a_public.csv",
-      "sha256": "36bdd480e3bf82ee246b1b411304e919fa0a7b80f59ac6db5e990682d3656e26"
+      "sha256": "3a660dce41e1aa3fd37408bf1271bf3a2d8d53caee43f251cd2f2772b2228109"
     },
     {
       "file": "results_protocol_a_public_itw.csv",
-      "sha256": "49c2fffe73d524c7bbc2f9daf5f6965f4b3a73de8b89c60545e155cf5e27a9a4"
+      "sha256": "3d6f09ecd194e48517c59608eb2216bbcacfc43f21edd48ef3681e0d6e71a732"
     },
     {
       "file": "scores_protocol_a_public/deepfense_w2v2_aasist_s240__M.npy",
