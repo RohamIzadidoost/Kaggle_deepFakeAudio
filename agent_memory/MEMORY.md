@@ -1,0 +1,21 @@
+# Memory Index
+
+- [Project goal](project-goal.md) — assignment: beat the "Unmasking the Fake" paper with a novel explainable DL model on 3 merged datasets
+- [Pipeline status](pipeline-status.md) — manifest build / split / dataset loader state, known leakage caveat
+- [Baseline results](baseline-results.md) — paper reproduction gives ~13% EER / ~85% bal-acc; the number the DL model must beat
+- [DL model results](dl-model-results.md) — AttentiveSpecCNN hits 4.81% EER / 93.84% bal-acc in-domain, beats the baseline (11.33% EER)
+- [Cross-dataset results](cross-dataset-results.md) — leave-one-source-out collapses to ~chance; in-domain success is dataset-specific, not universal
+- [Repo](repo.md) — project published at github.com/RohamIzadidoost/Kaggle_deepFakeAudio
+- [DA-RAD status](darad-status.md) — building the ICASSP generalization paper; losses/augment/sampler/eval_protocol done, data+SSL downloads pending
+- [SOTA phase status](sota-phase-status.md) — cloud exhausted/local-only, 5-seed grid changed the Tent claim, Protocol A is the path to a comparable number
+- [Adaptive TTA phase](adaptive-tta-phase.md) — q/E adapt, lambda stays fixed; three mechanisms killed on CPU before spending GPU time
+- [Public-checkpoint TTA phase](public-ckpt-tta-phase.md) — our TTA on two third-party released detectors; fairseq solved via torchaudio's pure key-mapping fn
+- [Public checkpoint score polarity](public-ckpt-score-polarity.md) — public repos use [spoof=0,bonafide=1]; the flip yields 100-x EER with no error
+- [Tent's collapse is model-dependent](tent-does-not-always-collapse.md) — 49.8% EER on one public checkpoint, mildly helpful on another; AUC degradation is the invariant
+- [TTA components are complementary](tta-components-are-complementary.md) — the ablation inverts across checkpoints; neither self-training nor consistency alone is sufficient
+- [Repo hazards](repo-hazards.md) — 45GB auto-download, ~8 copies of the TTA loop, a resume guard that silently skips every fold
+- [Validate before GPU](validate-before-gpu.md) — user's working style: cheap falsification first, honest negatives over salvaged claims
+- [AUC precondition falsified](auc-precondition-falsified.md) — the paper's r=+0.86 claim dies on 43 third-party cells; calibration-deficit recovery replaces it
+- [TTA epochs undertrained](tta-epochs-undertrained.md) — E=4 is an epoch count, so the update budget scales with pool size; E=21 on 6k beats the full pool
+- [Operating-point law](operating-point-law.md) — TTA moves the threshold, not the ranking; Delta predicts where it lands (51/51)
+- [Accuracy vs BA artifact](ba-vs-accuracy-artifact.md) — the 98.9->63% collapse is a fixed-threshold artifact; on DF-42 it is an improvement
