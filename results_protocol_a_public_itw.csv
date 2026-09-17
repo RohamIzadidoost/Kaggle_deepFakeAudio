@@ -235,3 +235,7 @@ ssl_aasist_wavefake,source,official_eval,0,0,4.019,0.9888,98.119,55.475,12438,,,
 ssl_aasist_wavefake,source,disjoint_eval,0,0,3.349,0.9921,98.4,55.115,4438,,,False,,,,,,0.3,,0.95,96.651,-1.749,98.828,0.428,0.0,1.0
 ssl_aasist_wavefake,ours_fixed,official_eval,9,0,5.321,0.9813,64.535,52.992,12181,,,False,9.1,,,,,0.3,,0.97,94.679,30.144,97.824,33.29,0.0,0.0
 ssl_aasist_wavefake,ours_fixed,disjoint_eval,9,0,4.085,0.9863,64.123,52.978,4181,,,False,9.1,,,,,0.3,,0.97,95.915,31.791,97.8,33.676,0.0,0.0
+ssl_aasist_wavefake,source,official_eval,0,0,4.733,0.9861,64.562,50.994,20165,,,False,,,,,,0.3,,0.01,95.267,30.705,99.092,34.53,1.0,1.0
+ssl_aasist_wavefake,source,disjoint_eval,0,0,4.41,0.9868,64.694,50.917,12165,,,False,,,,,,0.3,,0.01,95.59,30.896,99.137,34.443,1.0,1.0
+ssl_aasist_wavefake,ours_fixed,official_eval,0,0,4.857,0.9866,97.248,50.717,20165,,,False,8.8,,,,,0.02,,0.01,95.143,-2.105,99.107,1.86,1.0,1.0
+ssl_aasist_wavefake,ours_fixed,disjoint_eval,0,0,4.348,0.9873,97.279,50.629,12165,,,False,8.8,,,,,0.02,,0.01,95.652,-1.627,99.153,1.874,1.0,1.0

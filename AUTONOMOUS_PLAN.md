@@ -25,6 +25,28 @@ from 0.606 to 0.00095 (float32). Every stage below runs with it set. The
 normalisation mode is part of the resume key and the cached-score filename, so
 corrected and legacy runs coexist and neither satisfies the other.
 
+## Corrected-run configuration (settled 2026-09-17 15:30)
+
+`PUBA_PERSAMPLE_NORM=1 PUBA_FP32=1`, with normalisation applied at decode time.
+
+Getting here cost a false start worth recording. Applying the normalisation
+inside the model OOMed every adaptation cell at 9.07 GiB while the source cells
+passed at 4.3 GiB, and no isolated probe reproduced it: a faithful
+forward+backward with the consistency term measured 5.00 GiB with and without
+the patch. The bisect that settled it was a real pipeline cell run under legacy
+normalisation, which completed at 6.6 GiB. Moving the normalisation to decode
+time -- where upstream fairseq does it anyway, per utterance before batching --
+removed the interaction and returned a real adaptation step to 4.99 GiB.
+
+Float32 audio came with it: normalisation amplifies the waveform about
+twelvefold, and this model is sensitive enough that storing the amplified
+signal in the float16 buffer moves 3 of 512 clips by more than 0.01. On raw
+audio the same comparison showed nothing (5.058 against 5.060% EER), so the
+effect belongs to normalised input specifically.
+
+Lesson for the remaining stages: probe results that disagree with the pipeline
+are not evidence about the pipeline. Bisect against a real cell.
+
 ## Stages
 
 Each stage is one long-running script. After each, commit and push, analyse,
