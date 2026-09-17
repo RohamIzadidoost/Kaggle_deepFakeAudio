@@ -375,7 +375,12 @@ def _use_per_sample_norm(model):
 
     def extract_feat(input_data):
         x = input_data[:, :, 0] if input_data.ndim == 3 else input_data
-        x = _F.layer_norm(x, x.shape[-1:])          # over time, per utterance
+        # No trainable parameter sits upstream of the waveform, so this is pure
+        # preprocessing and never needs to be on the graph. Building it under
+        # grad costs ~2.4 GB during adaptation and OOMs a 10 GB card, while
+        # changing no gradient: torch.no_grad() here is not an approximation.
+        with torch.no_grad():
+            x = _F.layer_norm(x, x.shape[-1:])      # over time, per utterance
         emb, _ = ssl(x)
         return emb
 
